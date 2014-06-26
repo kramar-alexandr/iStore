@@ -1,0 +1,366 @@
+global
+function boolean ImportAccIClassBeforeEditField()
+begin
+  record RcVc RepSpec;
+Integer wn;
+  
+  wn =  FindWindow("ImportAccIClass");
+  GetWindowRecord(wn,RepSpec);
+  if (not RepSpec.flags[19]) then begin
+  RepSpec.flags[0] = 1;	
+  RepSpec.flags[1] = 1;	
+  RepSpec.flags[2] = 2;	
+  RepSpec.flags[3] = 3;	
+  RepSpec.flags[4] = 4;	
+  RepSpec.flags[5] = 5;	
+  RepSpec.flags[6] = 6;	
+  RepSpec.flags[7] = 7;	
+  RepSpec.flags[8] = 8;	
+  RepSpec.flags[9] = 9;	
+  RepSpec.flags[10] = 10;	
+  RepSpec.flags[11] = 11;	
+  RepSpec.flags[12] = 12;	
+  RepSpec.flags[13] = 13;	
+  RepSpec.flags[14] = 14;	
+  RepSpec.flags[15] = 15;	
+  RepSpec.flags[16] = 16;	
+  RepSpec.flags[17] = 17;	
+  RepSpec.flags[18] = 18;
+  RepSpec.flags[19] = 19;
+ 
+ 
+ PutWindowRecord(wn,RepSpec);
+ end;
+ ImportAccIClassBeforeEditField = true;
+return;
+end;
+ //***********************************************************//
+
+global 
+updating function TramAcc(record RcVc RepSpec)
+begin
+record SuppVc Suppr, oldSuppr;
+
+  Suppr.Code = 1;
+  ReadFirstMain(Suppr,0,true);
+  RecordCopy(oldSuppr,Suppr);
+  Suppr.Code = 1;
+  Suppr.flag1=RepSpec.flags[0];
+  Suppr.flag2=RepSpec.flags[1];
+  Suppr.flag3=RepSpec.flags[2];
+  Suppr.flag4=RepSpec.flags[3];
+  Suppr.flag5=RepSpec.flags[4];
+  Suppr.flag6=RepSpec.flags[5];
+  Suppr.flag7=RepSpec.flags[6];
+  Suppr.flag8=RepSpec.flags[7];
+  Suppr.flag9=RepSpec.flags[8];
+  Suppr.flag10=RepSpec.flags[9];
+  Suppr.flag11=RepSpec.flags[10];
+  Suppr.flag12=RepSpec.flags[11];
+  Suppr.flag13=RepSpec.flags[12];
+  Suppr.flag14=RepSpec.flags[13];
+  Suppr.flag15=RepSpec.flags[14];
+  Suppr.flag16=RepSpec.flags[15];
+  Suppr.flag17=RepSpec.flags[16];
+  Suppr.flag18=RepSpec.flags[17];
+  Suppr.flag19=RepSpec.flags[18];
+ 
+  RecordStore(Suppr,true);
+
+return;
+end;
+ //***********************************************************//
+
+global
+updating function boolean ImportAccIClassOnOkWindow()
+begin
+  record SuppVc Suppr, oldSuppr;
+  record RcVc RepSpec;
+  Integer wn;
+ 
+  wn =  FindWindow("ImportAccIClass");
+  GetWindowRecord(wn,RepSpec);
+  
+  TramAcc(RepSpec);
+
+  ImportAccIClassOnOkWindow = true;
+  
+return;
+end;
+  
+ //***********************************************************//
+
+
+global
+updating procedure ImportAccIn()
+begin
+	record AccVc INr, oldINr;
+    record SuppVc Suppr;
+	record AccVc Accr;
+	record RcVc RepSpec;
+	Row AccVc AccRw;
+	Integer flg,i,k,j;
+	array string 255 sfield;
+	string 255 sfield19,sfield20;
+	string 511 textmy;
+	Boolean testf,testin;
+	string 5 flag;
+	Integer coun,ll;
+	array Boolean s;
+
+ //CreateFile("ImportAccLog.txt");
+ //ExportString("Import Log"); 
+ //NewLine;
+		
+ if (SetImportCodePage("UTF-8")) then begin end;
+
+ Suppr.Code = 1;
+ ReadFirstMain(Suppr,1,true);	 
+
+
+ flg = Suppr.flag1;
+
+ If (flg == 0) then 
+  begin
+   NextImportLine(true);
+  end; 
+sfield[0]=0;
+    while (TestEOF()==false) 
+    begin
+    k=0;
+    
+    for (i=1;i<=18;i=i+1) 
+    begin
+    sfield[i]=ImportField;
+    end;
+    
+  for (i=1;i<=18;i=i+1) 
+    begin
+    s[i]=nonblank(sfield[i]);
+    end;
+	//*********************Проверки пустых полей и сортировка по полям **********************//
+	  for (i=0;i<=18;i=i+1) 
+    begin
+    if (Suppr.flag2 == i) then
+    begin
+    if (not s[i]) then begin end else begin INr.AccNumber=sfield[i]; end;
+    end;
+    end;
+
+    if (nonblank(INr.AccNumber)) then begin 
+k = 1; 
+
+if (k==1) then begin	//**********проверка (если первое поле не пустое, продолжить импорт**//
+
+	//*******************************************//
+	 for (i=0;i<=18;i=i+1) 
+    begin
+    if (Suppr.flag3 == i) then
+    begin
+    if (not s[i]) then begin end else begin INr.Comment=sfield[i]; end;
+    end;
+    end;
+    	//*******************************************//
+
+
+	 for (i=0;i<=18;i=i+1) 
+    begin
+    if (Suppr.flag4 == i) then
+    begin
+    if (not s[i]) then begin end else begin INr.AccType=EvalToVal(sfield[i]); end;
+    end;
+    end;
+    	//*******************************************//
+
+	
+	 for (i=0;i<=18;i=i+1) 
+    begin
+    if (Suppr.flag5 == i) then
+    begin
+    if (not s[i]) then begin end else begin INr.NVD=EvalToVal(sfield[i]); end;
+    end;
+    end;
+    	//*******************************************//
+
+	 for (i=0;i<=18;i=i+1) 
+    begin
+    if (Suppr.flag6 == i) then
+    begin
+    if (not s[i]) then begin end else begin INr.NVC=EvalToVal(sfield[i]); end;
+    end;
+    end;
+    	//*******************************************//
+
+
+	 for (i=0;i<=18;i=i+1) 
+    begin
+    if (Suppr.flag7 == i) then
+    begin
+    if (not s[i]) then begin end else begin INr.AutCode=sfield[i]; end;
+    end;
+    end;
+    	//*******************************************//
+
+	 for (i=0;i<=18;i=i+1) 
+    begin
+    if (Suppr.flag8 == i) then
+    begin
+    if (not s[i]) then begin end else begin INr.blockedFlag=EvalToVal(sfield[i]); end;
+    end;
+    end;
+    	//*******************************************//
+
+	
+	 for (i=0;i<=18;i=i+1) 
+    begin
+    if (Suppr.flag9 == i) then
+    begin
+    if (not s[i]) then begin end else begin INr.VATCode=sfield[i]; end;
+    end;
+    end;
+    	//*******************************************//
+
+	
+	 for (i=0;i<=18;i=i+1) 
+    begin
+    if (Suppr.flag10 == i) then
+    begin
+    if (not s[i]) then begin end else begin INr.ControlType=EvalToVal(sfield[i]); end;
+    end;
+    end;
+    	//*******************************************//
+
+	
+	 for (i=0;i<=18;i=i+1) 
+    begin
+    if (Suppr.flag11 == i) then
+    begin
+    if (not s[i]) then begin end else begin INr.Curncy=sfield[i]; end;
+    end;
+    end;
+    	//*******************************************//
+
+	 for (i=0;i<=18;i=i+1) 
+    begin
+    if (Suppr.flag12 == i) then
+    begin
+    if (not s[i]) then begin end else begin INr.ConsAccNumber=sfield[i]; end;
+    end;
+    end;
+    	//*******************************************//
+
+	
+	 for (i=0;i<=18;i=i+1) 
+    begin
+    if (Suppr.flag13 == i) then
+    begin
+    if (not s[i]) then begin end else begin INr.Conspr=EvalToVal(sfield[i]); end;
+    end;
+    end;
+    	//*******************************************//
+
+	 for (i=0;i<=18;i=i+1) 
+    begin
+    if (Suppr.flag14 == i) then
+    begin
+    if (not s[i]) then begin end else begin INr.Objects=sfield[i]; end;
+    end;
+    end;
+    	//*******************************************//
+
+	
+	 for (i=0;i<=18;i=i+1) 
+    begin
+    if (Suppr.flag15 == i) then
+    begin
+    if (not s[i]) then begin end else begin INr.SRUCode=sfield[i]; end;
+    end;
+    end;
+    	//*******************************************//
+
+	
+	 for (i=0;i<=18;i=i+1) 
+    begin
+    if (Suppr.flag16 == i) then
+    begin
+    if (not s[i]) then begin end else begin INr.ExclFrRep=EvalToVal(sfield[i]); end;
+    end;
+    end;
+    	//*******************************************//
+
+	 for (i=0;i<=18;i=i+1) 
+    begin
+    if (Suppr.flag17 == i) then
+    begin
+    if (not s[i]) then begin end else begin INr.PeriodCode=sfield[i]; end;
+    end;
+    end;
+    	//*******************************************//
+
+
+	 for (i=0;i<=18;i=i+1) 
+    begin
+    if (Suppr.flag18 == i) then
+    begin
+    if (not s[i]) then begin end else begin INr.GroupAcc=EvalToVal(sfield[i]); end;
+    end;
+    end;
+    	//*******************************************//
+
+
+
+	 for (i=0;i<=18;i=i+1) 
+    begin
+    if (Suppr.flag19 == i) then
+    begin
+    if (not s[i]) then begin end else begin INr.TransAutCode=sfield[i]; end;
+    end;
+    end;
+    	//*******************************************//
+
+	
+
+     end;
+     
+	  
+	 coun=0;
+	 sfield19 = ImportField;
+      while (nonblank(sfield19)) 
+       begin
+ 		 AccRw.LangCode=sfield19;
+		 sfield20 = ImportField;
+		 AccRw.Text = sfield20;
+		 MatRowPut(INr,coun,AccRw);
+		 coun=coun+1;
+		 sfield19 = ImportField;
+	   end;
+	
+ 	 testin = RecordStore(INr,false);
+ 	 for (i=0;i<=coun-1;i=i+1) begin MatRowDelete(INr,0); end;
+	 RecordClear(INr);
+	/* if (not testin) then 
+	   begin
+	     ExportString("Record with Code "& INr.AccNumber &" already exists"); NewLine;
+  	   end;
+	//  StopAlert("3.5");
+	 if (testin) then 
+	   begin
+	  	 ExportString("Record with Code "& INr.AccNumber &" addet in database"); NewLine;
+  	   end;
+	*/
+	 
+	 end; 
+       if (NextImportLine(true)) then begin end;
+	  end;
+	//CloseFile;
+ 	//RunProgram("/Applications/TextEdit.app/Contents/MacOS/TextEdit","ImportAccLog.txt"); 
+ 	
+
+
+ return;
+end;
+	 
+
+	 
+	
+	 

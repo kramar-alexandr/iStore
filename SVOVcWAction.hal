@@ -1,0 +1,85 @@
+remote inner function Boolean SVO_PasterSerialNr(var record SVOVc,Integer,var string);
+remote inner function string 255 DuplicateSVOSerial(string);
+remote inner procedure GetSalesGroup(string,var string);
+
+function Boolean SVODClassSerialNrEFAfter(Integer wn,Integer rownr,Integer changed)
+BEGIN
+  record SVOVc SVOr;
+  string 255 warning,tstr;
+  row SVOVc SVOrw;
+  
+  if (changed!=0) then begin
+    GetWindowRecord(wn,SVOr);    
+    
+    matrowget(SVOr,rownr,SVOrw);
+
+    tstr = DuplicateSVOSerial(SVOrw.SerialNr);
+    
+    
+    if(nonblank(tstr))then begin
+      MessageBox(31013,tstr & " " & USetStr(31012));
+    end;
+  end;
+  SVODClassSerialNrEFAfter = true;
+  return;
+end;
+
+global 
+function Boolean SVODClassAddr0EFAfter(integer wn, integer changed)
+begin
+  record SVOVc SVOr;
+  
+  GetWindowRecord(wn,SVOr);
+  if(changed>0)then begin
+    SVOr.Vlastnik=SVOr.Addr0;
+    PutWindowRecord(wn,SVOr);
+  end;
+
+return;
+end;
+
+function Boolean SVODClassSalesManEFAfter(Integer wn,Integer changed)
+BEGIN
+  record SVOVc SVOr;
+  string 255 tstr;
+	record UserVc Usr;
+	
+  if (changed!=0) then begin
+    GetWindowRecord(wn,SVOr);    
+    GetSalesGroup(SVOr.SalesMan,tstr);
+    Usr.Code = currentuser;
+    readfirstmain(Usr,1,true);
+    tstr = Usr.SalesGroup;
+    SVOr.SalesGroup = tstr;
+    PutWindowRecord(wn,SVOr);
+  end;
+  SVODClassSalesManEFAfter = true;
+  return;
+end;
+
+global
+function Boolean SVODClassAfterEditField(Integer wn,string fieldname,Integer fn, Integer rownr,Integer changed)
+BEGIN
+  Boolean res;
+
+res = inner.SVODClassAfterEditField(wn,fieldname,fn,rownr,changed);
+  switch (fieldname) begin
+    case "Addr0": res = SVODClassAddr0EFAfter(wn,changed);
+    case "SerialNr": res = SVODClassSerialNrEFAfter(wn,rownr,changed);
+    case "SalesMan": res = SVODClassSalesManEFAfter(wn,changed);
+  end;
+  SVODClassAfterEditField = res;
+  RETURN;
+END;
+
+global
+function Boolean SVODClassUpdateTest(Integer wn)
+BEGIN
+  Boolean res;
+  record SVOVc SVOr;
+  res = true;
+  GetWindowRecord(wn,SVOr);
+  if (SVOr.DoneMark!=0 and not UserCanAction("ViewCostPrice",true)) then begin res = false; end;
+  SVODClassUpdateTest = res;
+  RETURN;
+END;

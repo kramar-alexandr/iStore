@@ -1,0 +1,239 @@
+external function Boolean GetAccName(string,var string,Integer);
+external function Boolean ReadFirstItem(string,var record INVc,Boolean,Boolean);
+external function string 255 FindNextLegalSerNr(LongInt,Date,string);
+external procedure VIDDefault(Integer,string,var record VIVc);
+external procedure VISumup(record VIVc,var val);
+external procedure CheckFlush(var Integer,Integer);
+external function val MulRateToBase1(var string,val,val,val,val,val,val,Integer);
+external procedure IVDchsum(var record IVVc,Integer);
+external updating procedure DeleteIVrsStats(record IVVc);
+external updating procedure SaveTrans(record TRVc);
+external function Integer MakeTransFromSH(record TRVc,record SHVc,Boolean,record RcVc);
+external function Integer MakeTransFromOwnCheck(record TRVc,var record OwnCheckVc,Boolean,Boolean);
+external updating procedure ArtStats(record IVVc,Boolean,Boolean);
+external updating procedure IVrsStats(record IVVc);
+external function Boolean GetCustAndBal(var record CUVc,var val,var val,Integer,Integer,Integer,Integer,Integer,Integer);
+external procedure PasteCreditSalesAccs(record IVVc);
+external procedure Do_InvoiceRecepy(record IVVc,record INVc,Integer);
+external function Boolean GetFirstItem(var string,var record INVc);
+external procedure CalcSum(val,val,val,val,var val,Integer);
+external procedure IVSumup(var record IVVc,Boolean);
+external function LongInt GetCurUserLastNr(string);
+external procedure FindSalesExVat(string,val,Integer,Integer,var val);
+
+
+procedure FindCreditNotePayTerm(var string paydeal)
+BEGIN
+  Boolean TrHs;
+  record PDVc PDr;
+  
+  TrHs = true;
+  paydeal = "";
+  PDr.Code = "";
+  while (LoopMain(PDr,1,TrHs)) begin
+    if (PDr.PDType==3) then begin
+      paydeal = PDr.Code;
+      goto LFindCreditNotePayTerm;
+    end;
+  end;
+LFindCreditNotePayTerm:;  
+  RETURN;
+END;
+
+procedure VIClearRows(record VIVc VIp)
+BEGIN
+  Integer vicnt;
+
+  vicnt = MatRowCnt(VIp);
+  while (vicnt>0) begin
+    MatRowDelete(VIp,0);
+    vicnt = vicnt - 1;
+  end;
+  RETURN;
+END;
+
+function val RetPUVc_FindQtyToBeCredited(LongInt OrdNr,LongInt OrdRow)
+begin
+  val res;
+  record POVc POr;
+  row POVc POrw;
+  Boolean found;
+  Integer i,rwcnt;
+  
+  found = true;
+  POr.SerNr = OrdNr;
+  while (LoopMain(POr,1,found)) begin
+    if (POr.SerNr!=OrdNr) then begin found = false; end;
+    if (found) then begin
+      if (OrdRow<MatRowCnt(POr)) then begin
+        MatRowGet(POr,OrdRow,POrw);
+        res = POrw.Invd - POrw.Shipd1;
+      end;
+    end;
+  end;
+  RetPUVc_FindQtyToBeCredited = res;
+  return;
+end;
+
+function
+Boolean PasteRetPUInVI(record VIVc VIp,record RetPUVc RetPUp)
+BEGIN
+  record VIVc VIr;
+  row VIVc VIrw;
+  row VIVc VI2rw;
+  row RetPUVc RetPUrw;
+  Integer i,vicnt;
+  Integer j,rtcnt;
+  Integer cnt;
+  LongInt sernr;
+  Boolean found,firstf;
+  Boolean res,morethanoneinf,vifound;
+  val t;
+  string 255 tstr;
+  record VITBlock VITb;
+
+  BlockLoad(VITb);
+  res = true;
+  firstf = true;
+  VIr.SerNr = -1;  
+
+  found = true;
+  VIr.POSerNr = RetPUp.PONr;
+  while (LoopBackKey("POSerNr",VIr,1,found)) begin
+    if (VIr.POSerNr!=RetPUp.PONr) then begin 
+      found = false;
+    end;
+    if (found) then begin
+      if (vifound) then begin
+        morethanoneinf = true;
+        found = false;
+      end;
+      vifound = true;
+    end;    
+  end;
+
+  ResetLoop(VIr);
+  VIr.SerNr = -1;  
+  found = true;
+  VIr.POSerNr = RetPUp.PONr;
+  while (LoopBackKey("POSerNr",VIr,1,found)) begin
+    if (VIr.POSerNr!=RetPUp.PONr) then begin 
+      found = false;
+    end;
+    if (VIr.OKFlag==0) then begin goto L88PasteRetPUInVI; end;
+    if (VIr.InvType==3) then begin goto L88PasteRetPUInVI; end;
+    if (found) then begin
+
+      rtcnt = MatRowCnt(RetPUp);
+      vicnt = MatRowCnt(VIr);
+      for (j=0;j<rtcnt;j=j+1) begin
+        MatRowGet(RetPUp,j,RetPUrw);
+        if ((RetPUrw.Quant!=0) and (RetPUrw.OrdRow!=-1)) then begin
+          vicnt = MatRowCnt(VIr);
+          for (i=0;i<vicnt;i=i+1) begin
+            MatRowGet(VIr,i,VIrw);
+            if (((RetPUrw.ArtCode==VIrw.Item) and (RetPUrw.OrdRow==VIrw.OrdRow)) or (VIrw.OrdRow==-2)) then begin
+              if (firstf) then begin
+                RecordCopy(VIp,VIr);
+                VIClearRows(VIp);
+                VIp.TransDate = CurrentDate;
+                VIp.InvType = 3;
+                FindCreditNotePayTerm(tstr);
+                VIp.PayDeal = tstr;
+                VIp.OKFlag = 0;
+                VIp.POSerNr = RetPUp.PONr;
+                VIp.SerNr = sernr;
+                if (morethanoneinf) then begin
+                  VIp.CredInv = -1;
+                end else begin
+                  VIp.CredInv = VIr.SerNr;
+                end;
+                firstf = false;
+              end;
+              ClearRow(VIp,VI2rw,1);
+              VI2rw.stp = 1;
+              CopyRow(VIp,VIrw,VI2rw);
+              VI2rw.qty = RetPUVc_FindQtyToBeCredited(RetPUp.PONr,RetPUrw.OrdRow);
+              if (VI2rw.qty>RetPUrw.Quant) then begin
+                VI2rw.qty = RetPUrw.Quant;
+              end;
+
+              if (VI2rw.qty!=0) then begin
+                switch (VITb.TransferItems) begin
+                  case 2: VI2rw.Sum = RetPUrw.FIFORowVal;
+                  //otherwise VI2rw.Sum = (VIrw.Sum*VI2rw.qty)/VIrw.qty;
+                  otherwise VI2rw.Sum = RetPUrw.FIFORowVal;// Edit ************************** Tuesday, 13 November 2012 17:28:35
+                end;
+                if (GetAccName(RetPUrw.CredAcc,tstr,60)) then begin
+                  VI2rw.AccNumber = RetPUrw.CredAcc;
+                  VI2rw.Comment = tstr;
+                end;
+                MatRowPut(VIp,cnt,VI2rw);
+                cnt = cnt + 1;
+                found = false;
+                goto L77PasteRetPUInVI;
+              end;
+            end;
+          end;   
+        end;
+L77PasteRetPUInVI:;
+      end;
+    end;
+L88PasteRetPUInVI:;
+  end;
+  VIp.Comment = RetPUp.Comment;
+  VIDDefault(-1,"PayVal",VIp);  
+  VISumup(VIp,t);
+LPasteRetPUInVI:;
+  PasteRetPUInVI = res;
+  RETURN;
+END;
+
+global
+updating function Integer RecordAction_raPasteRetPUInVI(var record VIVc VIp,LongInt retpunr)
+BEGIN
+  record SRBlock SRRec;
+  record RetPUVc RetPUr;
+  Integer res;
+  LongInt newnr;
+  string 255 tstr;
+  Boolean nousersernr;
+  val temp;
+  
+  res = -1;
+  RecordNew(VIp);
+  VIp.SerNr = -1;
+  RetPUr.SerNr = retpunr;
+  if (ReadFirstMain(RetPUr,1,true)) then begin end;
+  if (RetPUr.OKFlag==0) then begin goto LRecordAction_raPasteRetPUInVI; end;
+  if (PasteRetPUInVI(VIp,RetPUr)) then begin
+    if (VIp.SerNr==-1) then begin
+      BlockLoad(SRRec);
+      if ((VIp.InvType==3) and (SRRec.LastCredVINr!=-1))  then begin
+        newnr = GetCurUserLastNr("CreditVIVc");
+        if (newnr<=0) then begin
+          newnr = SRRec.LastCredVINr;
+        end;
+        nousersernr = true;
+      end;
+    end;
+    VIp.SerNr = NextSerNr("VIVc",VIp.TransDate,newnr,true,"");
+    if (VIp.SerNr==-1) then begin
+      res = 1747;
+      goto LRecordAction_raPasteRetPUInVI;
+    end;
+    if ((MatRowCnt(VIp)>0) and (VIp.SerNr!=-1)) then begin
+      VISumup(VIp,temp);
+      if (RecordInsert(VIp,false)) then begin
+        res = 1;
+      end;
+    end;
+  end else begin
+    res = -2;
+  end;  
+LRecordAction_raPasteRetPUInVI:;
+  RecordAction_raPasteRetPUInVI = res;
+  RETURN;
+END;
+
+

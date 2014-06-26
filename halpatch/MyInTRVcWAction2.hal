@@ -1,0 +1,57 @@
+remote procedure SetTRObjectRows(var record TRVc);
+
+global
+procedure TRSumup(var record TRVc TRr,var val base2diff)
+BEGIN
+  Integer i,rwcnt;
+  row TRVc TRrw;
+  val deb2,cred2;
+  val CSum,CSum2;
+  
+  SetTRObjectRows(TRr);
+  TRr.DSum = blankval;
+  TRr.CSum = blankval;
+  TRr.DSum2 = blankval;
+  TRr.CSum2 = blankval;
+  rwcnt = MatRowCnt(TRr);
+  for (i=0; i<rwcnt; i=i+1) begin
+    MatRowGet(TRr,i,TRrw);
+    
+  // Edit Start ---------------------------------------------- Edit Start
+	//Thursday, 5 August 2010 14:53:28
+	  TRrw.DebVal = round(TRrw.DebVal,3);
+    TRrw.CredVal = round(TRrw.CredVal,3);
+    TRrw.CurDebVal = round(TRrw.CurDebVal,3);
+    TRrw.CurCredVal = round(TRrw.CurCredVal,3);
+	// Edit End ---------------------------------------------- Edit End
+	MatRowPut(TRr,i,TRrw);
+	MatRowGet(TRr,i,TRrw);
+    
+    if ((TRrw.stp==1) and (TRrw.ovst==0)) then begin
+      if ((nonblank(TRrw.DebVal)) or (nonblank(TRrw.CredVal))) then begin
+        TRr.DSum = TRr.DSum + TRrw.DebVal;
+        CSum = CSum + TRrw.CredVal;
+      end;
+      if ((nonblank(TRrw.DebVal2)) or (nonblank(TRrw.CredVal2))) then begin
+        deb2 = deb2 + TRrw.DebVal2;
+        cred2 = cred2 + TRrw.CredVal2;
+        TRr.DSum2 = TRr.DSum2 + TRrw.DebVal2;
+        CSum2 = CSum2 + TRrw.CredVal2;
+      end;
+    end;
+  end;
+  TRr.DSum = Round(TRr.DSum,DefaultCurRoundOff);
+  TRr.DSum2 = Round(TRr.DSum2,DefaultCurRoundOff);
+  TRr.CSum = -Round(CSum,DefaultCurRoundOff);
+  TRr.CSum2 = -Round(CSum2,DefaultCurRoundOff);
+  TRr.DiffVal = TRr.DSum + TRr.CSum;
+  TRr.Diff2Val = TRr.DSum2 + TRr.CSum2;
+  if (base2diff!=-1) then begin
+    deb2 = Round(deb2,DefaultCurRoundOff);
+    cred2 = -Round(cred2,DefaultCurRoundOff);
+    base2diff = deb2 + cred2;
+    base2diff = Round(base2diff,DefaultCurRoundOff);
+  end;
+  RETURN;
+END;
+

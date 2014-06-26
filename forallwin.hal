@@ -1,0 +1,231 @@
+event DefineWindows
+begin
+ Real h,h1,h2,h3,h4,h5,h6,h7,hs,hm,v,v3,l,vs,vm,f,t,x,v2;
+  integer flagtr;
+  string 255 label;
+    
+	SetLangMode(LangUkrainian,"UKR",0);
+
+	 
+	 WindowBegin("HansaWorld Функції",RoutinesWClass,CGother,RcType);
+  UseView(RcVc);
+  SetWRect(200,100,340,250);
+  CloseOnCancel;
+  v = 6;
+  PushButton(20,v+=5,120,v+=20,ToolExport,"Експорт");
+  PushButton(20,v+=5,120,v+=20,ToolImport,"Імпорт");
+  PushButton(20,v+=5,120,v+=20,ToolMaintenance, "Обслуговування");
+  if(currentuser=="SA")then begin
+    PushButton(20,v+=5,120,v+=20,ToolDemo, "Демо");
+    HALPushButton(20,v+=5,120,v+=20,"OpenRegWindow","Реєстрація");
+  end;
+  EndWindow;
+
+  
+  WindowBegin("Настройка валюти ЕККА",POSCurncyTClass,CGSbl,-);
+  SetBlid(POSCurncyBlock);
+  SetWRect(64,80,380,357);
+  h=160;f=70; 
+  v=6;
+		EditField(h,v+=vs,f,"Валюта ЕККА",Normal,CurncyCode,false,CurncyCodeSClass); 
+  EndWindow;
+  
+  WindowBegin("Останній номер синхронізаціі ЕККА",LocalOffLineNrTClass,CGSbl,-);
+  SetBlid(LocalOffLineNrBlock);
+  SetWRect(64,80,380,257);
+  h=200;f=70; 
+  v=56;
+		EditField(h,v+=vs,f,"Останній номер накладної ЕККА",Normal,LastIVCashNr,false,0); 
+  EndWindow;
+  
+   WindowBegin("Рахунки продавців ЕККА",LocalMachineAccTClass,CGHbl,-);
+  SetBlid(LocalMachineAccBlock);
+  SetWRect(64,80,500,400);
+    MatrixBegin(5,27,-50,-20,-,99);
+    Flip(0);
+    MatCol(1,24,"Лок. маш.",0,LocalMachine,false,LocalMachineSClass);
+    MatCol(1,85,"Клієнт",0,CustCode,false,CUSClass);
+    Flip(1);
+    MatCol(1,-200,"Назва",0,Name,false,0);
+    Flip(2);
+    MatCol(1,150,"SaleAcc",0,SaleAcc,false,AccSClass);
+    MatCol(1,210,"RecAcc",0,RecAcc,false,AccSClass);
+    MatCol(1,270,"RetAcc",0,RetAcc,false,AccSClass);
+    Flip(3);
+    MatCol(1,150,"StockAcc",0,StockAcc,false,AccSClass);
+    MatCol(1,210,"ServAcc",0,ServAcc,false,AccSClass);
+    MatCol(1,290,"PayDeal",0,PayDeal,false,PDSClass);
+    Flip(4);
+    MatCol(1,150,"CurDiffCred",0,CurDiffCred,false,AccSClass);
+    MatCol(1,230,"CurDiffDeb",0,CurDiffDeb,false,AccSClass);
+    Flip(5);
+    MatCol(1,150,"PLCode",0,Str01,false,PLDefSClass);
+    MatCol(1,230,"Object",0,Objects,false,ObjSClass);
+    Flip(6);
+    MatCol(1,150,"Користувач",0,UserCode,false,UserSClass);
+    MatCol(1,210,"Склад",0,DefLoc,false,LocationSClass);
+    MatCol(1,270,"Скринька",0,Drawer,false,DrawerSClass);
+    Flip(7);
+    MatCol(1,150,"Cash",0,CashID,false,PMSClass);
+    MatCol(1,200,"Term",0,TermID,false,PMSClass);
+    MatCol(1,250,"Sert",0,SertID,false,PMSClass);
+    MatCol(1,300,"Web",0,Oth01ID,false,PMSClass);
+    EndMatrix;
+    vs = 20;
+    v = 18; VTab(-35,v,-16,v+vs,ToolFlip,1,"A");
+    v=v+vs;  VTab(-35,v,-16,v+vs,ToolFlip,2,"B");
+    v=v+vs;  VTab(-35,v,-16,v+vs,ToolFlip,3,"C");
+    v=v+vs;  VTab(-35,v,-16,v+vs,ToolFlip,4,"D");
+    v=v+vs;  VTab(-35,v,-16,v+vs,ToolFlip,5,"E");
+    v=v+vs;  VTab(-35,v,-16,v+vs,ToolFlip,6,"F");
+    v=v+vs;  VTab(-35,v,-16,v+vs,ToolFlip,7,"G");
+   /* v=v+vs;  VTab(-35,v,-16,v+vs,ToolFlip,8,"H");*/
+  EndWindow;
+  WindowBegin("Визначте додання об'єкту в запис операції",AddObjTRVClass,CGMnt,RcType);
+  SetWRect(20,80,400,300);
+  PeriodField(h=100,v=6,"Період");
+  vs = 20;
+  EditFieldTL(h,v+=vs,200,"Об'єкт",M4UStr,Normal,60,f1,false,ObjSClass);
+  EditFieldTL(h,v+=20,200,"Рахунок",M4UStr,Normal,60,f2,false,AccSClass);
+  EditFieldTL(h,v+=20,200,"Діапазон",M4Str,Normal,30,f3,false,0);
+  EditFieldTL(h,v+=20,200,"IntYc",M4Int,Normal,30,flags[1],false,0);
+  CheckBox(h,v+=20,0,"Пропускати всі тести",flags[0]);
+  CheckBox(h,v+=20,0,"У кореспондуючі рахунки також",flags[2]);
+  EndWindow;
+  
+  WindowBegin("Изменение надбавки стоимости товара",ChangeMarkupINVClass,CGMnt,RcType);
+  SetWRect(20,80,400,300);
+  vs = 20;
+  EditFieldTL(h,v+=vs,200,"Група",M4UStr,Normal,60,f1,false,ITSClass);
+  EditFieldTL(h,v+=20,200,"% набаки",M4Val,Normal,30,vals0,false,0);
+  EndWindow;
+  
+  
+  WindowBegin("Вилучення об'єкту з запису операції",MyDelObjTRVClass,CGMnt,RcType);
+  SetWRect(20,80,400,300);
+  PeriodField(h=100,v=6,"Період");
+  vs = 20;
+  EditFieldTL(h,v+=vs,200,"Об'єкт",M4UStr,Normal,60,f1,false,ObjSClass);
+  EditFieldTL(h,v+=20,200,"Рахунок",M4UStr,Normal,60,f2,false,AccSClass);
+  EditFieldTL(h,v+=20,200,"Діапазон",M4Str,Normal,30,f3,false,0);
+  EditFieldTL(h,v+=20,200,"IntYc",M4Int,Normal,30,flags[1],false,0);
+  CheckBox(h,v+=20,0,"Пропускати всі тести",flags[0]);
+  EndWindow;
+  
+  WindowBegin("Формула ціни",PFormDClass,CGview,PFormView);
+  SetWRect(20,80,450,520);
+  UseView(PFormVc);
+  v = 10; vs = 20; h = 150;
+  EditField(h,v, 70,"Код",Normal,Code,false,0);
+  EditField(h,v+=vs ,200,"Коментар",Normal,Comment,false,0);
+  EditField(h,v+=vs ,55,"Перерахувати у валюту",Normal,CurncyCode,true,CurncyCodeSClass);
+  EditField(h,v+=vs ,55,"% коригування",Normal,Perc,true,0);
+  EditField(h,v+=vs ,55,"Додати суму 1",Normal,Add1Val,true,0);
+  EditField(h,v+=vs ,80,"Округлення",Normal,RndTo,true,SetSClass);
+  EditField(h,v+=vs ,55,"Додати суму 2",Normal,Add2Val,true,0);
+  ButtonFrame(h=100,vm=(v+=41),220,14,"Базувати значення на");
+  RadioButton(h,v+=3,0,0,"вартості",SelBase);
+  RadioButton(h,v+=18,1,0,"відпускній ціні",SelBase);
+  RadioButton(h,v+=18,2,0,"ціні останнього придбання",SelBase);
+  RadioButton(h,v+=18,3,0,"средньозваженій вартості",SelBase);
+  RadioButton(h,v+=18,4,0,"варт-ті товара постач. за зам.",SelBase);
+  RadioButton(h,v+=18,5,0,"З прейскуртанта:",SelBase);
+  ButtonFrame(h,(v+=25),h+65,6,""); 
+  EditField(h,v+=3,110,"Прейскуртант",Normal,BasePriceList,false,PLDefSClass);
+  ButtonFrame(h,(v+=40),h+35,3,"Якщо ціну не знайдено в прейскуранті"); 
+  RadioButton(h,v,0,0,"не додавати ціну",BasePriceListOption);
+  RadioButton(h,v+=16,1,0,"додати нульову ціну",BasePriceListOption);
+  RadioButton(h,v+=16,2,0,"викор. альтерн. формулу",BasePriceListOption);
+  EditField(h+165,v,35,"",Normal,BasePriceListAltFormula,false,PFormSClass);
+  EndWindow;
+  
+  
+  WindowBegin("Настройка принтера Zebra",ZebraPrinterTClass,CGSbl,-);
+  SetBlid(ZebraPrinterBlock);
+  SetWRect(64,80,380,150);
+  h=100;f=200;
+  v=6;
+    EditField(h,v+=vs,f,"Назва принтера",Normal,PrinterName,false,0); 
+  EndWindow;
+  
+  WindowBegin("Настройка синхронизации WEB",WebSyncTClass,CGSbl,-);
+  SetBlid(WebSyncBlock);
+  SetWRect(64,80,380,300);
+  h=100;f=200;
+  v=6;
+    EditField(h,v+=vs,f,"LastDateSync",Normal,DateLastTime,false,PasteCurDate); 
+    EditField(h,v+=vs,f,"Def PriceList",Normal,DefPriceList,false,PLDefSClass);
+  EndWindow;
+
+
+  WindowBegin("Настройка WEB matrix",WebSyncMatTClass,CGHbl,-);
+    SetBlid(WebSyncMatBlock);
+    SetWRect(64,80,380,300);
+    h=100;f=200;
+    v=6;
+      MatrixBegin(5,16,-20,-20,-,99);
+        MatCol(1,24,"Location",0,Location,false,LocationSClass);
+        MatCol(1,150,"ID",0,ID,false,0);
+        //MatCol(1,-85,"PriceList",0,LocPrice,false,PLDefSClass);
+      EndMatrix;
+  EndWindow;
+  
+  WindowBegin("Create WebSynReg",MyCrWebSyncVClass,CGMnt,-);
+  SetWRect(20,80,400,300);
+  
+  EndWindow;
+  
+  
+  WindowBegin("Web Sync Register",WebSyncRegDClass,CGview,-);
+  SetWRect(20,80,620,420);
+  Sizeable(-1,-1,0,0);
+  UseView(WebSyncRegVc);
+  EditField(75,vm=(v=6), 95,"ArtCode",Normal,ArtCode,false,INSClass);
+  EditField(75,v+=20,95, "DateChange",Normal,DateChange,false,PasteCurDate);
+  EditField(75,v+=20,95, "Price",Normal,Price,false,0);
+  EditField(75,v+=20,95, "Available",Normal,Available,false,0);
+  EndWindow;
+  
+  WindowBegin("Web Sync Registers",WebSyncRegLClass,CGmlist,-);
+  SpawnClass(WebSyncRegDClass);
+  SetWRect(20,80,580,298);
+  Sizeable(-1,-1,0,0);
+  UseView(WebSyncRegVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"Code",ArtCode,false,ArtCode);
+  RlColKey(121,121, "Change date",DateChange,false,DateChange);
+  SearchField("Пошук");
+  EndWindow;
+  
+  WindowBegin("UnreservOldOrders",UnreservOldOrdersVClass,CGMnt,RcType);
+  SetWRect(20,120,360,220);
+
+  EndWindow;
+  
+  WindowBegin("Контакти",CULClass,CGmlist,-);
+    SpawnClass(CUDClass);
+    SetWRect(20,80,760,300);
+    Sizeable(-1,-1,0,0);
+    UseView(CUVc);
+    RecordList(4,17,-21,-39);
+    RlColKey(4,4,"Код",Code,false,Code);
+    RlColKey(96,96,"Стисло",SearchKey,false,SearchKey);
+    RlColKey(145,140,"Кат.",CustCat,false,Group);
+    RlColKey(190,190,"Найменування",Name,false,Name);
+    RlColKey(-420,-420,"Телефон",Phone,false,Phone);
+    RlColKey(-325,-325,"Контакт",Person,false,Person);
+    RlColKey(-215,-215,"Відділ",Department,false,Department);
+    RlColKey(-125,-125,"Продавець",SalesMan,false,SalesMan);
+    RlColKey(-50,-50,"Рах. банку",BankAccount,false,BankAccount);
+    SearchField("Пошук");
+    CommunicateButton;
+    BrowseSubsetButton(-40,-15);
+    SpecialMenu("Статус клієнта",'e',0,"CUStatusCULsm");
+    SpecialMenu("Статус постачальника",'u',2,"VEStatusLsm");
+    SpecialMenu("Змінити пароль",' ',1,"ChangePasswdCULsm");
+    SpecialMenu("Пошук",'F',3,"CUSearchLsm");
+    SpecialMenu("Створити діяльність",'c',4,"NewActCULsm");
+  EndWindow;
+  
+   return;
+end;

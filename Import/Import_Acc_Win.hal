@@ -1,0 +1,42 @@
+event DefineWindows
+begin
+	Real h,h1,h2,h3,h4,h5,h6,h7,hs,hm,v,v3,l,vs,vm,f,t,x,v2;
+	string 60 label;
+	//record RcVc RepSpec1;
+	SetLangMode(LangUkrainian,"UKR",0);
+	
+  
+  //AppUseWindow(ImportAccInIClass);
+  WindowBegin("Accaunts Import",ImportAccIClass,CGIcW,RcType);
+  SetWRect(80,80,300,550);
+      
+    //EditField(140,110,20,"",Normal,f1,false,0);
+	CheckBox(10,25,0,"Read First String",flags[0]);
+    EditField(110,55,20,"Account",Normal,flags[1],false,0);
+    EditField(110,75,20,"Name",Normal,flags[2],false,0);
+    EditField(110,95,20,"AccountType",Normal,flags[3],false,0);
+    EditField(110,115,20,"Debit",Normal,flags[4],false,0);
+    EditField(110,135,20,"Credit",Normal,flags[5],false,0);
+    EditField(110,155,20,"Autotrans",Normal,flags[6],false,0);
+    EditField(110,175,20,"Closed",Normal,flags[7],false,0);
+    EditField(110,195,20,"Vat Code",Normal,flags[8],false,0);
+    EditField(110,215,20,"0",Normal,flags[9],false,0);
+    EditField(110,235,20,"Currency",Normal,flags[10],false,0);
+    EditField(110,255,20,"Consolidation A/C",Normal,flags[11],false,0);
+    EditField(110,275,20,"Reduce Minorities",Normal,flags[12],false,0);
+    EditField(110,295,20,"<TAB>",Normal,flags[13],false,0);
+    EditField(110,315,20,"SRU Code",Normal,flags[14],false,0);
+    EditField(110,335,20,"0",Normal,flags[15],false,0);
+    EditField(110,355,20,"Accrual",Normal,flags[16],false,0);
+    EditField(110,375,20,"Group Account",Normal,flags[17],false,0);
+    EditField(110,395,20,"Aut. Autotrans.",Normal,flags[18],false,0);
+StaticText(220,435,"Language - 19 position (no change)",true);
+StaticText(220,455,"Text - 20 position (no change)",true);
+
+   
+   
+
+  EndWindow;
+  
+  return;
+  end;

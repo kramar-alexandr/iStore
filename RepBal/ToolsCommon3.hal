@@ -1,0 +1,51 @@
+procedure SkipSpace(string aost,var Integer np)
+BEGIN
+  while ((np<=len(aost)) and (Mid(aost,np,1)==" ")) begin
+    np = np + 1;
+  end;  
+  RETURN;
+END;
+
+global
+function Boolean GetNextTokenReturn(string aost,var Integer np,var string anitem)
+BEGIN
+  string 1 nc;
+  string 255 ost;
+  string 255 nitem;
+  Integer i;
+  Boolean res,TrHs;
+
+  ost = aost;
+  nitem = anitem;
+  nitem = "";
+  SkipSpace(ost,np);
+  TrHs = true;
+  while (TrHs) begin
+    if (np>len(ost)) then begin TrHs = false; end;
+    nc = Mid(ost,np,1);//  nc = ost[*np];
+    if ((nc==" ") or (nc==";") or (nc==":") or (nc==",") or (nc=="-") or (nc=="+") or (nc==".")) then begin // Edit ************************** Wednesday, 27 April 2011 10:22:43 (nc==".")
+      TrHs = false;
+    end;
+    if (TrHs) then begin
+      nitem = nitem & nc;
+      np = np + 1;
+    end;
+  end;
+  anitem = nitem;
+  if (blank(nitem)) then begin
+    res = false;
+  end else begin
+    res = true;  
+  end; 
+  GetNextTokenReturn = res;   
+  RETURN;
+END;
+
+global
+procedure GetNextToken(string aost,var Integer np,var string anitem)
+BEGIN
+  Boolean testf;
+    testf = GetNextTokenReturn(aost,np,anitem);
+  RETURN;
+END;
+

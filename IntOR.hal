@@ -1,0 +1,85 @@
+event DefineWindows
+begin
+  real x,h,h1,h2,h3,h4,h5,h6,h7,v,v2,l,vs,vm,f,t;
+
+    
+	SetLangMode(LangUkrainian,"UKR",0);	 
+	
+ WindowBegin("Внутрішнє замовлення",IntORDClass,CGview,-);
+  SetWRect(20,80,615,350);
+  Sizeable(-1,-1,0,0);
+  UseView(IntORVc);
+  FormName(IntORForm);
+  ActiveFieldOnNew("OurUser");      
+  h = 100; h2 = 300; h3 = 450; vs = 20;
+  Tile(0,50+24,false,"",OurUser);
+  EditField(h,vm=(v=6),82,"Номер",Normal,SerNr,false,TSerSClass);
+  EditField(h,v+=20,55,"Співробітник",ViewOnly,OurUser,false,UserSClass);
+  EnterSkip(PlanShip);
+  EditField(h2,v=vm,82,"Дата",Normal,TransDate,false,PasteCurDate);
+  CheckBox(h3,v,0,"Закрито",Closed);
+  EditField(h2,v+=vs,200,"Ім'я",Normal,Name,false,0);
+  TileButton(1,"Склад");
+  TileButton(2,"Товар");
+  TileButton(3,"Адреса відвантаження");
+  TileButton(4,"Коментар");
+  Tile(1,70,false,"1",PlanShip);
+  EditField(h,v=6,80,"Заплановано відвантаження",Normal,PlanShip,false,PasteCurDate);
+  EditField(h2,v,80,"Посилання",Normal,Reference,false,0);
+  EditField(h,v+=vs,80,"Склад",Normal,Location,false,LocationSClass);
+  EditField(h2,v,80,"Вид",Normal,IntORClass,false,IntORClassSClass);
+  EditField(h,v+=vs,80,"Відділ",Normal,Department,false,DepSClass);
+  //  EditField(h,v+=vs,280,"Затверджено",ViewOnly,OKPersons,false,UserSClass);// funcionality removed, no operations menu 
+  EnterSkip(Math2);
+  Tile(2,120,true,"2",Math2);
+  //EditField(-144,-21,90,"Разом",ViewOnly,Total,true,0);
+  v = 24;
+  MatrixBegin(3,v,-50,-27,-,199);
+  MatOverStrike(ovst);
+  Flip(0);
+  MatCol(1,24,"Товар",0,ArtCode,false,INSClass);
+  MatCol(1,94,"Кіл-ть",0,Quant,true,MATVARINSClass);
+  MatCol(1,144,"Прийн.",0,Shipd1,false,0);
+  MatCol(1,194,"Відв.",0,Shipd2,false,0);
+  EnterSkip(ArtCode);
+  Flip(1);
+  MatCol(1,244,"Опис",0,Spec,false,0);
+  //MatCol(1,-180,"Собівартість",0,Price,true,0);
+  //MatCol(1,-90,"Разом вар-ть",0,Sum,true,0);
+  Flip(2);
+  MatCol(1,244,"Відпр.",0,Sent,false,0);
+  MatCol(1,294,"Зам. пост.",0,POOrd,false,0);
+  MatCol(1,344,"Опис",0,Spec,false,0);
+  //MatCol(1,-230,"Рах. варт.",0,CostAcc,false,AccSClass);
+  MatCol(1,-170," Об'єкти",0,Objects,false,ObjSClass);
+  MatCol(1,-70,"Структура",0,Recepy,false,RecSClass);
+  DeleteRowTest;
+  EndMatrix;
+  vs = 20;
+  v = 18; VTab(-35,v,-16,v+vs,ToolFlip,1,"A");
+  v=v+vs;  VTab(-35,v,-16,v+vs,ToolFlip,2,"B");
+  Tile(3,170,false,"3",ShipDeal);
+  EditField(h,v=6,60,"Умова відвантаження",Normal,ShipDeal,false,ShipDealSClass);
+  EditField(h2,v,60,"Спосіб відвантаження",Normal,ShipMode,false,DMSClass);
+  EditField(h3,v,60,"Мова",Normal,LangCode,false,LangSClass);
+  EditField(h,v+=vs,-20,"Відвантаження",Normal,ShipAddr0,false,0);
+  EditField(h,v+=vs,-20,"на адресу",Normal,ShipAddr1,false,0);
+  EditField(h,v+=vs,-20,"",Normal,ShipAddr2,false,0);
+  EditField(h,v+=vs,-20,"",Normal,ShipAddr3,false,0);
+  EditField(h,v+=vs,-20,"",Normal,DelAddr3,false,0);
+  EditField(h,v+=vs,-20,"",Normal,DelAddr4,false,0);
+  EditField(h,v+=vs,200,"Телефон",Normal,Phone,false,0);
+  EditField(h3,v,-20,"Факс",Normal,Fax,false,0);
+  Tile(4,117,false,"4",Math); vs = 20;
+  StaticText(h-6,v=20,"Коментар",true);
+  TextField(h,v-5,-10,-10,Math,0);
+  SpecialMenu("Переміщення товарів",' ',0,"StockMovFromIntORDsm");
+  SpecialMenu("Списання зі складу",' ',1,"SDFromIntORDsm");
+  SpecialMenu("Створити замовл. постач.",' ',2,"POFromIntORDsm");
+//  SpecialMenu("Authorise",' ',3,"AuthorizeIntORDsm");changed to below
+  SpecialMenu("Статус внутр. замовл.",'r',5,"IntORStatIntORDsm");
+  SpecialMenu("Пошук товару",'f',1,"ItemSearchDsm");
+  EndWindow;
+  
+   return;
+end;

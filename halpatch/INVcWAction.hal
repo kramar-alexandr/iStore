@@ -1,0 +1,91 @@
+global
+procedure INStatusINDsm()
+BEGIN
+  record INVc INr;
+  record RcVc RepSpec;
+  Integer wn;
+  
+  if(UserCanAction("ViewCostPrice",true))then begin
+    wn = CurWindow;
+    GetWindowRecord(wn,INr);
+    RepSpec.Media = mtScreen;
+    RepSpec.f1 = INr.Code;
+    RepSpec.repname = "INInfoRn";
+    RunReport(RepSpec,0);
+  end;
+  RETURN;
+END;
+
+global
+procedure INStatusINLsm()
+BEGIN
+  record INVc INr;
+  record RcVc RepSpec;
+  Integer wn,i;
+  
+  if(UserCanAction("ViewCostPrice",true))then begin
+    wn = CurWindow;
+    i = 1;
+    while (GetRecordFromBrowse(INr,wn,i)) begin
+      if (i==1) then begin
+        RepSpec.f1 = INr.Code;
+      end;
+      i = i + 1;
+    end;  
+    if (nonblank(RepSpec.f1)) then begin
+      RepSpec.f1 = RepSpec.f1 & ":";
+    end;
+    RepSpec.f1 = RepSpec.f1 & INr.Code;  
+    RepSpec.Media = mtScreen;
+    RepSpec.repname = "INInfoRn";
+    RunReport(RepSpec,0);
+  end;
+  RETURN;
+END;
+
+global
+procedure INStatusINSsm()
+BEGIN
+  record INVc INr;
+  record RcVc RepSpec;
+  Integer wn,i;
+
+  if(UserCanAction("ViewCostPrice",true))then begin
+    wn = CurWindow;
+    i = 1;
+    while (GetRecordFromBrowse(INr,wn,i)) begin
+      if (i==1) then begin
+        RepSpec.f1 = INr.Code;
+      end;
+      i = i + 1;
+    end;  
+    if (nonblank(RepSpec.f1)) then begin
+      RepSpec.f1 = RepSpec.f1 & ":";
+    end;
+    RepSpec.f1 = RepSpec.f1 & INr.Code;  
+    RepSpec.Media = mtScreen;
+    RepSpec.repname = "INInfoRn";
+    RunReport(RepSpec,0);
+  end;
+  RETURN;
+END;
+
+/*global
+function Boolean INDClassActiveEditField(Integer wn,string fieldname,Integer fn,Integer wnst,Integer rownr,Integer changed)
+begin
+  Boolean res;
+  
+  res = inner.INDClassActiveEditField(wn,fieldname,fn,wnst,rownr,changed);
+  
+  if(currentuser == "MELNIK")then begin
+    switch (fieldname) begin
+      case "Name": res = true;
+      case "UPrice1": res = true;
+      otherwise res = false;
+    end;
+  end;
+  
+  
+  INDClassActiveEditField = res;
+  return;
+end;*/

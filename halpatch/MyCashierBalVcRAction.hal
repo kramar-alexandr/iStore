@@ -1,0 +1,21 @@
+external procedure GetFullCurncyRate (var string,Date,var val,var val,var val,var val,var val);
+remote procedure MyConvertCurBal(var record CashVc);
+
+global
+function LongInt CashierBalVcRecordSaveClient(var record CashierBalVc CashierBalr,record CashierBalVc CashierBal2r,LongInt long3,LongInt long4)
+begin
+MyConvertCurBal(CashierBalr);
+
+
+  return;
+end;
+
+global
+function LongInt CashierBalVcRecordUpdateClient(var record CashierBalVc CashierBalr,record CashierBalVc CashierBal2r,LongInt long3,LongInt long4)
+begin
+MyConvertCurBal(CashierBalr);
+
+
+  return;
+end;
+

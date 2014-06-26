@@ -1,0 +1,1199 @@
+external procedure APRn(record RcVc);
+external procedure ARRn(record RcVc);
+external procedure MyPOQCRn(record RcVc);
+
+SetLangMode(LangUkrainian,"UKR",0);
+
+global procedure OstatkiSPraysomRn(record RcVc RepSpec)
+begin
+  record ItemStatusVc ISr;
+  record PLVc PLr;
+  string 50 location,pricecode;
+  record PLDefVc PLDr;
+  boolean TrHs;
+  integer i;
+  
+  location = RepSpec.f1;
+  pricecode = RepSpec.f2;
+  
+  startreportnoheaderjob("Stock");
+  
+  if(nonblank(location) and nonblank(pricecode))then begin
+    PLDr.Code = pricecode;
+    if(readfirstmain(PLDr,1,true))then begin
+      ISr.Location = location;
+      TrHs = true;
+      while(loopkey("Location",ISr,1,TrHs))begin
+        if(ISr.Location!=location)then begin TrHs = false; end;
+        if(TrHs and ISr.Instock>0)then begin
+          PLr.ArtCode = ISr.Code;
+          PLr.PLCode = PLDr.Code;
+          if(readfirstmain(PLr,2,true))then begin
+            for(i=0;i<ISr.Instock;i=i+1)begin
+              startformat(15);
+                OutString(0,0,ISr.Code,false);
+                OutString(200,0,PLr.ExVatPrice,false);
+              endformat;
+            end;
+          end else begin
+            for(i=0;i<ISr.Instock;i=i+1)begin
+              startformat(15);
+                OutString(0,0,ISr.Code,false);
+                OutString(200,0,0,false);
+              endformat;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+
+  endjob;
+  
+return;
+end;
+
+
+global procedure OstatkiPoPostavchikamRn(record RcVc RepSpec)
+begin
+  record ItemStatusVc ISr;
+  record ItemHistVc IHr;
+  record INVc INr;
+  record ICSVc ICSr;
+  record SerBalVc SBr;
+  record PLVc PLr;
+  string 50 location,pricecode;
+  string 20 artcode;
+  record PLDefVc PLDr;
+  Record PUVc PUr;
+  boolean TrHs,testf,pfounf;
+  integer i,mtrw,k;
+  record ORVc ORr;
+  row ORVc ORrw;
+  val price,cost;
+  
+  startreportnoheaderjob("Stock");
+  startformat(15);
+    OutString(0,0,"ArtCode",false);
+    OutString(0,0,"Name",false);
+    OutString(0,0,"Quant",false);
+    OutString(0,0,"Location",false);
+    OutString(0,0,"Vendor",false);
+    OutString(0,0,"Item Group",false);
+    OutString(0,0,"Price",false);
+    if(currentuser=="ANNA"  or currentuser=="SA")then begin
+      OutString(0,0,"Cost",false);
+    end;
+  endformat;
+  INr.Code = "";
+  TrHs = true;
+  
+  pfounf = false;
+  if(nonblank(RepSpec.f5))then begin
+    PLDr.Code=RepSpec.f5;
+    if(readfirstmain(PLDr,1,true))then begin
+      pfounf = true;
+    end;
+  end;
+  
+  
+  While(loopmain(INr,1,TrHs))begin
+    price = blankval;
+    if(pfounf)then begin
+      PLr.PLCode = PLDr.Code;
+      PLr.ArtCode = INr.Code;
+      if(readfirstmain(PLr,2,true))then begin
+        if(PLr.PLCode==PLDr.Code and PLr.ArtCode==INr.Code)then begin
+          price = PLr.ExVatPrice;
+        end;
+      end;
+    end;
+    
+    ISr.Code = INr.Code;
+    ISr.Location = ";;;";
+    if(readfirstmain(ISr,2,true))then begin
+      if(ISr.Instock!=0)then begin
+        artcode = ISr.Code;
+        while(loopmain(ISr,1,ISr.Code==artcode))begin
+          if(ISr.Code==artcode and ISr.Instock!=0 and ISr.Location!=";;;")then begin
+            SBr.Item = ISr.Code;
+            SBr.Location = ISr.Location;
+            i=0;
+            RecordNew(ORr);
+            while(loopmain(SBr,2,(SBr.Item==ISr.Code and SBr.Location==ISr.Location)))begin     
+              if(SBr.Item==ISr.Code and SBr.Location==ISr.Location and SBr.Quant!=0)then begin
+                IHr.ArtCode = SBr.Item;
+                IHr.SerialNr = SBr.Serial;
+                IHr.FileName = "PUVc";
+                if(Readfirstkey("ArtCodeSerialNr",IHr,3,true))then begin
+                  PUr.SerNr = IHr.TransNr;
+                  if(readfirstmain(PUr,1,true))begin end;
+                end;
+                mtrw = matrowcnt(ORr);
+                if(mtrw==0)then begin
+                  ORrw.ArtCode = SBr.Item;
+                  ORrw.Location = SBr.Location;
+                  ORrw.Spec = PUr.VECode;
+                  ORrw.Quant = SBr.Quant;
+                  cost = SBr.CostPrice;
+                  matrowinsert(ORr,mtrw,ORrw);
+                  goto LG01;
+                end;
+                testf = true;
+                for(i=0;i<mtrw;i=i+1)begin
+                  Matrowget(ORr,i,ORrw);
+                  if(ORrw.Spec==PUr.VECode)then begin
+                    ORrw.Quant = ORrw.Quant+SBr.Quant;
+                    cost = cost + SBr.CostPrice;
+                    Matrowput(ORr,i,ORrw);
+                    testf = false;
+                  end;
+                end;
+                if(testf)then begin
+                  ORrw.ArtCode = SBr.Item;
+                  ORrw.Location = SBr.Location;
+                  ORrw.Spec = PUr.VECode;
+                  ORrw.Quant = SBr.Quant;
+                  matrowinsert(ORr,mtrw,ORrw);
+                end;
+LG01:;
+              end;
+            end;
+            resetloop(SBr);
+            mtrw = matrowcnt(ORr);
+            for(i=0;i<mtrw;i=i+1)begin
+              Matrowget(ORr,i,ORrw);
+              startformat(15);
+                OutString(0,0,ORrw.ArtCode,false);
+                OutString(0,0,INr.Name,false);
+                OutString(0,0,ORrw.Quant,false);
+                OutString(0,0,ORrw.Location,false);
+                OutString(0,0,ORrw.Spec,false);
+                OutString(0,0,INr.Group,false);
+                OutString(0,0,price,false);
+                if(currentuser=="ANNA" or currentuser=="SA")then begin
+                OutString(0,0,cost/ORrw.Quant,false);
+                end;
+              endformat;
+            end;
+          end;
+        end;
+        Resetloop(ISr);
+      end;
+    end;
+  end;
+  endjob;
+return;
+end;
+
+global updating procedure OstatkiPoPostavchikamEn()
+begin
+integer compno;
+record RcVc RepSpec;
+string 50 filename;
+      compno = CurrentCompany;
+      switch (compno) begin
+      case 1: filename = "Stock/VendorStock_iStore.txt";
+              CreateFile(filename);
+              closefile;
+              millisleep(100);
+              openexportfile(filename,true);
+              OstatkiPoPostavchikamRn(RepSpec);
+              closefile;
+              RunProgram("Stock/VendorStock_iStore.sh", "");
+      end;
+return;
+end;
+
+global procedure SVOStockMyNewRn(record RcVc RepSpec)
+begin
+  record SVOVc SVOr;
+  row SVOVc SVOrw;
+  integer i,mtrw;
+  string 50 tstr;
+  
+  startreportnoheaderjob("Stock");
+  
+  
+  SVOr.SerNr = 0;
+  while(loopmain(SVOr,1,true))begin
+    if(SVOr.DoneMark==0)then begin
+      mtrw = matrowcnt(SVOr);
+      if(mtrw>0)then begin
+        for(i=0;i<mtrw;i=i+1)begin
+          matrowget(SVOr,i,SVOrw);
+          if(nonblank(SVOrw.ArtCode) or nonblank(SVOrw.Spec) or nonblank(SVOrw.SerialNr))then begin
+            startformat(15);
+              OutString(0,0,SVOr.TransDate,false);
+              OutString(0,0,SVOr.SerNr,false);
+              OutString(0,0,SVOr.CustCode,false);
+              OutString(0,0,SVOr.Vlastnik,false);
+              OutString(0,0,SVOr.CustomField7,false);
+              OutString(0,0,SVOr.CustomField7,false);
+              OutString(0,0,SVOrw.ArtCode,false);
+              OutString(0,0,SVOrw.Quant,false);
+              OutString(0,0,SVOrw.SerialNr,false);
+              OutString(0,0,SVOrw.Spec,false);
+              switch (SVOrw.ItemType) begin
+                case 0: tstr = "-";
+                case 1: tstr = USetStr(8154);
+                case 2: tstr = USetStr(8155);
+                case 3: tstr = USetStr(8156);
+                case 4: tstr = USetStr(31003);
+              end;  
+              OutString(15,0,tstr,false);
+            endformat;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+  endjob;
+return;
+end;
+
+global updating procedure SVOStockMyNewEn()
+begin
+integer compno;
+record RcVc RepSpec;
+string 50 filename;
+      compno = CurrentCompany;
+      filename = "Stock/AServiceServiceOrders.xls";
+      CreateFile(filename);
+      closefile;
+      millisleep(100);
+      openexportfile(filename,true);
+      SVOStockMyNewRn(RepSpec);
+      closefile;
+      RunProgram("Stock/AServiceServiceOrders.sh", "");
+return;
+end;
+
+
+global updating procedure AutoUnreservOrderMn()
+begin
+  record ORVc ORr,oldORr;
+  row ORVc ORrw;
+  boolean TrHs,testf;
+  integer compnr,counter,i,mtrw;
+  
+  
+  compnr = currentcompany;
+  TrHs = true;
+  ORr.Reserved = 1;
+  
+  switch(compnr)begin
+  		case  6:  CreateFile("Stock/AutoreservTXT.xls");
+              closefile;
+              millisleep(100);
+              openexportfile("Stock/AutoreservTXT.xls",true);
+              
+    case  7:  CreateFile("Stock/AutoreservTNM.xls");
+              closefile;
+              millisleep(100);
+              openexportfile("Stock/AutoreservTNM.xls",true);
+  end;
+  
+  startformat(15);
+    outString(0,0,"Рахунок",false);
+    outString(0,0,"Дата раунка",false);
+    outString(0,0,"Дата резерва",false);
+    outString(0,0,"Код клієнта",false);
+    outString(0,0,"Назва клієнта",false);
+    outString(0,0,"Продавець",false);
+  endformat;
+  counter = 0;
+  while(loopkey("Reserved",ORr,1,TrHs))begin
+    testf = true;
+    if(ORr.Reserved!=1)then begin TrHs=false; testf = false; end;
+  
+    if(stringtodate(ORr.PlanShip)>=CurrentDate)then begin testf = false; end;
+    if(blank(ORr.PlanShip))then begin testf = false; end;
+    if(ORr.Closed>0)then begin testf = false; end;
+    
+    if(testf)then begin
+      testf = false;
+      mtrw = matrowcnt(ORr);
+      for(i=0;i<mtrw;i=i+1)begin
+        matrowget(ORr,i,ORrw);
+        if(ORrw.Quant-ORrw.Invd>0)then begin
+          testf = true;
+        end;
+      end;
+    end;
+    
+    if(testf)then begin
+      recordCopy(oldORr,ORr);
+      ORr.Reserved=0;
+      if (RecordUpdate(oldORr,ORr,true)==0) then begin  
+        counter = counter + 1;
+        startformat(15);
+          outString(0,0,ORr.SerNr,false);
+          outString(0,0,ORr.OrdDate,false);
+          outString(0,0,ORr.PlanShip,false);
+          outString(0,0,ORr.CustCode,false);
+          outString(0,0,ORr.Addr0,false);
+          outString(0,0,ORr.SalesMan,false);
+        endformat;
+      end;
+    end;
+  end;
+  
+  switch(compnr)begin
+  			case 6:   CloseFile;
+      case 7:   CloseFile;
+  end;
+  
+  if(counter>0)then begin
+    switch(compnr)begin
+    		case 6:   RunProgram("Stock/AutoreservTXT.sh", "");
+      case 7:   RunProgram("Stock/AutoreservTNM.sh", "");
+    end;
+  end;
+  
+return;
+end;
+
+
+global procedure WSVcOKReportRn(record RcVc RepSpec)
+begin
+record WSVc WSr;
+boolean TrHs,testf;
+
+  startreportnoheaderjob("OKed work table");
+  
+  startformat(15);
+      OutString(0,0,"Дата",false);
+      OutString(60,0,"№ Замов.",false);
+      OutString(110,0,"№ Табл.",false);
+      OutString(140,0,"Клиент",false);
+      OutString(200,0,"Наимен.",false);
+      OutString(330,0,"Сотр.",false);
+      OutString(1,0,"ФИО",true);
+    endformat;
+  
+  if(blank(RepSpec.d1))then begin 
+    RepSpec.d1 = currentdate;
+  end;
+  
+  WSr.TransDate = RepSpec.d1;
+  TrHs = true;
+  while(loopbackkey("TransDate",WSr,1,TrHs))begin
+    testf = true;
+    if(WSr.TransDate<RepSpec.d1)then begin TrHs = false; testf = false; end;
+    if(WSr.OKFlag!=1)then begin testf = false; end;
+    if(testf)then begin
+      
+      startformat(15);
+        OutString(0,0,WSr.TransDate,false);
+        OutString(60,"DblSVOVc",WSr.SVONr,false);
+        OutString(110,"DblWSVc",WSr.SerNr,false);
+        OutString(140,"DblCUVc",WSr.CustCode,false);
+        OutString(200,0,WSr.Addr0,false);
+        OutString(330,0,WSr.EMCode,false);
+        OutString(1,0,WSr.EMName,true);
+      endformat;
+      Gray_Divider(0,1);
+    end;
+  end;
+  
+  endjob;
+
+return;
+end;
+
+
+
+global procedure WSVcOKReportEn()
+begin
+record RcVc RepSpec;
+string 50 filename;
+      filename = "Stock/AServiceWorkTable.xls";
+      CreateFile(filename);
+      closefile;
+      millisleep(100);
+      openexportfile(filename,true);
+      RepSpec.d1 = addday(currentdate,-1);
+      WSVcOKReportRn(RepSpec);
+      closefile;
+      RunProgram("Stock/AServiceWorkTable.sh", "");
+return;
+end;
+
+
+global procedure POSClientRn(record RcVc RepSpec)
+begin
+  record CUVc CUr;
+  boolean testf,TrHs,cut;
+  record IVCashVc IVCashr;
+  record IVVc IVr;
+  date ivcashdate,findate;
+  string 100 salesman,location;
+  record UserVc USr;
+  
+  startreportnoheaderjob("Карточки клиентов");
+  
+  USr.Code = currentuser;
+  readfirstmain(USr,1,true);
+  cut = true;
+  if(USr.SalesGroup=="POS")then begin
+  		cut = false;
+  end;
+  startformat(15);
+      OutString(0,0,"ФІО",false);
+      OutString(60,0,"№ Карт.",false);
+      if(cut)then begin
+				OutString(110,0,"Телефон",false);
+				OutString(140,0,"e-mail",false);
+				OutString(200,0,"Дата народж.",false);
+				OutString(330,0,"Місто",false);
+				OutString(1,0,"Семінари",true);
+				OutString(1,0,"Діти",true);
+				OutString(1,0,"Професія",true);
+				OutString(1,0,"Наявні товари",true);
+				OutString(1,0,"Перший продаж",true);
+				OutString(1,0,"Магазин",true);
+				OutString(1,0,"Продавець",true);
+      end;
+    endformat;
+    
+  TrHs = true;
+  CUr.CustCat = "POS";
+  
+  while(loopkey("Group",CUr,1,TrHs))begin
+    testf = true;
+    if(CUr.CustCat!="POS")then begin testf = false; TrHs = false; end;
+    if(blank(CUr.Name))then begin testf = false; end;
+    
+    if(testf)then begin
+      
+      IVCashr.CustCode = CUr.Code;
+        findate = "";
+        salesman = "";
+        location = "";
+      
+      if(readfirstkey("CustCode",IVcashr,1,true))then begin
+        findate = IVcashr.TransDate;
+        salesman = IVcashr.SalesMan;
+        location = IVcashr.Location;
+        //Messagebox(0,findate);
+      end;
+      resetloop(IVcashr);
+      IVr.CustCode = CUr.Name;
+      if(readfirstkey("CustCode",IVr,1,true))then begin
+        if(nonblank(findate))then begin
+          if(findate>IVr.TransDate)then begin
+            findate = IVr.TransDate;
+            salesman = IVr.SalesMan;
+            location = IVr.Location;
+          end;
+        end else begin
+          findate = IVr.TransDate;
+          salesman = IVr.SalesMan;
+          location = IVr.Location;
+        end;
+      end;
+      resetloop(IVr);
+      
+      StartFormat(15);
+				OutString(0,0,CUr.Name,false);
+				OutString(60,0,CUr.Code,false);
+				if(cut)then begin
+					OutString(110,0,CUr.Phone,false);
+					OutString(140,0,CUr.eMail,false);
+					OutString(200,0,CUr.BirthDate,false);
+					OutString(330,0,CUr.InvAddr1,false);
+					if(CUr.Smoking==1)then begin
+						OutString(1,0,"Так",true);//seminar
+					end else begin
+						OutString(1,0,"Ні",true);//seminar
+					end;
+					if(CUr.Blacklist==1)then begin
+						OutString(1,0,"Так",true);//seminar
+					end else begin
+						OutString(1,0,"Ні",true);//seminar
+					end;
+					OutString(1,0,CUr.Profesion,true);
+					OutString(1,0,CUr.Comment,true);
+					OutString(1,0,findate,true);
+					OutString(1,0,location,true);
+					OutString(1,0,salesman,true);
+				end;
+      endformat;
+    end;
+    
+  end;
+    
+  endjob;
+  
+  
+
+return;
+end;
+
+
+global procedure CustSalesReportRn(record RcVc RepSpec)
+begin
+  record IVVc IVr;
+  row IVVc IVrw;
+  record INVc INr;
+  boolean testf,TrHs;
+  string 20 mykey;
+  integer mtrw,i;
+  
+  startreportnoheaderjob("Історія продажів по клієнту");
+  
+    startformat(15);
+      OutString(0,0,"Клієнт",false);
+      OutString(60,0,"Дата",false);
+      OutString(60,0,"Накладна",false);
+      OutString(60,0,"Рахунок",false);
+      OutString(120,0,"Товар",false);
+      OutString(200,0,"Найменування",false);
+      OutString(330,0,"Ціна",false);
+      OutString(370,0,"Кіл-ть",false);
+      OutString(405,0,"Знижка",false);
+      OutString(460,0,"Сума",true);
+      OutString(1,0,"Група",true);
+    endformat;
+      
+    TrHs = true;
+    IVr.CustCode = RepSpec.f1;
+    IVr.InvDate = RepSpec.sStartDate;
+    if(nonblank(RepSpec.f1))then begin
+      mykey = "CustCode";
+    end else begin
+      mykey = "InvDate";
+    end;
+    
+    while(loopkey(mykey,IVr,1,TrHs))begin
+      testf = true;
+      if(nonblank(RepSpec.f1) and RepSpec.f1!=IVr.CustCode)then begin 
+        testf = false; 
+        if(mykey=="CustCode")then begin
+          TrHs = false;
+        end;
+      end;
+      
+      if(RepSpec.sStartDate>IVr.InvDate and RepSpec.sEndDate<IVr.InvDate)then begin 
+        testf = false; 
+        if(mykey=="InvDate")then begin
+          TrHs = false;
+        end;
+      end;
+      
+      if(testf)then begin
+        mtrw = matrowcnt(IVr);
+
+        for(i=0;i<mtrw;i=i+1)begin
+          matrowget(IVr,i,IVrw);
+          if(nonblank(IVrw.ArtCode))then begin
+            if(IVrw.ArtCode==RepSpec.f2 or blank(RepSpec.f2))then begin
+              startformat(15);
+                OutString(0,0,IVr.CustCode,false);
+                OutString(60,0,IVr.InvDate,false);
+                OutString(60,"DblIVVc",IVr.SerNr,false);
+                OutString(60,"DblORVc",IVr.OrderNr,false);
+                OutString(120,0,IVrw.ArtCode,false);
+                OutString(200,0,IVrw.Spec,false);
+                OutString(310,0,IVrw.Price,false);
+                OutString(370,0,IVrw.Quant,false);
+                OutString(405,0,IVrw.vRebate,false);
+                OutString(460,0,IVrw.Sum,false);
+                INr.Code = IVrw.ArtCode;
+                if(Readfirstmain(INr,1,true)) then
+                begin
+                	OutString(1,0,INr.Group,false);
+				end;
+              endformat;
+            end;
+          end;
+        end;
+      end;
+      
+      
+    end;
+    
+  endjob;
+  
+  
+
+return;
+end;
+
+global procedure KreditorkaReportEn(integer compnr)
+begin
+record RcVc RepSpec;
+string 50 filename;
+      
+      if(GetDateID(currentdate)==1)then begin
+        switch(compnr)begin
+          case 1: filename = "Stock/ISTORCreditorka.xls";
+          case 2: filename = "Stock/ITEKUACreditorka.xls";
+          case 3: filename = "Stock/WDCreditorka.xls";
+          case 4: filename = "Stock/PPhLCreditorka.xls";//PPHl
+          case 5: filename = "Stock/TXTCreditorka.xls";
+          //case 6: filename = "Stock/ITEKMDCreditorka.xls";
+          case 7: filename = "Stock/TNMCreditorka.xls";
+          case 8: filename = "Stock/A-SRVCreditorka.xls";
+        end;
+        
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        ReportDefaults(RepSpec,"APRClass");
+        RepSpec.ArtMode = 1;
+        RepSpec.flags[2] = 1;
+        RepSpec.flags[13] = 1;
+        RepSpec.Media = 20;
+        
+        RepSpec.flags[29] = 1;// Edit ************************** Friday, 25 May 2012 12:58:08
+        
+        APRn(RepSpec);
+        closefile;
+        
+        switch(compnr)begin
+          case 1: RunProgram("Stock/ISTORCreditorka.sh","");
+          case 2: RunProgram("Stock/ITEKUACreditorka.sh","");
+          case 3: RunProgram("Stock/WDCreditorka.sh","");
+          case 4: RunProgram("Stock/PPhLCreditorka.sh","");//PPHl
+          case 5: RunProgram("Stock/TXTCreditorka.sh","");
+          //case 6: RunProgram("Stock/ITEKMDCreditorka.sh","");
+          case 7: RunProgram("Stock/TNMCreditorka.sh","");
+          case 8: RunProgram("Stock/A-SRVCreditorka.sh","");
+        end;
+      end;
+return;
+end;
+
+global procedure DebitorkaReportEn(integer compnr)
+begin
+record RcVc RepSpec;
+string 50 filename;
+      
+      if(GetDateID(currentdate)==1 or GetDateID(currentdate)==3)then begin
+        switch(compnr)begin
+          case 1: filename = "Stock/ISTORDebitorka.xls";
+          case 2: filename = "Stock/ITEKUADebitorka.xls";
+          case 3: filename = "Stock/WDDebitorka.xls";
+          case 4: filename = "Stock/PPhLDebitorka.xls";//PPhL
+          case 5: filename = "Stock/TXTDebitorka.xls";
+          //case 6: filename = "Stock/ITEKMDDebitorka.xls";
+          case 7: filename = "Stock/TNMDebitorka.xls";
+          case 8: filename = "Stock/A-SRVDebitorka.xls";
+        end;
+        
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        ReportDefaults(RepSpec,"ARRClass");
+        RepSpec.ArtMode = 0;
+        RepSpec.flags[20] = 1;
+        RepSpec.Media = 20;
+        ARRn(RepSpec);
+        closefile;
+        
+        switch(compnr)begin
+          case 1: RunProgram("Stock/ISTORDebitorka.sh","");
+          case 2: RunProgram("Stock/ITEKUADebitorka.sh","");
+          case 3: RunProgram("Stock/WDDebitorka.sh","");
+          case 4: RunProgram("Stock/PPhLDebitorka.sh","");//PPhL
+          case 5: RunProgram("Stock/TXTDebitorka.sh","");
+          //case 6: RunProgram("Stock/ITEKMDDebitorka.sh","");
+          case 7: RunProgram("Stock/TNMDebitorka.sh","");
+          case 8: RunProgram("Stock/A-SRVDebitorka.sh","");
+        end;
+      end;
+return;
+end;
+
+
+global procedure KreditorkaWDEn()
+begin
+record RcVc RepSpec;
+string 50 filename;
+        
+        RepSpec.flags[29] = 1;
+
+        filename = "Stock/Credit_OFI.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        ReportDefaults(RepSpec,"APRClass");
+        RepSpec.flags[29] = 1;
+        RepSpec.ArtMode = 1;
+        RepSpec.flags[2] = 1;
+        RepSpec.flags[13] = 1;
+        RepSpec.Media = 20;
+        RepSpec.ObjStr = "OX";
+        APRn(RepSpec);
+        closefile;
+        RunProgram("Stock/Credit_OFI.sh","");
+        millisleep(50);
+        
+        filename = "Stock/Credit_ICC.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        ReportDefaults(RepSpec,"APRClass");
+        RepSpec.flags[29] = 1;
+        RepSpec.ArtMode = 1;
+        RepSpec.flags[2] = 1;
+        RepSpec.flags[13] = 1;
+        RepSpec.Media = 20;
+        RepSpec.ObjStr = "IM";
+        APRn(RepSpec);
+        closefile;
+        RunProgram("Stock/Credit_ICC.sh","");
+        millisleep(50);
+        
+        filename = "Stock/Credit_GT.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        ReportDefaults(RepSpec,"APRClass");
+        RepSpec.flags[29] = 1;
+        RepSpec.ArtMode = 1;
+        RepSpec.flags[2] = 1;
+        RepSpec.flags[13] = 1;
+        RepSpec.Media = 20;
+        RepSpec.ObjStr = "GT";
+        APRn(RepSpec);
+        closefile;
+        RunProgram("Stock/Credit_GT.sh","");
+        millisleep(50);
+        
+        filename = "Stock/Credit_GT_D.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        ReportDefaults(RepSpec,"APRClass");
+        RepSpec.flags[29] = 1;
+        RepSpec.ArtMode = 1;
+        RepSpec.flags[2] = 1;
+        RepSpec.flags[13] = 1;
+        RepSpec.Media = 20;
+        RepSpec.ObjStr = "GT_D";
+        APRn(RepSpec);
+        closefile;
+        RunProgram("Stock/Credit_GT_D.sh","");
+        millisleep(50);
+        
+        filename = "Stock/Credit_OIIPhoto.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        ReportDefaults(RepSpec,"APRClass");
+        RepSpec.flags[29] = 1;
+        RepSpec.ArtMode = 1;
+        RepSpec.flags[2] = 1;
+        RepSpec.flags[13] = 1;
+        RepSpec.Media = 20;
+        RepSpec.ObjStr = "OR";
+        APRn(RepSpec);
+        closefile;
+        RunProgram("Stock/Credit_OIIPhoto.sh","");
+        millisleep(50);
+        
+        filename = "Stock/Credit_OIITextile.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        ReportDefaults(RepSpec,"APRClass");
+        RepSpec.flags[29] = 1;
+        RepSpec.ArtMode = 1;
+        RepSpec.flags[2] = 1;
+        RepSpec.flags[13] = 1;
+        RepSpec.Media = 20;
+        RepSpec.ObjStr = "OR_TT";
+        APRn(RepSpec);
+        closefile;
+        RunProgram("Stock/Credit_OIITextile.sh","");
+        millisleep(50);
+        
+        filename = "Stock/Credit_WD.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        ReportDefaults(RepSpec,"APRClass");
+        RepSpec.flags[29] = 1;
+        RepSpec.ArtMode = 1;
+        RepSpec.flags[2] = 1;
+        RepSpec.flags[13] = 1;
+        RepSpec.Media = 20;
+        RepSpec.ObjStr = "IA";
+        APRn(RepSpec);
+        closefile;
+        RunProgram("Stock/Credit_WD.sh","");
+        millisleep(50);
+        
+        filename = "Stock/Credit_WD_SE.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        ReportDefaults(RepSpec,"APRClass");
+        RepSpec.flags[29] = 1;
+        RepSpec.ArtMode = 1;
+        RepSpec.flags[2] = 1;
+        RepSpec.flags[13] = 1;
+        RepSpec.Media = 20;
+        RepSpec.ObjStr = "SI";
+        APRn(RepSpec);
+        closefile;
+        RunProgram("Stock/Credit_WD_SE.sh","");
+        millisleep(50);
+        
+        filename = "Stock/Credit_WD_WD.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        ReportDefaults(RepSpec,"APRClass");
+        RepSpec.flags[29] = 1;
+        RepSpec.ArtMode = 1;
+        RepSpec.flags[2] = 1;
+        RepSpec.flags[13] = 1;
+        RepSpec.Media = 20;
+        RepSpec.ObjStr = "WD";
+        APRn(RepSpec);
+        closefile;
+        RunProgram("Stock/Credit_WD_WD.sh","");
+        millisleep(50);
+        
+        /*filename = "Stock/Credit_WD_iTek_MDL.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        ReportDefaults(RepSpec,"APRClass");
+        RepSpec.flags[29] = 1;
+        RepSpec.ArtMode = 1;
+        RepSpec.flags[2] = 1;
+        RepSpec.flags[13] = 1;
+        RepSpec.Media = 20;
+        RepSpec.ObjStr = "IT";
+        APRn(RepSpec);
+        closefile;
+        RunProgram("Stock/Credit_WD_iTek_MDL.sh","");
+        millisleep(50);*/
+        
+return;
+end;
+
+global procedure ProcessWDEn()
+begin
+record RcVc RepSpec;
+string 50 filename;
+      
+        RepSpec.sStartDate = "1/1/2009";
+        RepSpec.sEndDate = "31/12/2016";
+        
+        filename = "Stock/Process_OFI.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(200);
+        openexportfile(filename,true);
+        RepSpec.f3 = "OX";
+        MyPOQCRn(RepSpec);
+        closefile;
+	millisleep(100);
+        RunProgram("Stock/Process_OFI.sh","");
+        millisleep(100);
+        
+        filename = "Stock/Process_ICC.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        RepSpec.f3 = "IM";
+        MyPOQCRn(RepSpec);
+        closefile;
+	millisleep(100);
+        RunProgram("Stock/Process_ICC.sh","");
+        millisleep(100);
+        
+        filename = "Stock/Process_GT.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        RepSpec.f3 = "GT";
+        MyPOQCRn(RepSpec);
+        closefile;
+	millisleep(100);
+        RunProgram("Stock/Process_GT.sh","");
+        millisleep(100);
+        
+        filename = "Stock/Process_GT_D.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        RepSpec.f3 = "GT_D";
+        MyPOQCRn(RepSpec);
+        closefile;
+	millisleep(100);
+        RunProgram("Stock/Process_GT_D.sh","");
+        millisleep(100);
+        
+        filename = "Stock/Process_OIIPhoto.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        RepSpec.f3 = "OR";
+        MyPOQCRn(RepSpec);
+	millisleep(100);
+        closefile;
+        RunProgram("Stock/Process_OIIPhoto.sh","");
+        millisleep(100);
+        
+        filename = "Stock/Process_OIITextile.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        RepSpec.f3 = "OR_TT";
+        MyPOQCRn(RepSpec);
+        closefile;
+	millisleep(100);
+        RunProgram("Stock/Process_OIITextile.sh","");
+        millisleep(100);
+        
+        filename = "Stock/Process_WD.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        RepSpec.f3 = "IA";
+        MyPOQCRn(RepSpec);
+        closefile;
+	millisleep(100);
+        RunProgram("Stock/Process_WD.sh","");
+        millisleep(100);
+        
+        filename = "Stock/Process_WD_SE.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        RepSpec.f3 = "SI";
+        MyPOQCRn(RepSpec);
+        closefile;
+	millisleep(100);
+        RunProgram("Stock/Process_WD_SE.sh","");
+        millisleep(100);
+        
+        /*filename = "Stock/Process_WD_iTek_MDL.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        RepSpec.f3 = "IT";
+        MyPOQCRn(RepSpec);
+        closefile;
+	millisleep(100);
+        RunProgram("Stock/Process_WD_iTek_MDL.sh","");
+        millisleep(100);*/
+
+return;
+end;
+
+
+global procedure PUOrdersToPrepayRn(record RcVc RepSpec)
+begin
+record POVc POr;
+string 50 type,object;
+boolean TrHs,testf;
+record PDVc PDr;
+
+
+  type = RepSpec.ObjType;
+  object = RepSpec.ObjStr;
+  
+  TrHs = true;
+  
+  startreportnoheaderjob("Заплановані передплати по замовленням");
+  
+  startformat(15);
+    outstring(0,0,"№ Замовлення",false);
+    outstring(70,0,"Дата",false);
+    outstring(140,0,"Постачальник ",false);
+    outstring(220,0,"Найменування",false);
+    outstring(300,0,"Валюта",false);
+    outstring(350,0,"Сума",false);
+    outstring(400,0,"Посилання",false);
+    outstring(400,0,"Умови сплати",false);
+    outstring(1,0,"Коментар",true);
+  endformat;
+  POr.TransDate = RepSpec.sEndDate;
+  while(loopbackkey("TransDate",POr,1,TrHs))begin
+    testf = true;
+    if(POr.TransDate<RepSpec.sStartDate)then begin TrHs = false; testf = false; end;
+    if(POr.POClass!=type and nonblank(type))then begin testf = false; end;
+    if(POr.Objects!=object and nonblank(object))then begin testf = false; end;
+    
+    if(testf)then begin
+      startformat(15);
+        outstring(0,"DblPOVc",POr.SerNr,false);
+        outstring(70,0,POr.TransDate,false);
+        outstring(140,0,POr.VECode,false);
+        outstring(220,0,POr.Addr0,false);
+        outstring(300,0,POr.CurncyCode,false);
+        outstring(350,0,POr.Sum4,false);
+        outstring(400,0,POr.Reference,false);
+        
+        if(nonblank(POr.PayDeal))then begin
+          PDr.Code = POr.PayDeal;
+          readfirstmain(PDr,1,true);
+          outstring(400,0,PDr.pdComment,false);
+        end else begin
+           outstring(400,0,"",false);
+        end;
+        
+        outstring(1,0,POr.Comment,true);
+      endformat;
+    end;
+  end;
+  
+  endjob;
+return;
+end;
+
+
+global procedure PUOrdersToPrepayWDEn()
+begin
+record RcVc RepSpec;
+string 50 filename;
+      
+        RepSpec.sStartDate = addday(currentdate,-180);
+        RepSpec.sEndDate = currentdate;
+        
+        RepSpec.ObjType = "PRPMN";
+        
+        filename = "Stock/PUOrders_OFI.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        RepSpec.ObjStr = "OX";
+        PUOrdersToPrepayRn(RepSpec);
+        closefile;
+        //RunProgram("Stock/PUOrders_OFI.sh","");
+        millisleep(50);
+        
+        filename = "Stock/PUOrders_ICC.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        RepSpec.ObjStr = "IM";
+        PUOrdersToPrepayRn(RepSpec);
+        closefile;
+        //RunProgram("Stock/PUOrders_ICC.sh","");
+        millisleep(50);
+        
+        filename = "Stock/PUOrders_GT.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        RepSpec.ObjStr = "GT";
+        PUOrdersToPrepayRn(RepSpec);
+        closefile;
+        //RunProgram("Stock/PUOrders_GT.sh","");
+        millisleep(50);
+        
+        filename = "Stock/PUOrders_GT_D.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        RepSpec.ObjStr = "GT_D";
+        PUOrdersToPrepayRn(RepSpec);
+        closefile;
+        //RunProgram("Stock/PUOrders_GT_D.sh","");
+        millisleep(50);
+        
+        filename = "Stock/PUOrders_OIIPhoto.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        RepSpec.ObjStr = "OR";
+        PUOrdersToPrepayRn(RepSpec);
+        closefile;
+        //RunProgram("Stock/PUOrders_OIIPhoto.sh","");
+        millisleep(50);
+        
+        filename = "Stock/PUOrders_OIITextile.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        RepSpec.ObjStr = "OR_TT";
+        PUOrdersToPrepayRn(RepSpec);
+        closefile;
+        //RunProgram("Stock/PUOrders_OIITextile.sh","");
+        millisleep(50);
+        
+        filename = "Stock/PUOrders_WD.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        RepSpec.ObjStr = "IA";
+        PUOrdersToPrepayRn(RepSpec);
+        closefile;
+        //RunProgram("Stock/PUOrders_WD.sh","");
+        millisleep(50);
+        
+        filename = "Stock/PUOrders_WD_SE.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        RepSpec.ObjStr = "SI";
+        PUOrdersToPrepayRn(RepSpec);
+        closefile;
+        //RunProgram("Stock/PUOrders_WD.sh","");
+        millisleep(50);
+        
+        filename = "Stock/PUOrders_WD_WD.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        RepSpec.ObjStr = "WD";
+        PUOrdersToPrepayRn(RepSpec);
+        closefile;
+        //RunProgram("Stock/PUOrders_WD.sh","");
+        millisleep(50);
+        
+        /*filename = "Stock/PUOrders_WD_iTek_MDL.xls";
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        RepSpec.ObjStr = "IT";
+        PUOrdersToPrepayRn(RepSpec);
+        closefile;
+        //RunProgram("Stock/PUOrders_WD.sh","");
+        millisleep(50);*/
+
+return;
+end;
+
+
+

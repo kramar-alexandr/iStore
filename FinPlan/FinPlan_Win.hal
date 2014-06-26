@@ -1,0 +1,129 @@
+event DefineWindows
+begin
+ Real h,h1,h2,h3,h4,h5,h6,h7,hs,hm,v,v3,l,vs,vm,f,t,x,v2;
+  integer flagtr;
+  string 255 label;
+    
+	SetLangMode(LangUkrainian,"UKR",0);
+
+  WindowBegin("Заплановані платежі",OtherInPlanDClass,CGview,-);
+  UseView(OtherInPlanVc);
+  SetWRect(20,80,627,360);
+  Sizeable(-1,-1,0,0);
+  vs = 20; h = 80; h2 = 230;
+  ActiveFieldOnNew("TransDate");  
+  EditField(h,v=10,80,"Номер",Normal,SerNr,false,0);
+  CheckBox(-100,v,0,"OK",OKFlag);
+  EditField(h2,v,100,"Підпіс",ViewOnly,SalesMan,false,UserSClass);
+  EditField(h2+170,v,100,"Валюта",Normal,CurncyCode,false,CurncyCodeSClass);
+  EditField(h2+170,v+vs,50,"Курс",Normal,FrRate,false,0);
+  EditField(h2+240,v+vs,50,":",Normal,ToRateB1,false,0);
+  //EditField(h2,v,200,"Ім'я",ViewOnly,Name,false,0);
+  EditField(h,v+=vs,80,"Дата",Normal,TransDate,false,PasteCurDate);
+  EditField(h,v+=vs,-50,"Коментар",Normal,Comment,false,0);
+  h = 8; v=v+45;
+  MatrixBegin(h,v,-50,-22,-,1000);
+  Flip(0);  
+  MatCol(1,h=24,"Коресп.",0,CorspCode,false,CLCorspSClass);
+  Flip(1);
+  MatCol(1,120,"Коментар",0,Comment,false,0);
+  MatCol(1,-150,"План",0,PlanVal,false,0);
+  MatCol(1,-70,"Валюта",0,CurncyCode,false,CurncyCodeSClass);
+  
+  Flip(2);
+  	MatCol(1,110,"Назва",0,Name,false,0);
+  	MatCol(1,-190,"Осн.",0,PlanValB1,false,0);
+  	MatCol(1,-120,"Курс",0,FrRate,false,0);
+  	MatCol(1,-90,"",0,ToRateB1,false,0);
+  	MatCol(1,-60,"Валюта",0,CurncyCode,false,CurncyCodeSClass);
+  EndMatrix;
+           VTab(-35,v,-16,v+vs,ToolFlip,1,"A");
+  v=v+vs;  VTab(-35,v,-16,v+vs,ToolFlip,2,"B");
+  //v=v+vs;  VTab(-35,v,-16,v+vs,ToolFlip,3,"C");
+  EditField(-350,-25,100,"Сума осн.",ViewOnly,BaseSum4,false,0);
+  EditField(-150,-25,100,"Сума",ViewOnly,Sum4,false,0);
+	MatCol(1,-60,"Сп. сплати",0,PayMode,false,PMSClass);
+  EndWindow;
+
+
+  WindowBegin("Заплановані платежі",OtherInPlanLClass,CGmlist,-);
+  SpawnClass(OtherInPlanDClass);
+  SetWRect(20,80,600,298);
+  Sizeable(-1,-1,0,0);
+  UseView(OtherInPlanVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"№",SerNr,false,SerNr);
+  RlCol(70,70,"Коментар",Comment,false);
+  RlColKey(-240,-240,"Дата",TransDate,false,TransDate);
+  RlColKey(-160,-160,"Валюта",CurncyCode,false,CurncyCode);
+  RlCol(-80,-80,"Сума",Sum4,false);
+  SearchField("Пошук");
+  EndWindow;
+  
+  WindowBegin("Заплановані виплати",OtherOutPlanDClass,CGview,-);
+  UseView(OtherOutPlanVc);
+  SetWRect(20,80,627,360);
+  Sizeable(-1,-1,0,0);
+  vs = 20; h = 80; h2 = 230;
+  ActiveFieldOnNew("TransDate");  
+  EditField(h,v=10,80,"Номер",Normal,SerNr,false,0);
+  CheckBox(-100,v,0,"OK",OKFlag);
+  EditField(h2,v,100,"Підпіс",ViewOnly,SalesMan,false,UserSClass);
+  EditField(h2+170,v,100,"Валюта",Normal,CurncyCode,false,CurncyCodeSClass);
+  EditField(h2+170,v+vs,50,"Курс",Normal,FrRate,false,0);
+  EditField(h2+240,v+vs,50,":",Normal,ToRateB1,false,0);
+  //EditField(h2,v,200,"Ім'я",ViewOnly,Name,false,0);
+  EditField(h,v+=vs,80,"Дата",Normal,TransDate,false,PasteCurDate);
+  EditField(h,v+=vs,-50,"Коментар",Normal,Comment,false,0);
+  h = 8; v=v+45;
+  MatrixBegin(h,v,-50,-22,-,1000);
+  Flip(0);  
+  MatCol(1,h=24,"Коресп.",0,CorspCode,false,CLCorspSClass);
+  Flip(1);
+  MatCol(1,120,"Коментар",0,Comment,false,0);
+  MatCol(1,-150,"План",0,PlanVal,false,0);
+  MatCol(1,-70,"Валюта",0,CurncyCode,false,CurncyCodeSClass);
+  
+  Flip(2);
+  	MatCol(1,110,"Назва",0,Name,false,0);
+  	MatCol(1,-190,"Осн.",0,PlanValB1,false,0);
+  	MatCol(1,-120,"Курс",0,FrRate,false,0);
+  	MatCol(1,-90,"",0,ToRateB1,false,0);
+  	MatCol(1,-60,"Валюта",0,CurncyCode,false,CurncyCodeSClass);
+  EndMatrix;
+           VTab(-35,v,-16,v+vs,ToolFlip,1,"A");
+  v=v+vs;  VTab(-35,v,-16,v+vs,ToolFlip,2,"B");
+  //v=v+vs;  VTab(-35,v,-16,v+vs,ToolFlip,3,"C");
+  EditField(-350,-25,100,"Сума осн.",ViewOnly,BaseSum4,false,0);
+  EditField(-150,-25,100,"Сума",ViewOnly,Sum4,false,0);
+	MatCol(1,-60,"Сп. сплати",0,PayMode,false,PMSClass);
+  EndWindow;
+
+
+  WindowBegin("Заплановані виплати",OtherOutPlanLClass,CGmlist,-);
+  SpawnClass(OtherOutPlanDClass);
+  SetWRect(20,80,600,298);
+  Sizeable(-1,-1,0,0);
+  UseView(OtherOutPlanVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,4,"№",SerNr,false,SerNr);
+  RlCol(70,70,"Коментар",Comment,false);
+  RlColKey(-240,-240,"Дата",TransDate,false,TransDate);
+  RlColKey(-160,-160,"Валюта",CurncyCode,false,CurncyCode);
+  RlCol(-80,-80,"Сума",Sum4,false);
+  SearchField("Пошук");
+  EndWindow;
+
+	WindowBegin("Визначте звіт по запланованим розрахункам",FinPlanRepRClass,CGRcW,RcType);
+  SetWRect(20,80,450,200);
+  vs = 20;
+  PeriodField(h=100,v=6,"Період");
+  EditField(h,v=v+20,100,"Кореспондування",Normal,f1,false,CLCorspSClass);
+  EndWindow;
+	
+	
+	
+	
+return;
+end;
+

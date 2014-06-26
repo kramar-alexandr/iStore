@@ -1,0 +1,27 @@
+global
+updating function LongInt SerBalVcRecordSaveAfter(var record SerBalVc SBr,record SerBalVc SB2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+
+  if(SBr.Quant==0)then begin
+    RecordDelete(SBr);    
+  end;
+  
+  SerBalVcRecordSaveAfter = res; 
+  RETURN;
+END;
+
+global
+updating function LongInt SerBalVcRecordUpdateAfter(var record SerBalVc SBr,record SerBalVc SB2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+    
+  if(SBr.Quant==0)then begin
+    RecordDelete(SBr);
+  end;
+  
+  SerBalVcRecordUpdateAfter = res; 
+  RETURN;
+END;
+
+

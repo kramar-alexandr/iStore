@@ -1,0 +1,464 @@
+external procedure PUCalcPerc(val,string,var val);
+external function Integer TypeOfCurncy(var string,var Integer);
+external procedure GetFullCurncyRateText(Boolean,var string,val,val,val,val,val);
+external function val MulRateToBase1(var string,val,val,val,val,val,val,Integer);
+external procedure HT2Per(Date, Date,var string);
+external procedure HTDetailLevel(Integer, var string);
+external procedure HTOKF(Integer,Integer, var string);
+external procedure HTNr(Integer,Integer,LongInt,LongInt,var string);
+
+	SetLangMode(LangUkrainian,"UKR",0);
+
+global
+procedure PUJRn(record RcVc RepSpec)
+begin
+  record RoundBlock RoundRec;
+  record PUVc PUr;
+  Boolean TrHs;
+  Boolean testf;
+  LongInt frorder,toorder;
+  val totsum;
+  LongInt afr,ato;
+  val rowsum;
+  val totunitsum,totfreight,totcustoms,totextra;
+  val t,t2;
+  Integer rw;
+  String 255 tstr;
+  String 20 ckey;
+  Integer i,rwcnt;
+  Row PUVc PUrw;
+  val pursum;
+  val unitsum,sumquant,freight,customs,extra;
+  string 50 crncy;
+  val v1;// Edit ************************** Tuesday, 10 July 2012 13:38:25
+  
+  BlockLoad(RoundRec);
+  rowsum = blankval;
+  totsum = blankval;
+  totunitsum = blankval;
+  totfreight = blankval;
+  totcustoms = blankval;
+  totextra   = blankval;
+
+  afr = FirstInRange(RepSpec.f1,30);
+  ato = LastInRange(RepSpec.f1,30);
+
+  frorder = FirstInRange(RepSpec.TransStr,20);
+  toorder = LastInRange(RepSpec.TransStr,20);
+
+  StartReportJob(USetStr(2601));
+  rw = 1;
+  HT2Per(RepSpec.sStartDate,RepSpec.sEndDate,tstr);
+  Header(rw,tstr,1);
+  rw = rw + 1;
+
+  HTDetailLevel(RepSpec.ArtMode,tstr);
+  Header(rw,tstr,1);
+  rw = rw + 1;
+
+  HTNr(2608,2609,afr,ato,tstr);
+  Header(rw,tstr,1);
+  rw = rw + 1;
+
+  HTNr(2610,2610,frorder,toorder,tstr);
+  Header(rw,tstr,1);
+  rw = rw + 1;  
+
+  tstr = "";
+  if nonblank(RepSpec.f2) then begin
+    tstr = USetStr(1213);
+    tstr = tstr & RepSpec.f2;
+  end;
+  if nonblank(tstr) then begin
+    Header(rw,tstr,1);
+    rw = rw + 1;
+  end;
+  if (nonblank(RepSpec.f3)) then begin
+    tstr = USetStr(2768);
+    tstr = tstr & ": " & RepSpec.f3;
+    Header(rw,tstr,1);
+    rw = rw + 1;
+  end;
+
+  HTOKF(RepSpec.flags[1],RepSpec.flags[2],tstr);
+  Header(rw,tstr,1);
+  rw = rw + 1; 
+  EndHeader;
+
+  if RepSpec.ArtMode==0 then begin
+    StartFormat(15);
+    OutString(0,0,USetStr(2602),false);
+    OutString(60,0,USetStr(2603),false);
+    OutString(140,0,USetStr(2607),false);
+    OutString(1,0,USetStr(2625),true);
+    EndFormat;
+  end;
+  if RepSpec.ArtMode==1 then begin
+    /*StartFormat(15);
+    
+    OutString(0,0,USetStr(2602),false);
+    OutString(60,0,USetStr(2603),false);
+    OutString(160,0,USetStr(2607),false);
+    OutString(350,0,USetStr(5010),false);
+    OutString(420,0,USetStr(2604),false);
+    EndFormat;
+    StartFormat(15);
+    OutString(0,0,USetStr(2605),false);
+    OutString(100,0,USetStr(2606),false);
+    EndFormat;
+    StartFormat(15);
+    OutString(0,0,USetStr(12554),false);
+    OutString(0,0,USetStr(2762),false);
+    OutString(100,0,USetStr(2620),true);
+    OutString(200,0,USetStr(2612),false);
+    OutString(290,0,USetStr(2613),true);
+    OutString(330,0,USetStr(2614),true);
+    OutString(380,0,USetStr(2615),true);
+    OutString(420,0,USetStr(2616),true);
+    OutString(480,0,USetStr(2331),true);
+    OutString(480,0,USetStr(2569),true);// Edit ************************** Friday, 6 April 2012 15:11:06
+    EndFormat;*/
+    
+     StartFormat(15);
+    
+    OutString(0,0,"Дата зап. опер.",false);
+    OutString(0,0,"Номер",false);
+    OutString(60,0,"Постачальник",false);
+    OutString(160,0,"Замовлення пост. №",false);
+    OutString(350,0,"Валюта",false);
+    OutString(420,0,"Код товару",false);
+    OutString(0,0,"Назва",false);
+    OutString(0,0,"Кіл-ть",false);
+    OutString(0,0,"Сер. №",false);
+    OutString(100,0,"Ціна",true);
+    OutString(200,0,"Сума",false);
+    OutString(290,0,"Дост.",true);
+    OutString(330,0,"Сумма",true);
+    OutString(380,0,"Дост.,  % ",true);
+    OutString(420,0,"Митниця",true);
+    OutString(480,0,"Сумма",true);
+    OutString(480,0,"Митниця,  %",true);
+    OutString(480,0,"Накл. Витр.1 ",true);
+    OutString(480,0,"Сумма",true);
+    OutString(480,0,"Витр. 1,  % ",true);
+    OutString(480,0,"Накл. Витр.2",true);
+    OutString(480,0,"Сумма",true);
+    OutString(480,0,"Витр. 2,  % ",true);
+    OutString(480,0,"Накл. Витр.3",true);
+    OutString(480,0,"Сумма",true);
+    OutString(480,0,"Витр. 3,  % ",true);
+    OutString(480,0,"Накл. Витр.4",true);
+    OutString(480,0,"Сумма",true);
+    OutString(480,0,"Витр. 4,  % ",true);
+    OutString(480,0,"Накл. Витр.5",true);
+    OutString(480,0,"Сумма",true);
+    OutString(480,0,"Витр. 5,  % ",true);
+    OutString(480,0,"Закуп.вар-ть",true);
+    OutString(480,0,"Сума",true);
+    OutString(480,0,"Склад",true);
+    EndFormat;
+    
+  end;
+  if (RepSpec.ArtMode==0) then begin
+   Gray_Divider(0,1);
+  end;
+  switch (RepSpec.flags[5]) begin
+    case 0:
+      ckey = "SerNr";
+      PUr.SerNr = afr;
+    case 1:
+      ckey = "TransDate";
+      PUr.TransDate = RepSpec.sStartDate;
+    case 2:
+      ckey = "LocOK";
+      PUr.Location = RepSpec.f3;
+  end;
+  TrHs = true;        
+  while LoopKey(ckey,PUr,1,TrHs) begin
+    switch (RepSpec.flags[5]) begin
+      case 0:
+        if (ato<>-1) then begin
+          if (PUr.SerNr>ato) then begin
+            TrHs = false;
+          end;
+        end;
+      case 1:
+        if (PUr.TransDate>RepSpec.sEndDate) then begin
+          TrHs = false;
+        end;
+      case 2:
+        if (nonblank(RepSpec.f3)) then begin
+          if (PUr.Location!=RepSpec.f3) then begin
+            TrHs = false;
+          end;
+        end;
+    end;
+   if (TrHs) then begin
+    testf = true;
+    switch (RepSpec.flags[5]) begin
+      case 1:
+        if (nonblank(RepSpec.f1)) then begin
+          if (PUr.SerNr<afr) then begin testf = false; end;
+          if (PUr.SerNr>ato) then begin testf = false; end;
+        end;
+      case 2:
+        if (nonblank(RepSpec.f1)) then begin
+          if (PUr.SerNr<afr) then begin testf = false; end;
+          if (PUr.SerNr>ato) then begin testf = false; end;
+        end;
+    end;
+    if (nonblank(RepSpec.f2) and (RepSpec.f2<>PUr.VECode)) then begin
+      testf = false;
+    end;
+    if nonblank(RepSpec.TransStr) then begin
+      if ((PUr.PONr<frorder) or (PUr.PONr>toorder)) then begin
+        testf = false;
+      end;
+    end;
+    if ((PUr.TransDate<RepSpec.sStartDate) or (PUr.TransDate>RepSpec.sEndDate)) then begin
+      testf = false;
+    end;
+    if ((RepSpec.flags[1]==0) and (PUr.OKFlag==0)) then begin testf = false; end;
+    if ((RepSpec.flags[2]==0) and (PUr.OKFlag<>0)) then begin testf = false; end;
+    if (PUr.Invalid!=0) then begin testf = false; end;
+    if (testf) then begin
+      if (nonblank(RepSpec.f3)) then begin
+         testf = false;
+         rwcnt = MatRowCnt(PUr);
+         for (i = 0 ; i<rwcnt ;i=i+1) begin
+           MatRowGet(PUr,i,PUrw);
+           tstr = PUrw.Location;
+           if (blank(tstr)) then begin
+             tstr = PUr.Location;
+           end; 
+           if (tstr==RepSpec.f3) then begin
+             testf = true;
+             i = rwcnt;
+           end;
+         end;
+      end;
+    end;
+    if (testf) then begin
+      pursum = PUr.SumCostPrice;
+      freight = PUr.ShipCost;
+      customs = PUr.CustomsCost;
+      extra = PUr.ExtraCost;
+      if (nonblank(RepSpec.f3)) then begin
+        freight = blankval;
+        pursum = blankval;
+        customs = blankval;
+        extra = blankval;
+      end;
+      t = 0;
+      if RepSpec.ArtMode==1 then begin
+        /*Gray_Divider(0,1);
+        StartFormat(15);
+        OutLongInt(0,"DblPU",PUr.SerNr,false);
+        OutDate(60,0,PUr.TransDate,false);
+        OutString(160,0,PUr.Comment,false);
+        OutString(350,0,PUr.Location,false);
+        OutLongInt(420,0,PUr.PONr,false);
+        EndFormat;
+        StartFormat(15);
+        OutString(0,0,PUr.VECode,false);
+        OutString(100,0,PUr.VEName,false);
+        OutString(350,0,PUr.CurncyCode,true);
+        crncy = PUr.CurncyCode;
+        i = -1;
+        if (TypeOfCurncy(crncy,i)==0) then begin
+          GetFullCurncyRateText(true,tstr,PUr.FrRate,PUr.ToRateB1,PUr.ToRateB2,PUr.BaseRate1,PUr.BaseRate2);
+        end else begin
+          GetFullCurncyRateText(false,tstr,PUr.FrRate,PUr.ToRateB1,PUr.ToRateB2,PUr.BaseRate1,PUr.BaseRate2);
+        end;  
+        OutString(370,0,tstr,false);
+        EndFormat;*/
+        unitsum = 0;
+        rwcnt = MatRowCnt(PUr);
+        for (i = 0 ; i<=rwcnt-1 ;i=i+1) begin
+          MatRowGet(PUr,i,PUrw);
+          if ((PUrw.stp==3) or (PUrw.ovst!=0)) then begin
+            goto LSKIPPUROW;
+          end;
+          if (nonblank(RepSpec.f3)) then begin
+            tstr = PUrw.Location;
+            if (blank(tstr)) then begin
+              tstr = PUr.Location;
+            end; 
+            if (tstr!=RepSpec.f3) then begin
+              goto LSKIPPUROW;
+            end;
+          end;
+//                    t2 = MulRateToBase1(PUr.CurncyCode,PUrw.UPrice,PUr.FrRate,PUr.ToRateB1,PUr.ToRateB2,PUr.BaseRate1,PUr.BaseRate2,DefaultCurRoundOff);
+          t2 = PUrw.UPrice;
+          t = Round(PUrw.Quant * t2,RoundRec.RndFIFO);
+          unitsum = unitsum + t;
+          StartFormat(15);
+          
+          OutString(0,0,PUr.TransDate,false);
+          OutString(0,0,PUr.SerNr,false);
+          OutString(60,0,PUr.VECode,false);
+          OutString(160,0,PUr.PONr,false);
+          OutString(350,0,PUr.CurncyCode,false);
+          OutString(420,0,PUrw.ArtCode,false);
+          OutString(0,0,PUrw.Spec,false);
+          OutString(0,0,PUrw.Quant,false);
+          OutString(0,0,PUrw.SerialNr,false);
+          OutString(100,0,PUrw.UPrice,true);
+          OutString(200,0,PUrw.UPrice*PUrw.Quant,false);
+          
+          v1 = PUrw.ShipCost;
+          
+          OutString(290,0,v1,true);
+          OutString(330,0,v1*PUrw.Quant,true);
+          OutString(380,0,v1/PUrw.UPrice*100,true);
+          
+          if(nonblank(PUrw.CustomsCost))then begin
+            v1 = evaltoval(PUrw.CustomsCost);
+          end else begin
+            v1 = 0;
+          end;
+          OutString(290,0,v1,true);
+          OutString(330,0,v1*PUrw.Quant,true);
+          OutString(380,0,v1/PUrw.UPrice*100,true);
+          
+          v1 = PUrw.RowCost1;
+          OutString(290,0,v1,true);
+          OutString(330,0,v1*PUrw.Quant,true);
+          OutString(380,0,v1/PUrw.UPrice*100,true);
+          
+          v1 = PUrw.RowCost2;
+          OutString(290,0,v1,true);
+          OutString(330,0,v1*PUrw.Quant,true);
+          OutString(380,0,v1/PUrw.UPrice*100,true);
+          
+          v1 = PUrw.RowCost3;
+          OutString(290,0,v1,true);
+          OutString(330,0,v1*PUrw.Quant,true);
+          OutString(380,0,v1/PUrw.UPrice*100,true);
+          
+          v1 = PUrw.RowCost4;
+          OutString(290,0,v1,true);
+          OutString(330,0,v1*PUrw.Quant,true);
+          OutString(380,0,v1/PUrw.UPrice*100,true);
+          
+          v1 = PUrw.RowCost5;
+          OutString(290,0,v1,true);
+          OutString(330,0,v1*PUrw.Quant,true);
+          OutString(380,0,v1/PUrw.UPrice*100,true);
+          
+          OutString(480,0,PUrw.CostPrice,true);
+          OutString(480,0,PUrw.Sum,true);
+          
+          OutString(480,0,PUr.Location,true);
+          
+         /* 
+          OutString(0,0,PUr.SerNr,false);// Edit ************************** Friday, 29 July 2011 12:23:31
+          OutString(0,0,PUrw.ArtCode,false);
+          OutVal(100,0,PUrw.Quant,M4UVal,true);
+          OutString(120,0,PUrw.Spec,false);
+          if (nonblank(PUrw.SerialNr)) then begin 
+            //EndFormat;// Edit ************************** Friday, 29 July 2011 12:15:00
+            //StartFormat(15);// Edit ************************** Friday, 29 July 2011 12:15:01
+            switch (PUrw.StockType) begin
+              case 0: OutString(80,0,PUrw.SerialNr,false);
+              case 1: OutString(80,0,PUrw.SerialNr & "(*)",false);
+            end;
+          end;
+          OutVal(290,0,PUrw.UPrice,M45Val,true);
+          OutVal(330,0,PUrw.ShipCost,M4UVal,true);
+          OutString(380,0,PUrw.CustomsCost,true);
+          OutString(420,0,PUrw.Extra,true);
+          OutVal(480,0,PUrw.CostPrice,M45Val,true);
+        // Edit Start ---------------------------------------------- Edit Start
+	//Friday, 6 April 2012 15:29:00
+	  
+          if(nonblank(PUrw.Location))then begin
+            OutString(480,0,PUrw.Location,true);
+          end else begin
+            OutString(480,0,PUr.Location,true);// Edit ************************** Friday, 6 April 2012 15:09:25
+          end;
+          
+	// Edit End ---------------------------------------------- Edit End
+	*/
+          EndFormat;
+          sumquant = sumquant + PUrw.Quant;
+          pursum = pursum + PUrw.CostPrice;
+          freight = freight + PUrw.ShipCost;
+          PUCalcPerc(PUrw.CostPrice,PUrw.CustomsCost,t2);
+          customs = customs + t2;
+          PUCalcPerc(PUrw.CostPrice,PUrw.Extra,t2);
+          extra = extra + t2;
+LSKIPPUROW:;          
+        end;
+        Black_Divider(250,480);
+        /*StartFormat(15);
+        OutVal(100,0,sumquant,M4UVal,true);
+        OutVal(290,0,unitsum,M45Val,true);
+        OutVal(330,0,freight,M4UVal,true);
+        OutVal(380,0,customs,M4UVal,true);
+        OutVal(420,0,extra,M4UVal,true);
+        OutVal(480,0,pursum,M45Val,true);
+        EndFormat;*/
+        totsum = totsum + pursum;
+        t = unitsum;
+      end;
+
+      if RepSpec.ArtMode==0 then begin
+        if (nonblank(RepSpec.f3)) then begin
+          rwcnt = MatRowCnt(PUr);
+          for (i = 0 ; i<rwcnt ;i=i+1) begin
+            MatRowGet(PUr,i,PUrw);
+            tstr = PUrw.Location;
+            if (blank(tstr)) then begin
+              tstr = PUr.Location;
+            end; 
+            if (tstr==RepSpec.f3) then begin
+              pursum = pursum + PUrw.CostPrice;
+              freight = freight + PUrw.ShipCost;
+              PUCalcPerc(PUrw.CostPrice,PUrw.CustomsCost,t2);
+              customs = customs + t2;
+              PUCalcPerc(PUrw.CostPrice,PUrw.Extra,t2);
+              extra = extra + t2;
+            end;
+          end;
+        end;
+        StartFormat(15);
+        endformat;
+        
+        /*StartFormat(15);
+        totsum = totsum + pursum;
+        OutLongInt(0,"DblPU",PUr.SerNr,false);
+        OutDate(60,0,PUr.TransDate,false);
+        OutString(140,0,PUr.Comment,false);
+        OutVal(480,0,pursum,M4Val,true);
+        EndFormat;*/
+      end;
+      totunitsum = totunitsum + t;
+      totfreight = totfreight + freight;
+      totcustoms = totcustoms + customs;
+      totextra = totextra + extra;
+    end;
+   end;
+  end;
+
+  if RepSpec.ArtMode==0 then begin
+    Gray_Divider(0,1);
+    StartFormat(15);
+    OutVal(480,0,totsum,M4Val,true);
+    EndFormat;
+  end;
+  if RepSpec.ArtMode==1 then begin
+    totunitsum = Round(totunitsum,DefaultCurRoundOff);
+    totsum = Round(totsum,DefaultCurRoundOff);
+    Gray_Divider(0,1);
+   /* StartFormat(15);
+    OutVal(290,0,totunitsum,M4Val,true);
+    OutVal(330,0,totfreight,M4UVal,true);
+    OutVal(380,0,totcustoms,M4UVal,true);
+    OutVal(420,0,totextra,M4UVal,true);
+    OutVal(480,0,totsum,M4Val,true);
+    EndFormat;*/
+  end;
+  EndJob;
+  return;
+end;

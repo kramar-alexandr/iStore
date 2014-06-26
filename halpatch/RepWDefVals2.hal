@@ -1,0 +1,26 @@
+external function string 255 CurDrawerCode(string);
+
+global
+procedure CashupVClassReportDefaults(Integer wn)
+BEGIN
+  record RcVc RepSpec;
+  record LocalMachineBlock LocalMachineRec;
+  
+  BlockLoad(LocalMachineRec);  
+  DeselectWindow(wn,false);
+  GetWindowRecord(wn,RepSpec);
+  RepSpec.d1 = CurrentDate;
+  RepSpec.sStartTime = CurrentTime;
+  RepSpec.flags[1] = 1;
+  RepSpec.flags[2] = 1;
+  RepSpec.flags[3] = 1;
+  RepSpec.f1 = LocalMachineRec.LocalMachineCode;
+  RepSpec.f4 = CurDrawerCode(LocalMachineRec.LocalMachineCode);
+  RepSpec.AccStr = LocalMachineRec.DefLocation;// Edit ************************** Wednesday, 1 June 2011 12:52:57
+  PutWindowRecord(wn,RepSpec);
+  SelectWindow(wn);
+  RETURN;
+END;
+
+
+

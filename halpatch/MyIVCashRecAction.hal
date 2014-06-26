@@ -1,0 +1,1523 @@
+external procedure RemoveOldCustObjects(string,var string);
+external updating procedure IVCashUpdateItemHist(record IVCashVc);
+external function Boolean CanOKStockRecord();
+external updating procedure IVCashUpdateSerialNr(record IVCashVc);
+external function Boolean POSBalanceExistsAfterThis(Date,Time,string,string);
+external function Integer CheckRates(string,val,val,val,val,val,var string);
+external function string 255 CurDrawerCode(string);
+external function Boolean RequireOpenSession(string);
+external function Boolean IsSessionOpen(string,string,Date,Time);
+external function string 255 GetObjectFromRestIT(string);
+external function LongInt IVCashNrFromLastSerNrBlock(string);
+external function Integer GetPOSOffLineCompNo();
+external updating procedure UpdateLastSerNrBlock(string,LongInt);
+external updating procedure SaveOffLineLastIVCashNr(LongInt);
+external updating procedure PrintPOSNETReceiptIVCash(var record IVCashVc);
+external function val MulRateToBase1(var string,val,val,val,val,val,val,Integer);
+external function Boolean ReadFirstItem(string,var record INVc,Boolean,Boolean);
+external updating procedure ArtStatUp(string,string,Date,val,val,val,val,Boolean,val,val,val);
+external procedure FindSalesExVat(string,val,Integer,Integer,var val);
+external updating procedure UpdateInstock(string,string,string,string,date,val,val,val,val,val,val,val,val,val);
+external function Boolean ShouldItemUpdateStock(string);
+external function Boolean IsSerialNrCorrect(string);
+external updating procedure UpdateLocOKNr(string,var val);
+external procedure SwapM4Val(var val,var val);
+external procedure B1ToB2Val(val,val,val,var val);
+external procedure IVCashSumup(var record IVCashVc,Boolean);
+external procedure ConvertToDualBase(var string,date,var val,var val,var val,var val,var val,var val,Boolean);
+external procedure IVCashUpdateFIFO(record IVCashVc,Boolean);
+external function Boolean ExistStockTrans(string ,Date,var Integer,string,LongInt,Integer);
+external function Boolean IsControlAccount(string,Boolean,Boolean);
+external function Integer CheckObjs(string,string,var string);
+external function Boolean CorrectM4ValProc(val);
+external function Boolean IsVATCodeDefined(string);
+external function Boolean SerialNrAvail(string,string,string,val);
+external function Boolean ExpandStructItem(string,string,val,var record SHVc);
+external procedure FindStockValue(string,string,var record ItemStatusVc);
+external function Boolean VATAccIsClosed(string,var string,Integer);
+external function Integer CheckVATNrMask(string,string,Integer,var string);
+external function Boolean Date2Test(string,Date,string,Integer);
+external function Boolean SerNrTestIVCashVc(LongInt,Date,var Boolean);
+external function LongInt GetCurUserLastNr(string);
+external function Boolean GetCustAndBal(var record CUVc,var val,var val,Integer,Integer,Integer,Integer,Integer,Integer);
+external function Integer GetProgramMode();
+external updating procedure RecordActionIVCash_Print(var record IVCashVc,string,Boolean);
+external procedure GetCurUser(var record UserVc);
+external procedure GetFullCurncyRate (var string,Date,var val,var val,var val,var val,var val);
+external procedure GetBaseCurncy(Integer,var string);
+external function Boolean PasteCustInCashInv(var record IVCashVc,string,var string);
+external procedure prt(string,string);
+
+
+updating procedure FindAndCreatePrintSuppReg(var record IOSUPALL1Vc INSUPr,string artcode,string name)
+begin
+	integer mtrw,i,lenth,k,l;
+	record VATCodeBlock vatr;
+	row VATCodeBlock vatrw;
+	string 100 newitname,itname;
+	longint ii;
+	record INVc INr;
+	
+	INSUPr.ItemNo = artcode;
+	INSUPr.ItemName = name;
+	
+	if (ReadFirstKey("ItemNo",INSUPr,2,true)==false) then begin
+		ii = CountRecords("IOSUPALL1Vc");
+		RecordNew(INSUPr);
+		if (ii<=0) then begin
+	  	ii=0; 
+		end;
+		INSUPr.Art=ii+1;
+		INr.Code=artcode;
+		INSUPr.VATCOD=1;
+		if(ReadFirstMain(INr,1,true))then begin
+			blockload(vatr);
+			mtrw=matrowcnt(vatr);
+			for (i=0;i<mtrw;i=i+1)	begin
+				matrowget(vatr,i,vatrw)
+				if (vatrw.VATCode==INr.VATCode) then begin
+					if (vatrw.ExVatpr==0) then begin 
+						INSUPr.VATCOD=0;
+					end;
+				end;
+			end;
+		end;
+		
+
+		INSUPr.ItemNo=artcode;
+		INSUPr.ItemName=name;
+
+		RecordInsert(INSUPr,true);
+	end;
+	
+return
+end;
+
+global updating procedure PrintFiscalReceipt(record IVCashVc IVCashr)
+begin
+string 255 filename,comandmy,comandmy1,fname,itname,newitname;
+record IOSUPALL1Vc INSUPr;
+row IVCashVc IVCashrw;
+date opdate;
+integer numrw,i,artno,ii,nrw,j,l,k,lenth;
+Boolean TrHs;
+record SysFormatBlock SysFormatRec;
+record VATCodeBlock vatr;
+row VATCodeBlock vatrw;
+REcord INVc INr,OldINr;
+//stopalert("123");
+
+blockload(vatr);
+opdate = IVCashr.InvDate;
+numrw = MatRowCnt(IVCashr);
+filename = "Datecs/Print/";
+filename=filename & IVCashr.SerNr & "-" & GetDay(opdate) & "-" & GetMonth(opdate) & "-" & GetYear(opdate);
+filename=filename & ".pos";
+
+
+fname=".\\Datecs\\Print\\" & IVCashr.SerNr & "-" & GetDay(opdate) & "-" & GetMonth(opdate) & "-" & GetYear(opdate);
+fname=fname & ".pos";
+
+
+//SetExportCodePage("CP1251");
+//SetExportCodePage("PC866");
+
+CreateFile(filename);
+//Closefile;
+//OpenExportFile(filename,true);
+
+
+if (nonblank(IVCashr.CashValue)) then
+begin
+// if (IVCashr.CashValue<0) then begin IVCashr.CashValue=-IVCashr.CashValue;
+ ExportString(Valtostring(IVCashr.CashValue,M4Val,chr(0),chr(46),0));
+
+end
+else begin
+ExportString("0");
+end;
+
+
+if (nonblank(IVCashr.RecValue) or nonblank(IVCashr.RecValue3)) then// Edit ************************** Monday, 15 April 2013 17:00:45
+begin
+ ExportString(Valtostring(IVCashr.RecValue + IVCashr.RecValue3,M4Val,chr(0),chr(46),0));// Edit ************************** Monday, 15 April 2013 17:00:44
+
+end
+else begin
+ExportString("0");
+end;
+
+if (nonblank(IVCashr.RecValue2)) then
+begin
+ ExportString(Valtostring(IVCashr.RecValue2,M4Val,chr(0),chr(46),0));
+end
+else begin
+ExportString("0");
+end;
+
+if (nonblank(IVCashr.RecValue3)) then
+begin
+ ExportString(Valtostring(IVCashr.RecValue3,M4Val,chr(0),chr(46),0));
+end
+else begin
+ExportString("0");
+end;
+
+ExportString(numrw);
+NewLine;
+
+for (i=0;i<numrw;i=i+1) begin
+	MatRowGet(IVCashr,i,IVCashrw);
+
+	INSUPr.ItemNo=IVCashrw.ArtCode;
+	INSUPr.ItemName=IVCashrw.Spec;
+	
+	
+	newitname = "";
+	itname = IVCashrw.Spec;
+	lenth = len(itname);
+	for(k=0;k<lenth;k=k+1) begin
+		if(asc(mid(itname,k,1))<32) then begin
+			newitname = newitname & "";
+		end else begin
+			newitname = newitname & mid(itname,k,1);
+		end;
+	end;
+
+	if (len(newitname)>50) then begin// Edit ************************** Friday, 7 May 2010 2:53:45 PM
+		newitname=left(newitname,50);// Edit ************************** Friday, 7 May 2010 2:53:46 PM
+	end;
+	itname = newitname;
+	if (len(itname)<50) then begin// Edit ************************** Friday, 7 May 2010 2:53:47 PM
+		for(l=len(itname);l<50;l=l+1) begin
+			newitname = newitname & " ";	
+		end;
+	end;
+	
+	
+	FindAndCreatePrintSuppReg(INSUPr,IVCashrw.ArtCode,newitname);
+	artno=INSUPr.Art;
+	ExportString(INSUPr.VATCOD);
+	ExportString(INSUPr.ItemName);
+	NewLine;
+	ExportString(Valtostring(artno,M4Val,chr(0),chr(49),1));
+	if (IVCashrw.Quant<0) then begin
+		IVCashrw.Quant=-IVCashrw.Quant; 
+	end;
+	ExportString(Valtostring(IVCashrw.Quant,M4Val,chr(0),chr(46),0));
+	if (IVCashrw.Price<0) then begin 
+		IVCashrw.Price=-IVCashrw.Price; 
+	end;
+	ExportString(Valtostring(IVCashrw.Price,M4Val,chr(0),chr(46),0));  
+	if (nonblank(IVCashrw.vRebate)) then begin 
+		ExportString(Valtostring(IVCashrw.vRebate,M4Val,chr(0),chr(46),0)); 
+	end else begin 
+		ExportVal(0,M4Val); 
+	end;
+	ExportString(IVCashrw.SerialNr);
+	NewLine;
+
+end;
+comandmy="printreciept " & fname;
+Closefile;
+//millisleep(100);
+//RunProgram("Datecs/prt.exe",comandmy);
+SetExportCodePage("UTF-8");
+prt("printreciept",fname);
+
+
+return;
+
+end;
+
+
+// This function is actually not used, but prepared to be and is used by customisation
+global
+procedure SetupIVCashRecord(var record IVCashVc IVCashr)
+begin
+  string 255 warning;
+  record LocalMachineBlock LMb;
+
+  BlockLoad(LMb);
+  if (nonblank(LMb.DefCustCode)) then begin
+    IVCashr.CustCode = LMb.DefCustCode;
+    if (PasteCustInCashInv(IVCashr,"",warning)) then begin end;
+  end;
+  IVCashr.Location = LMb.DefLocation;
+  return;
+end;
+
+/*
+This is Dollarstores Defaults, which I belive is better (once translated).
+global
+function LongInt IVCashVcRecordDefaultsClient(var record IVCashVc IVCashr,record IVCashVc IVCash2r,LongInt long3,LongInt long4)
+begin
+  LongInt res;
+  record UserVc Userr;
+
+  SetupIVCashRecord(IVCashr);
+  if (blank(IVCashr.Location)) then begin
+    MessageBox(0,"LagerstŠlle saknas, kontrollera instŠllningen Lokal Maskin!");
+  end else begin
+    Userr.Code = CurrentUser;
+    if (ReadFirstMain(Userr,1,true)) then begin end;
+    if (Userr.Location!=IVCashr.Location) then begin
+      MessageBox(0,"Denna anvŠndaren Šr instŠlld pŒ ett annat lagerstŠlle Šn denna kassa, kontrollera instŠllningarna!");
+      res = -1;
+    end else begin
+      if (IVCashr.InclVAT!=1) then begin
+        MessageBox(0,"Defaultkunden mŒste vara instŠlld med en prislista inklusive moms. €ndra instŠllningar!");
+        res = -1;    
+      end;
+    end;
+  end;
+  
+  IVCashVcRecordDefaultsClient = res;
+  RETURN;
+END;
+*/
+global
+function LongInt IVCashVcRecordDefaultsClient(var record IVCashVc IVCashr,record IVCashVc IVCash2r,LongInt long3,LongInt long4)
+begin
+  LongInt res;
+  record LocalMachineBlock LMb;
+  record DefCashBlock DCb;
+  string 255 warning,tstr;
+
+  BlockLoad(LMb);  
+  BlockLoad(DCb);  
+  SetupIVCashRecord(IVCashr);
+  if (blank(IVCashr.Location)) then begin
+    IVCashr.Location = LMb.DefLocation;
+  end;
+  if (nonblank(LMb.DefCustCode)) then begin
+    tstr = IVCashr.Objects;
+    RemoveOldCustObjects(IVCashr.CustCode,tstr);
+    IVCashr.Objects = tstr;
+
+    IVCashr.CustCode = LMb.DefCustCode;
+    if (PasteCustInCashInv(IVCashr,LMb.DefLocation,warning)) then begin end;
+  end;
+  IVCashr.PayDeal = DCb.DefCCPayMode;
+  IVCashVcRecordDefaultsClient = res;
+  RETURN;
+END;
+
+global
+function LongInt IVCashVcRecordDefaults(var record IVCashVc IVCashr,record IVCashVc IVCash2r,LongInt long3,LongInt long4)
+begin
+  LongInt res;
+  record AccBlock ARAccRec;
+  record CashierDefBlock CashDefRec;
+  record UserVc USr;
+  Date blankd,curdate;
+  val frrate,to1,to2,br1,br2;
+  string 5 curcode;
+  Integer ProgramType;
+  record LocalOffLineNrBlock LastRecNr;
+  LongInt newnr;
+  string 255 tstr,warning;
+  record DefCashBlock DCb;// Edit ************************** Wednesday, 6 June 2012 15:07:34 
+
+  ProgramType = GetProgramMode;
+  curdate = CurrentDate;
+  BlockLoad(ARAccRec);  
+  BlockLoad(CashDefRec);  
+  IVCashr.SerNr = -1;
+  IVCashr.ARonTR = ARAccRec.ARonTR;
+  IVCashr.TransTime = CurrentTime;
+  IVCashr.InvDate = curdate;
+  IVCashr.TransDate = curdate;
+  IVCashr.PayDate = blankd;
+  IVCashr.CustCat = "";
+  IVCashr.Prntdf = 0;
+  IVCashr.OKFlag = 0;
+  IVCashr.NLFlag = 0;
+  IVCashr.ExportedFlag = 0;
+  IVCashr.InclVAT = ARAccRec.BasePriceInclVAT;
+  IVCashr.NoTAXonVAT = ARAccRec.NoTAXonVAT;
+  IVCashr.TotalwoTAX = ARAccRec.TotalwoTAX;
+  IVCashr.ARAcc = ARAccRec.ARAcc;
+  IVCashr.PriceList = "";
+   IVCashr.PayDeal = "";
+// Edit Start ---------------------------------------------- Edit Start
+	//Tuesday, 27 July 2010 10:23:10
+	IVCashr.LocalMachineCode = CurMachineName;// Edited Tuesday, 27 July 2010 10:14:48
+  BlockLoad(DCb);
+  IVCashr.PayDeal2 = DCb.DefGCSPayMode;
+  IVCashr.PayDeal3 = DCb.DefGCRPayMode;// Edit ************************** Monday, 15 April 2013 17:19:56
+  IVCashr.Objects = "";
+  GetCurUser(USr);
+  IVCashr.Objects = USr.PersObjx;
+  IVCashr.InvComment = "";
+  IVCashr.CurncyCode = "";
+  IVCashr.CustCode = CashDefRec.DefCustCode;
+  if (PasteCustInCashInv(IVCashr,"",warning)) then begin end;
+  IVCashr.SalesMan = CurrentUser;
+  if (ServingClient==false) then begin//offline
+    BlockLoad(LastRecNr);
+    
+    newnr = LastRecNr.LastIVCashNr;
+    IVCashr.SerNr = NextSerNr("IVCashVc",IVCashr.TransDate,newnr,false,IVCashr.LangCode);
+    if (IVCashr.SerNr<=LastRecNr.LastIVCashNr) then begin
+      IVCashr.SerNr = LastRecNr.LastIVCashNr + 1;
+    end;
+  end;
+  curcode = IVCashr.CurncyCode;
+  GetFullCurncyRate(curcode,curdate,frrate,to1,to2,br1,br2);
+  IVCashr.CurncyCode = curcode;
+  IVCashr.FrRate = frrate;
+  IVCashr.ToRateB1 = to1;
+  IVCashr.ToRateB2 = to2;
+  IVCashr.BaseRate1 = br1;
+  IVCashr.BaseRate2 = br2;
+  IVCashr.OurContact = USr.CurOurContact;
+  if (nonblank(USr.Location)) then begin
+    IVCashr.Location = USr.Location;
+  end;
+  IVCashr.Sum0 = blankval;
+  IVCashr.Sum1 = blankval;
+  IVCashr.Sum2 = blankval;
+  IVCashr.Sum3 = blankval;
+  IVCashr.Sum4 = blankval;
+  IVCashr.TotGP = blankval;
+  IVCashr.RecValue = blankval;
+  IVCashr.RetValue = blankval;  
+  IVCashr.CashValue = blankval;
+  if (ProgramType==typOffLine) then begin
+    IVCashr.UpdStockFlag = 0;
+  end else begin
+    IVCashr.UpdStockFlag = 0;
+//    IVCashr.UpdStockFlag = ARAccRec.InvUpdStock;//not supported anymore
+  end;
+  IVCashr.BaseSum4 = blankval;
+  IVCashr.TotQty = blankval;
+  IVCashr.TotWeight = blankval;
+  IVCashr.TotVolume = blankval;    
+  IVCashr.RecValue2 = blankval; 
+  IVCashr.RecValue3 = blankval;   // Edit ************************** Monday, 15 April 2013 17:00:38 
+  IVCashr.CashValueB2 = blankval;    
+  IVCashr.RetValueB2 = blankval;    
+  IVCashr.CashValueCur = blankval;    
+  IVCashr.RetValueCur = blankval;
+  GetBaseCurncy(2,curcode);
+  IVCashr.POSCurncyCode = curcode;    
+  IVCashr.AuthorizationCode = "";
+  IVCashr.Invalid = 0;
+  IVCashr.OrderNr = -1;
+//  IVCashr.LocalMachineCode = LocalMachineRec.LocalMachineCode;not working in client-server
+  //IVCashr.LocalMachineCode = CurMachineName;// Edit ************************** Tuesday, 27 July 2010 10:23:33
+  IVCashr.DrawerCode = CurDrawerCode(IVCashr.LocalMachineCode);
+  tstr = GetObjectFromRestIT(IVCashr.LocalMachineCode);
+  if ((nonblank(IVCashr.Objects)) and (nonblank(tstr))) then begin
+    IVCashr.Objects = IVCashr.Objects & ",";
+  end;
+  IVCashr.Objects = IVCashr.Objects & tstr;  
+  IVCashVcRecordDefaults = res;  
+  return;
+end;
+
+global
+function LongInt IVCashVcRecordDuplicate(var record IVCashVc IVCashr,record IVCashVc IVCash2r,LongInt long3,LongInt long4)
+begin
+  LongInt res;
+  record CashierDefBlock CashDefRec;
+  record AccBlock ARAccRec;
+  record UserVc USr;
+  val frrate,to1,to2,br1,br2;
+  string 5 curcode;
+  Date curdate;
+  Integer ProgramType;
+  Integer i,rwcnt;
+  row IVCashVc IVCashrw;
+  record LocalOffLineNrBlock LastRecNr;
+  LongInt newnr;
+  string 255 tstr;
+  record DefCashBlock DCb;// Edit ************************** Wednesday, 6 June 2012 15:07:34 
+
+  ProgramType = GetProgramMode;
+  BlockLoad(ARAccRec);  
+  BlockLoad(CashDefRec);  
+  curdate = CurrentDate;
+  IVCashr.SerNr = -1;
+  IVCashr.POSNr = CashDefRec.POSNr;
+  IVCashr.TransTime = CurrentTime;
+  IVCashr.InvDate = curdate;
+  IVCashr.TransDate = curdate;
+  if (ServingClient==false) then begin//offline
+    BlockLoad(LastRecNr);
+    
+    newnr = LastRecNr.LastIVCashNr;
+    IVCashr.SerNr = NextSerNr("IVCashVc",IVCashr.TransDate,newnr,false,IVCashr.LangCode);
+    if (IVCashr.SerNr<=LastRecNr.LastIVCashNr) then begin
+      IVCashr.SerNr = LastRecNr.LastIVCashNr + 1;
+    end;
+  end;
+  IVCashr.Prntdf = 0;
+  IVCashr.OKFlag = 0;
+  IVCashr.NLFlag = 0;
+  IVCashr.ExportedFlag = 0;
+  GetCurUser(USr);
+  IVCashr.OurContact = USr.CurOurContact;
+  if (nonblank(USr.Location)) then begin
+    IVCashr.Location = USr.Location;
+  end;
+  curcode=IVCashr.CurncyCode;
+  GetFullCurncyRate(curcode,curdate,frrate,to1,to2,br1,br2);
+  IVCashr.CurncyCode = curcode;
+  
+     // IVCashr.Location = curcode;
+
+  
+  
+  IVCashr.FrRate = frrate;
+  IVCashr.ToRateB1 = to1;
+  IVCashr.ToRateB2 = to2;
+  IVCashr.BaseRate1 = br1;
+  IVCashr.BaseRate2 = br2;
+  IVCashr.SalesMan = CurrentUser;
+  IVCashr.RecValue = blankval;
+  IVCashr.RetValue = blankval;  
+  IVCashr.CashValue = blankval;
+  if (ProgramType==typOffLine) then begin
+    IVCashr.UpdStockFlag = 0;
+  end else begin
+    IVCashr.UpdStockFlag = 0;
+//    IVCashr.UpdStockFlag = ARAccRec.InvUpdStock; not supported any more
+  end;
+ // Edit Start ---------------------------------------------- Edit Start
+	//Tuesday, 27 July 2010 10:15:47
+	 IVCashr.LocalMachineCode = CurMachineName;// Edited Tuesday, 27 July 2010 10:14:48
+  
+  BlockLoad(DCb);
+	IVCashr.PayDeal2 = DCb.DefGCSPayMode;  
+  IVCashr.PayDeal3 = DCb.DefGCRPayMode;  
+  IVCashr.RecValue = blankval;    
+  IVCashr.RecValue2 = blankval;    
+  IVCashr.RecValue3 = blankval;    
+  IVCashr.CashValueB2 = blankval;    
+  IVCashr.RetValueB2 = blankval;    
+  IVCashr.CashValueCur = blankval;    
+  IVCashr.RetValueCur = blankval;
+  GetBaseCurncy(2,curcode);
+  IVCashr.POSCurncyCode = curcode;    
+  IVCashr.AuthorizationCode = "";
+  IVCashr.Invalid = 0;
+  IVCashr.LocOKNr = blankval;
+  IVCashr.OrderNr = -1;
+  IVCashr.AuthorizationCode = "";
+  IVCashr.AuthorizationCode2 = "";
+  rwcnt = MatRowCnt(IVCashr);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(IVCashr,i,IVCashrw);
+    IVCashrw.FIFO = blankval;
+    IVCashrw.FIFORowVal = blankval;
+    IVCashrw.DownPaidSum = blankval;
+    IVCashrw.OrdQuant = blankval;
+    IVCashrw.OrdRow = -1;
+    MatRowPut(IVCashr,i,IVCashrw);
+  end;  
+  IVCashSumup(IVCashr,true);
+//  IVCashr.LocalMachineCode = LocalMachineRec.LocalMachineCode;
+  
+  IVCashr.DrawerCode = CurDrawerCode(IVCashr.LocalMachineCode);
+  tstr = GetObjectFromRestIT(IVCashr.LocalMachineCode);
+  if ((nonblank(IVCashr.Objects)) and (nonblank(tstr))) then begin
+    IVCashr.Objects = IVCashr.Objects & ",";
+  end;
+  IVCashr.Objects = IVCashr.Objects & tstr;  
+  IVCashVcRecordDuplicate = res;  
+  return;
+end;
+
+global
+updating function LongInt IVCashVcRecordUpdateClient(var record IVCashVc IVCashp,record IVCashVc IVCash2p,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  record IVCashVc IVCashr;
+  record AutoActionBlock AutoActionRec;
+  Integer ProgramType;
+
+  ProgramType = GetProgramMode;
+  if ((IVCash2p.OKFlag==0) and (IVCashp.OKFlag==1)) then begin
+    BlockLoad(AutoActionRec);
+    if (AutoActionRec.CashInvoicePrinting!=0) then begin
+      RecordActionIVCash_Print(IVCashp,"",false);
+    end;
+    /*
+    if (ProgramType==typOffLine)then begin
+      wn = FindWindow("IVCashDClass");
+      RecordNew(IVCashr);
+      nwn = OpenWindow("IVCashDClass",1,0,"","",IVCashr);
+      CloseWindow(wn);
+it should close the window but if it does there is a crash on PC
+if we don't close the window soon we will have more then 100 windows open
+    end;
+*/    
+    if (IVCashp.FiscalFlag!=0) or (IVCashp.FiscalFlag==0) then begin
+PrintFiscalReceipt(IVCashp);//++++++++++++++++++++++++++++++++++++++++++++++++++
+      PrintPOSNETReceiptIVCash(IVCashp);//=-=-=0=00=0=0=0=-0-9=9=9=9=9=-9=99=999999=9=9=9=
+    end;      
+  end;
+  res = 1;
+  IVCashVcRecordUpdateClient = res;
+  RETURN;
+END;
+//==========================================================================================
+global
+updating function LongInt IVCashVcRecordSaveClient(var record IVCashVc IVCashp,record IVCashVc IVCash2p,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  record IVCashVc IVCashr;
+  record AutoActionBlock AutoActionRec;
+//  record LocalMachineBlock LocalMachineRec;
+  Integer ProgramType;
+
+  ProgramType = GetProgramMode;
+  if (IVCashp.OKFlag!=0) then begin
+//PrintFiscalReceipt(IVCashp);//++++++++++++++++++++++++++++++++++++++++++++++++++
+    BlockLoad(AutoActionRec);
+    if (AutoActionRec.CashInvoicePrinting!=0) then begin
+      RecordActionIVCash_Print(IVCashp,"",false);
+    end;
+    /*
+    if (ProgramType==typOffLine)then begin
+      wn = FindWindow("IVCashDClass");
+      RecordNew(IVCashr);
+      nwn = OpenWindow("IVCashDClass",1,0,"","",IVCashr);
+      CloseWindow(wn);
+    end;
+it should close the window but if it does there is a crash on PC
+if we don't close the window soon we will have more then 100 windows open
+    */
+    if (IVCashp.FiscalFlag!=0) or (IVCashp.FiscalFlag==0)  then begin
+PrintFiscalReceipt(IVCashp);//++++++++++++++++++++++++++++++++++++++++++++++++++
+      PrintPOSNETReceiptIVCash(IVCashp);//===================-=-=-=-=0=0=99999999999990==
+    end;      
+  end;
+//  BlockLoad(LocalMachineRec); //done on default and duplicate
+//  IVCashp.LocalMachineCode = LocalMachineRec.LocalMachineCode;
+  SaveOffLineLastIVCashNr(IVCashp.SerNr);//on save only
+  UpdateLastSerNrBlock(IVCashp.LocalMachineCode,IVCashp.SerNr);
+  res = 1;
+  IVCashVcRecordSaveClient = res;
+  RETURN;
+END;
+
+function boolean Checkprice(string artcode,string pricelist, val price)
+begin
+  record PLVc PLr;
+  boolean res;
+  res = true;
+  
+  PLr.PLCode = pricelist;
+  PLr.ArtCode = artcode;
+  if(readfirstmain(PLr,2,true))then begin
+    if(PLr.PLCode==pricelist and PLr.ArtCode==artcode)then begin
+      if(price<PLr.ExVatPrice)then begin// Edit ************************** ñðåäà, 25 èþíß 2014 ã., 16:06:29 != -> <
+        res = false;
+      end;
+    end;
+  end;
+  
+  Checkprice = res;
+return;
+end;
+
+global
+updating function LongInt IVCashVcRecordCheck(var record IVCashVc IVCashr,record IVCashVc IVCash2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;  
+  record CreditLimitBlock CreditLimitRec; 
+  record MainStockBlock MainStockRec;  
+  record AccBlock ARAccRec;  
+  record SRBlock SRRec;  
+  record CUVc CUr;
+  record INVc INr;
+  record ItemStatusVc ISr;  
+  record SHVc recSHr;
+  record AccVc Accr;
+  row SHVc SHrw2;
+  row IVCashVc IVCashrw;
+  row IVCashVc IVCash2rw;  
+  record IVCashVc locIVCashr;
+  Integer i,rwcnt,j,rwcnt2,cnt; 
+  LongInt newnr,oldnr;
+  Boolean gentrans,testf,transf;
+  val limit,bal,quant,prev;
+  string 255 tstr,errstr;
+  string 10 location;
+  Boolean isstruct;  
+  Boolean check;
+  Integer insertmode,updatemode;
+  Integer errcode;
+  LongInt sernr;
+  record LocalOffLineNrBlock LastRecNr;
+  Integer positivef;
+  integer chi;// Edit ************************** Friday, 22 February 2013 14:56:47
+  row IVCashVc chIVrw;// Edit ************************** Friday, 22 February 2013 15:01:26
+  
+  
+ /* CreateFile("ser.txt");
+  Closefile;
+  
+  OpenExportFile("ser.txt",false);
+  RegisterExport("SerBalVc");
+  CloseFile;*/
+
+  if(currentuser=="POSSRV")then begin
+    res = 0;
+  end else begin
+        if (long4>0) then begin
+          check = true;
+        end else begin
+          check = false;
+        end;
+        res = 0;
+        insertmode = 1;//Rs_insert
+        updatemode = 2;//Rs_update
+        transf = false;
+        if (IVCashr.OKFlag==1) then begin
+          if (stat==insertmode) then begin transf = true; end;
+          if (stat==updatemode) then begin
+            if (IVCash2r.OKFlag==0) then begin transf = true; end;
+          end;
+        end;
+        if (stat==updatemode) then begin
+          if (IVCashr.SerNr<=0) and (IVCash2r.OKFlag==0) then begin
+            IVCashr.SerNr = IVCash2r.SerNr;
+          end;
+        end;    
+        BlockLoad(CreditLimitRec);
+        BlockLoad(MainStockRec);
+        BlockLoad(ARAccRec);  
+        BlockLoad(SRRec);  
+        oldnr = IVCashr.SerNr;
+        if (RequireOpenSession(IVCashr.LocalMachineCode)) then begin
+          IVCashr.TransDate = CurrentDate;
+          IVCashr.TransTime = CurrentTime;
+          if (IsSessionOpen(IVCashr.LocalMachineCode,IVCashr.DrawerCode,IVCashr.TransDate,IVCashr.TransTime)==false) then begin
+            RecordCheckError(2195,"",-1,"SerNr");      
+            res = -1;
+            goto LIVCashVcRecordCheck;
+          end;
+        end;
+        if (CreditLimitRec.IVSave==1) then begin
+          CUr.Code = IVCashr.CustCode;
+          if (GetCustAndBal(CUr,limit,bal,CreditLimitRec.Base,CreditLimitRec.OwnCheques,CreditLimitRec.ThirdCheques,CreditLimitRec.IOUCheques,CreditLimitRec.ThirdIOUCheques,CreditLimitRec.ORSaveWarn)) then begin
+            if (limit>0) then begin
+              bal = bal + IVCashr.Sum4;
+              if (bal>limit) then begin
+                if (CreditLimitRec.IVSave==1) then begin    
+                  RecordCheckError(1164,"",-1,"CustCode");      
+                  res = -1;
+                  goto LIVCashVcRecordCheck;
+                end;
+              end;
+            end;
+          end;
+        end;
+        if (IVCashr.SerNr<=0) then begin
+          newnr = GetCurUserLastNr("IVCashVc");
+          if (newnr==-1) then begin
+            newnr = SRRec.LastIVCashNr;
+          end;
+          if (ServingClient) then begin//online only
+            if (GetPOSOffLineCompNo>0) then begin
+              if (blank(IVCashr.LocalMachineCode)) then begin
+                RecordCheckError(1770,"",-1,"LocalMachineCode");      
+                res = -1;
+                goto LIVCashVcRecordCheck;
+              end;
+              newnr = IVCashNrFromLastSerNrBlock(IVCashr.LocalMachineCode);
+            end;
+          end;    
+          IVCashr.SerNr = NextSerNr("IVCashVc",IVCashr.TransDate,newnr,false,IVCashr.LangCode);
+        end;
+        if ((stat==insertmode) or (IVCashr.SerNr!=IVCash2r.SerNr)) then begin
+          locIVCashr.SerNr = IVCashr.SerNr;    
+          if (ReadFirstMain(locIVCashr,1,true)) then begin
+            RecordCheckError(1115,"",-1,"SerNr");      
+            res = -1;
+            goto LIVCashVcRecordCheck;
+          end;
+        end;
+        if (stat==insertmode) then begin
+          if (ServingClient==false) then begin//offline only
+            BlockLoad(LastRecNr);//from client DB
+            if (LastRecNr.LastIVCashNr>0) then begin
+              if (IVCashr.SerNr<=LastRecNr.LastIVCashNr) then begin
+                IVCashr.SerNr = LastRecNr.LastIVCashNr + 1;
+              end;
+            end;
+          end; 
+        end;
+        if (SerNrTestIVCashVc(IVCashr.SerNr,IVCashr.TransDate,gentrans)==false) then begin
+          RecordCheckError(1557,"",-1,"SerNr");      
+          res = -1; 
+          goto LIVCashVcRecordCheck;
+        end;
+        if (IVCashr.UpdStockFlag==1) then begin
+          if (MainStockRec.requireLocation!=0) then begin
+            if (blank(IVCashr.Location)) then begin
+              RecordCheckError(1058,IVCashr.Location,-1,"Location");      
+              goto LIVCashVcRecordCheck;
+            end;
+          end;
+        end;
+        if (Date2Test("IVCashVc",IVCashr.TransDate,"TransDate",-1)==false) then begin
+          res = -1;
+          goto LIVCashVcRecordCheck;
+        end;
+        if (Date2Test("IVCashVc",IVCashr.InvDate,"InvDate",-1)==false) then begin
+          res = -1;
+          goto LIVCashVcRecordCheck;
+        end;
+        errcode = CheckRates(IVCashr.CurncyCode,IVCashr.FrRate,IVCashr.ToRateB1,IVCashr.ToRateB2,IVCashr.BaseRate1,IVCashr.BaseRate2,tstr);
+        if (errcode!=0) then begin
+          RecordCheckError(errcode,"",-1,tstr);      
+          res = -1; 
+          goto LIVCashVcRecordCheck;
+        end;              
+        if (IVCashr.RecValue!=0) then begin
+          if (blank(IVCashr.PayDeal)) then begin
+            RecordCheckError(1207,"",-1,"PayDeal");      
+            res = -1; 
+            goto LIVCashVcRecordCheck;
+          end;
+        end;
+        if (IVCashr.RecValue2!=0) then begin
+          if (blank(IVCashr.PayDeal2)) then begin
+            RecordCheckError(1207,"",-1,"PayDeal");      
+            res = -1; 
+            goto LIVCashVcRecordCheck;
+          end;
+        end;
+        if (IVCashr.RecValue3!=0) then begin
+          if (blank(IVCashr.PayDeal3)) then begin
+            RecordCheckError(1207,"",-1,"PayDeal");      
+            res = -1; 
+            goto LIVCashVcRecordCheck;
+          end;
+        end;
+        if (blank(IVCashr.CustCode)) then begin
+          RecordCheckError(1125,"",-1,"CustCode");      
+          res = -1; 
+          goto LIVCashVcRecordCheck;
+        end;
+        
+        // Edit Start ---------------------------------------------- Edit Start
+	//Monday, 10 June 2013 11:22:59
+				if (blank(IVCashr.CustOrdNr) and IVCashr.RecValue3!=0) then begin
+          RecordCheckError(31033,"",-1,"CustOrdNr");      
+          res = -1; 
+          goto LIVCashVcRecordCheck;
+        end;
+        
+	// Edit End ---------------------------------------------- Edit End
+	
+        CUr.Code = IVCashr.CustCode;
+        if (ReadFirstMain(CUr,1,true)==false) then begin
+          RecordCheckError(1120,IVCashr.CustCode,-1,"CustCode");      
+          res = -1; 
+          goto LIVCashVcRecordCheck;
+        end;
+        if (CUr.blockedFlag!=0) then begin
+          RecordCheckError(1265,IVCashr.CustCode,-1,"CustCode");      
+          res = -1; 
+          goto LIVCashVcRecordCheck;
+        end;
+        errcode = CheckVATNrMask(IVCashr.VATNr,CUr.CountryCode,CUr.CustType,tstr);
+        if (errcode!=0) then begin
+          RecordCheckError(errcode,tstr,-1,"VATNr");      
+          res = -1; 
+          goto LIVCashVcRecordCheck;
+        end;
+        if (POSBalanceExistsAfterThis(IVCashr.TransDate,IVCashr.TransTime,IVCashr.LocalMachineCode,IVCashr.DrawerCode)) then begin
+          RecordCheckError(2194,"",-1,"TransDate");      
+          res = -1;
+          goto LIVCashVcRecordCheck;
+        end;
+        
+        if (transf) then begin
+      
+          if (blank(IVCashr.RetValue)) then begin
+            RecordCheckError(1210,"",-1,"CashValue");      
+            res = -1; 
+            goto LIVCashVcRecordCheck;   
+          end;
+          //===============================================================Customizat
+         
+          if ((IVCashr.Sum4>0) and ((IVCashr.RecValue + IVCashr.RecValue3)>IVCashr.Sum4)) or ((IVCashr.Sum4<0) and ((IVCashr.RecValue+IVCashr.CashValue + IVCashr.RecValue3)<IVCashr.Sum4)) then begin
+            RecordCheckError(1210,"",-1,"RecValue");      
+            res = -1; 
+            goto LIVCashVcRecordCheck;   
+          end;
+          
+          if (IVCashr.RecValue>0 and IVCashr.RetValue>0) then begin
+            RecordCheckError(1210,"",-1,"RecValue");      
+            res = -1; 
+            goto LIVCashVcRecordCheck;   
+          end;
+          
+          if (IVCashr.RecValue2>0 and IVCashr.RetValue>0) then begin
+            RecordCheckError(1210,"",-1,"RecValue2");      
+            res = -1; 
+            goto LIVCashVcRecordCheck;   
+          end;
+          
+          if (IVCashr.RecValue3>0 and IVCashr.RetValue>0) then begin
+            RecordCheckError(1210,"",-1,"RecValue3");      
+            res = -1; 
+            goto LIVCashVcRecordCheck;   
+          end;
+        end;
+        
+        
+        if (transf) then begin
+      
+          if ((IVCashr.Sum4>0) and (IVCashr.RetValue<0)) or ((IVCashr.Sum4<0) and (IVCashr.RetValue>0)) then begin
+            RecordCheckError(1210,"",-1,"CashValue");      
+            res = -1; 
+            goto LIVCashVcRecordCheck;   
+          end;  
+        end;
+        rwcnt = MatRowCnt(IVCashr);
+        if ((IVCashr.OKFlag==1) and (rwcnt==0)) then begin
+          RecordCheckError(1030,"",0,"ArtCode");      
+          res = -1;
+          goto LIVCashVcRecordCheck;
+        end;
+        for (i=0;i<rwcnt;i=i+1) begin
+          MatRowGet(IVCashr,i,IVCashrw);
+          
+            // Edit Start ---------------------------------------------- Edit Start
+    //Tuesday, 8 November 2011 10:16:22
+    
+            if(IVCashrw.Quant==0)then begin
+              RecordCheckError(1058,"",i,"Quant");      
+              res = -1; 
+              goto LIVCashVcRecordCheck;
+            end;
+            
+    // Edit End ---------------------------------------------- Edit End
+               // Edit Start ---------------------------------------------- Edit Start
+    //Tuesday, 8 November 2011 10:16:22
+          if(not(Checkprice(IVCashrw.ArtCode,IVCashr.PriceList,IVCashrw.Price)) and IVCashrw.Sum>0)then begin
+            RecordCheckError(20767,"",i,"Price");      
+            res = -1; 
+            goto LIVCashVcRecordCheck;
+          end;
+        
+          if(IVCashrw.Price<=0)then begin
+            RecordCheckError(1058,"",i,"Price");      
+            res = -1; 
+            goto LIVCashVcRecordCheck;
+          end;
+          
+          For(chi=0;chi<rwcnt;chi=chi+1) begin
+	  					matrowget(IVCashr,chi,chIVrw);
+	  					if(left(chIVrw.Spec,50)==left(IVCashrw.Spec,50) and chIVrw.Sum!=IVCashrw.Sum)then begin
+	  						RecordCheckError(31030,"",i,"Spec");      
+							res = -1; 
+							goto LIVCashVcRecordCheck;
+	  					end;
+					end; 
+          
+            
+    // Edit End ---------------------------------------------- Edit End
+          switch (positivef) begin
+            case 0:
+              if (IVCashrw.Sum>=0) then begin
+                positivef = 1;
+              end else begin
+                positivef = -1;
+              end;
+            case 1:
+              if (IVCashrw.Sum<0) then begin
+                RecordCheckError(1567,"",i,"Quant");      
+                res = -1; 
+                goto LIVCashVcRecordCheck;
+              end;
+            case -1:
+              if (IVCashrw.Sum>0) then begin
+                RecordCheckError(1566,"",i,"Quant");      
+                res = -1; 
+                goto LIVCashVcRecordCheck;
+              end;
+          end;
+          testf = true;
+          switch (IVCashrw.stp) begin
+            otherwise
+      /*
+            if (blank(IVCashrw.ArtCode)) then begin
+              RecordCheckError(1058,"",i,"ArtCode");      
+              res = -1; 
+              goto LIVCashVcRecordCheck;
+            end;
+      */
+            if (VATAccIsClosed(IVCashrw.VATCode,tstr,1)) then begin
+              RecordCheckError(1258,tstr,i,"VATCode");      
+              res = -1; 
+              goto LIVCashVcRecordCheck;
+            end;          
+            if (nonblank(IVCashrw.ArtCode)) then begin
+              INr.Code = IVCashrw.ArtCode;
+              if (ReadFirstItem(IVCashrw.ArtCode,INr,true,true)==false) then begin
+                RecordCheckError(1120,IVCashrw.ArtCode,i,"ArtCode");      
+                res = -1; 
+                goto LIVCashVcRecordCheck;
+              end;
+              if (INr.Terminated!=0) then begin
+                RecordCheckError(1266,IVCashrw.ArtCode,i,"ArtCode");      
+                res = -1; 
+                goto LIVCashVcRecordCheck;
+              end;
+            end else begin
+              testf = false;
+            end; 
+            if (UserCanAction("AllowPOSIVNegQty",true)==false) then begin
+              if (IVCashrw.Quant<0) then begin
+                RecordCheckError(1274,StringFromStringSet(3,"AllowPOSIVNegQty"),i,"Quant");      
+                res = -1; 
+                goto LIVCashVcRecordCheck;
+              end;
+            end;                                          
+            if ((check==true) and (testf==true)) then begin
+              if (MainStockRec.dontAllowOvership==1) then begin
+                if ((INr.ItemType!=0) and (INr.ItemType!=3)) then begin
+                if (IVCashr.UpdStockFlag!=0) then begin
+                if (nonblank(IVCashrw.Recepy)) then begin          
+                  isstruct = ExpandStructItem(IVCashrw.ArtCode,IVCashrw.Recepy,IVCashrw.Quant,recSHr);
+                  if (isstruct) then begin
+                    rwcnt2 = MatRowCnt(recSHr);
+                    for (j=0;j<rwcnt2;j=j+1) begin
+                      MatRowGet(recSHr,j,SHrw2);
+                      FindStockValue(SHrw2.ArtCode,location,ISr);
+                      if ((ISr.Instock<SHrw2.Ship) and (SHrw2.Ship>0)) then begin
+                        RecordCheckError(1247,"",i,"Quant");      
+                        res = -1; 
+                        goto LIVCashVcRecordCheck;
+                      end;
+                    end;
+                  end;
+                end else begin            
+                  if (INr.ItemType==1) then begin
+                    prev = blankval;
+                    for (j=0;j<i;j=j+1) begin
+                      MatRowGet(IVCashr,j,IVCash2rw);
+                      if (IVCash2rw.ArtCode==IVCashrw.ArtCode) then begin
+                        prev = prev + IVCash2rw.Quant;
+                      end;
+                    end;
+                    prev = prev + IVCashrw.Quant;
+                    FindStockValue(IVCashrw.ArtCode,IVCashr.Location,ISr);
+                    if ((ISr.Instock<prev) and (prev>0)) then begin
+                      RecordCheckError(1247,"",i,"Quant");      
+                      res = -1; 
+                      goto LIVCashVcRecordCheck;
+                    end;
+                  end;
+                end;
+                end;
+                end;
+              end;
+            end;
+            
+           // StopAlert("afa");
+            
+            
+            if ((check==true) and (testf==true)) then begin
+              if (IVCashr.UpdStockFlag==0) then begin//****************************
+                if (INr.SerNrf>0) then begin
+                  if (IsSerialNrCorrect(IVCashrw.SerialNr)==false) then begin
+                    RecordCheckError(1209,IVCashrw.SerialNr,i,"SerialNr");      
+                    res = -1; 
+                    goto LIVCashVcRecordCheck;
+                  end;
+                  if (blank(IVCashrw.SerialNr)) then begin
+                    if (IVCashrw.Quant>0) then begin
+                      RecordCheckError(1239,"",i,"SerialNr");      
+                      res = -1; 
+                      goto LIVCashVcRecordCheck;
+                    end;
+                  end;
+                  
+                  // Edit Start ---------------------------------------------- Edit Start
+	//Tuesday, 1 November 2011 11:15:52
+                  if (nonblank(IVCashrw.vRebate) and IVCashrw.Quant<0) then begin
+                      RecordCheckError(31026,"",i,"vRebate");      
+                      res = -1; 
+                      goto LIVCashVcRecordCheck;
+                  end;
+	// Edit End ---------------------------------------------- Edit End
+	
+                  
+                  location = IVCashr.Location;
+                  if (blank(location)) then begin
+                    location = MainStockRec.MainStock;
+                  end;
+                  quant = IVCashrw.Quant;
+                  if (quant>0) then begin 
+                    if (INr.SerNrf==1) then begin
+            
+            
+            
+            if (blank(IVCashrw.Price) or (IVCashrw.Price==0)) then begin
+                        RecordCheckError(1210,"",i,"Price");      
+                        res = -1; 
+                        goto LIVCashVcRecordCheck;
+                      end;
+      
+                      if (SerialNrAvail(IVCashrw.ArtCode,IVCashrw.SerialNr,location,quant)==false) then begin
+                        RecordCheckError(1240,"",i,"SerialNr");      
+                        res = -1; 
+                        goto LIVCashVcRecordCheck;
+                      end;
+                    end else begin
+                      prev = blankval;
+                      for (cnt=0;cnt<i;cnt=cnt+1) begin
+                        MatRowGet(IVCashr,cnt,IVCash2rw);
+                        if ((IVCash2rw.ArtCode==IVCashrw.ArtCode) and (IVCash2rw.SerialNr==IVCashrw.SerialNr)) then begin
+                          prev = prev + IVCash2rw.Quant;
+                        end;
+                      end;
+                      prev = prev + IVCashrw.Quant;
+                      if (SerialNrAvail(IVCashrw.ArtCode,IVCashrw.SerialNr,location,prev)==false) then begin
+                        RecordCheckError(1240,"",i,"SerialNr");      
+                        res = -1; 
+                        goto LIVCashVcRecordCheck;
+                      end;
+                    end;
+                  end else begin
+                    quant = -quant;
+                    /*if (INr.SerNrf==1) then begin
+                      if (SerialNrAvail(IVCashrw.ArtCode,IVCashrw.SerialNr,location,quant)==true) then begin
+                        RecordCheckError(1241,"",i,"SerialNr");      
+                        res = -1; 
+                        goto LIVCashVcRecordCheck;
+                      end;
+                    end;*/
+                  end;
+                  if (INr.SerNrf==1) then begin            
+                    if (IVCashrw.Quant>1) then begin
+                      RecordCheckError(1242,"",i,"SerialNr");      
+                      res = -1; 
+                      goto LIVCashVcRecordCheck;
+                    end;
+                    for (j=0;j<i;j=j+1) begin
+                      MatRowGet(IVCashr,j,IVCash2rw);
+                      if ((IVCashrw.ArtCode==IVCash2rw.ArtCode) and (IVCashrw.SerialNr==IVCash2rw.SerialNr)) then begin
+                        RecordCheckError(1242,"",i,"SerialNr");      
+                        res = -1; 
+                        goto LIVCashVcRecordCheck;
+                      end;
+                      //***************** BEGIN
+                      if ((IVCashrw.ArtCode==IVCash2rw.ArtCode) and (IVCashrw.Sum!=IVCash2rw.Sum)) then begin
+                        RecordCheckError(5,"",i,"SerialNr");      
+                        res = -1; 
+                        goto LIVCashVcRecordCheck;
+                      end;
+                      //***************** END
+                    end;
+                  end;
+                end;
+              end;
+            end;  
+            if ((nonblank(IVCashrw.VATCode)) and (IsVATCodeDefined(IVCashrw.VATCode)==false)) then begin
+              RecordCheckError(1120,IVCashrw.VATCode,i,"VATCode");      
+              res = -1; 
+              goto LIVCashVcRecordCheck;
+            end;
+            if ((blank(IVCashrw.VATCode) and (IVCashrw.Sum!=0))) then begin
+              RecordCheckError(1134,IVCashrw.VATCode,i,"VATCode");      
+              res = -1; 
+              goto LIVCashVcRecordCheck;
+            end;
+            if (CorrectM4ValProc(IVCashrw.vRebate)==false) then begin
+              RecordCheckError(1019,IVCashrw.VATCode,i,"vRebate");      
+              res = -1; 
+              goto LIVCashVcRecordCheck;
+            end;
+            if (nonblank(IVCashrw.SalesAcc)) then begin
+              tstr = "";
+              if ((nonblank(IVCashr.Objects)) or (nonblank(IVCashrw.Objects))) then begin
+                tstr = IVCashr.Objects;
+                if ((nonblank(tstr)) and (nonblank(IVCashrw.Objects))) then begin
+                  tstr = tstr & ",";
+                end;
+                if (nonblank(IVCashrw.Objects)) then begin
+                  tstr = tstr & IVCashrw.Objects;
+                end;
+              end;
+              errcode = CheckObjs(IVCashrw.SalesAcc,tstr,errstr);
+              if (errcode!=0) then begin
+                RecordCheckError(errcode,errstr,-1,"Objects");      
+                res = -1; 
+                goto LIVCashVcRecordCheck;
+              end;
+            end;
+            if (IsControlAccount(IVCashrw.SalesAcc,true,false)) then begin
+              RecordCheckError(1082,"",i,"SalesAcc");      
+              res = -1; 
+              goto LIVCashVcRecordCheck;
+            end;
+            if (ARAccRec.VATCodeCtrl==1) then begin
+              Accr.AccNumber = IVCashrw.SalesAcc;
+              if (ReadFirstMain(Accr,1,true)) then begin
+                if ((nonblank(Accr.VATCode)) and (Accr.VATCode!=IVCashrw.VATCode)) then begin
+                  RecordCheckError(1245,"",i,"VATCode");      
+                  res = -1; 
+                  goto LIVCashVcRecordCheck;
+                end;
+              end else begin
+                tstr = IVCashrw.SalesAcc;
+                Accr.AccNumber = tstr;
+                if (ReadFirstMain(Accr,1,true)) then begin
+                  if ((nonblank(Accr.VATCode)) and (Accr.VATCode!=IVCashrw.VATCode)) then begin
+                    RecordCheckError(1245,"",i,"VATCode");      
+                    res = -1; 
+                    goto LIVCashVcRecordCheck;
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;    
+        IVCashr.TransTime = CurrentTime;//cannot be on save nor on update
+        if (transf) then begin
+          if (UserCanAction("CashInvOK",true)==false) then begin
+            RecordCheckError(1274,StringFromStringSet(3,"CashInvOK"),-1,"SerNr");      
+            res = -1;
+            goto LIVCashVcRecordCheck;
+          end;
+        end;
+        if (check) then begin
+          if (IVCashr.UpdStockFlag!=0) then begin
+            IVCashUpdateFIFO(IVCashr,true);
+          end;
+        end;
+        if (transf and IVCashr.UpdStockFlag!=0) then begin
+          if (stat==updatemode) then begin sernr = IVCash2r.SerNr; end;
+      
+          if (MainStockRec.Chronology!=0) then begin
+            if (ExistStockTrans(IVCashr.Location,IVCashr.TransDate,errcode,"IVCashVc",sernr,MainStockRec.Chronology)) then begin
+              RecordCheckError(errcode,"",-1,"TransDate");      
+              res = -1;
+              goto LIVCashVcRecordCheck;
+            end;
+          end;
+          if (CanOKStockRecord==false) then begin
+            RecordCheckError(1766,"",-1,"SerNr");      
+            res = -1; 
+            goto LIVCashVcRecordCheck;
+          end;
+        end;  
+      LIVCashVcRecordCheck:;  
+        if (res!=0) then begin IVCashr.SerNr = oldnr; end;
+  end;
+  
+  IVCashVcRecordCheck = res;
+  RETURN;
+END;
+
+global
+function LongInt IVCashVcRecordProtectFields(var record IVCashVc IVCashr,record IVCashVc IVCash2r,LongInt long3,LongInt long4)
+begin
+  LongInt res;
+  
+  IVCash2r.Prntdf = IVCashr.Prntdf;
+  IVCashVcRecordProtectFields = res;
+  RETURN;
+END;
+
+global
+function LongInt IVCashVcRecordReset(var record IVCashVc IVCashr,record IVCashVc IVCash2r,LongInt long3,LongInt long4)
+begin
+  LongInt res;
+  
+  IVCashr.OKFlag = 0;
+  IVCashVcRecordReset = res;
+  RETURN;
+END;
+
+procedure IVCashVcConvertB1ToB2(record IVCashVc IVCashr,string curncy,val fr,var val to1p,var val to2p,var val br1p,var val br2p)
+BEGIN
+  row IVCashVc IVCashrw;
+  val t;
+  Integer i,rwcnt;
+
+  SwapM4Val(br1p,br2p);
+  SwapM4Val(to1p,to2p);
+  rwcnt = MatRowCnt(IVCashr);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(IVCashr,i,IVCashrw);
+    B1ToB2Val(IVCashrw.rowGP,br1p,br2p,t);
+    IVCashrw.rowGP = t;
+    B1ToB2Val(IVCashrw.FIFO,br1p,br2p,t);
+    IVCashrw.FIFO = t;
+    B1ToB2Val(IVCashrw.BasePrice,br1p,br2p,t);
+    IVCashrw.BasePrice = t;
+    B1ToB2Val(IVCashrw.FIFORowVal,br1p,br2p,t);
+    IVCashrw.FIFORowVal = t;
+    MatRowPut(IVCashr,i,IVCashrw);
+  end;
+  RETURN;
+END;
+
+/*global
+updating function LongInt IVCashVcRecordImport(var record IVCashVc IVCashr,record IVCashVc IVCash2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  //LogText(0,"import");
+  string 5 curncy;
+  val fr,to1,to2,br1,br2,t;
+  Boolean gBase1ToBase2,gToDualBase;
+  record ConvMasterBlock cvm;
+  Integer i,rwcnt;
+  row IVCashVc IVCashrw;
+  record AccBlock Accb;
+     
+  IVCashr.InvDate = CurrentDate;
+  IVCashr.TransDate = CurrentDate;
+  IVCashr.RegDate = CurrentDate;
+  if (nonblank(IVCashr.PayDate)) then begin
+    IVCashr.PayDate = CurrentDate;
+  end;
+  
+  BlockLoad(cvm);
+  BlockLoad(Accb);
+  if (cvm.DualBaseCurrencyFlag!=0) then begin gToDualBase = true; end;
+  if (cvm.Base1ToBase2Flag!=0) then begin gBase1ToBase2 = true; end;
+  if (gToDualBase) then begin
+    curncy = IVCashr.CurncyCode;
+    fr = IVCashr.FrRate; 
+    to1 = IVCashr.ToRateB1;
+    to2 = IVCashr.ToRateB2;
+    br1 = IVCashr.BaseRate1;
+    br2 = IVCashr.BaseRate2;
+    t = IVCashr.Sum4;
+    ConvertToDualBase(curncy,IVCashr.TransDate,fr,to1,to2,br1,br2,t,true);
+    IVCashr.CurncyCode = curncy;
+    IVCashr.FrRate = fr;
+    IVCashr.ToRateB1 = to1;
+    IVCashr.ToRateB2 = to2;
+    IVCashr.BaseRate1 = br1;
+    IVCashr.BaseRate2 = br2;
+    IVCashr.Sum4 = t;
+  end;
+  if (gBase1ToBase2) then begin
+    to1 = IVCashr.ToRateB1;
+    to2 = IVCashr.ToRateB2;
+    br1 = IVCashr.BaseRate1;
+    br2 = IVCashr.BaseRate2; 
+    IVCashVcConvertB1ToB2(IVCashr,IVCashr.CurncyCode,IVCashr.FrRate,to1,to2,br1,br2);
+    IVCashr.ToRateB1 = to1;
+    IVCashr.ToRateB2 = to2;
+    IVCashr.BaseRate1 = br1;
+    IVCashr.BaseRate2 = br2;
+    IVCashSumup(IVCashr,true);
+  end;
+  if (IVCashr.Sum4!=0) then begin
+    IVCashSumup(IVCashr,true);
+  end;
+  if (IVCashr.TotGP==0) then begin  
+    rwcnt = MatRowCnt(IVCashr);
+    for (i=0;i<rwcnt;i=i+1) begin
+      MatRowGet(IVCashr,i,IVCashrw);
+      if (nonblank(IVCashrw.ArtCode)) then begin
+        IVCashr.TotGP = IVCashr.TotGP + IVCashrw.rowGP;
+      end;
+    end;
+  end;  
+  if (IVCashr.NoTAXonVAT==-1) then begin
+    IVCashr.NoTAXonVAT = Accb.NoTAXonVAT;
+  end;
+  IVCashVcRecordImport = res;
+  RETURN;
+END;*/
+
+updating procedure IVCashArtStats(record IVCashVc IVCashp)
+begin
+  Integer i,rwcnt;
+  row IVCashVc IVCashrw;
+  val basesum,gps;
+  val sumprice,temp;
+  val icsbasesum,icsgps,icsprice;
+
+  if (blankdate(IVCashp.TransDate)) then begin goto LIVCashArtStats; end;
+  rwcnt = MatRowCnt(IVCashp);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(IVCashp,i,IVCashrw);
+    if (IVCashrw.stp==1) then begin
+      temp = MulRateToBase1(IVCashp.CurncyCode,IVCashrw.Sum,IVCashp.FrRate,IVCashp.ToRateB1,IVCashp.ToRateB2,IVCashp.BaseRate1,IVCashp.BaseRate2,DefaultCurRoundOff);
+      FindSalesExVat(IVCashrw.VATCode,temp,IVCashp.InclVAT,IVCashp.NoTAXonVAT,basesum);
+      temp = IVCashrw.Quant * IVCashrw.Price;
+      if (temp==0) then begin temp = IVCashrw.Sum; end;
+      icsprice = temp;
+      icsbasesum = basesum;
+      icsgps = IVCashrw.rowGP;
+      ArtStatUp(IVCashrw.ArtCode,IVCashp.CustCode,IVCashp.TransDate,IVCashrw.Quant,basesum,IVCashrw.rowGP,temp,false,icsbasesum,icsgps,icsprice);
+      sumprice = sumprice + temp;
+      gps = gps + IVCashrw.rowGP;
+    end;
+  end;
+LIVCashArtStats:;
+  return;
+end;
+
+global
+updating function LongInt IVCashVcRecordSave(var record IVCashVc IVCashp,record IVCashVc IVCash2p,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  val LocOKNr;
+  record UserVc USr;
+
+
+  if (blankdate(IVCashp.RegDate)) then begin
+    IVCashp.RegDate = CurrentDate;
+  end;
+  if (blanktime(IVCashp.RegTime)) then begin
+    IVCashp.RegTime = CurrentTime;
+  end;
+  if (IVCashp.Invalid==0) then begin
+    IVCashSumup(IVCashp,true);
+    GetCurUser(USr);
+    if (blank(IVCashp.Location)) then begin
+      IVCashp.Location = USr.Location;
+    end;    
+    IVCashp.Prntdf = 1;
+    if (IVCashp.OKFlag!=0) then begin
+      IVCashp.Prntdf = 0;
+      if (IVCashp.UpdStockFlag!=0) then begin
+LocOKNr = IVCashp.LocOKNr;
+        UpdateLocOKNr(IVCashp.Location,LocOKNr);
+        IVCashp.LocOKNr = LocOKNr;
+      end;
+    end;
+  end;    
+  IVCashVcRecordSave = res;
+  RETURN;
+END;
+
+global
+updating function LongInt IVCashVcRecordSaveAfter(var record IVCashVc IVCashp,record IVCashVc IVCash2p,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  
+  /*if (IVCashp.Invalid==0) then begin
+    if (IVCashp.OKFlag!=0) then begin
+      IVCashArtStats(IVCashp);
+    end;
+  end;  */
+  IVCashVcRecordSaveAfter = res;
+  RETURN;
+END;
+
+global
+updating procedure IVCashUpdateStock(record IVCashVc IVCashp)
+BEGIN
+  val t,t2,q2;
+  row IVCashVc IVCashrw;
+  Integer i,rwcnt;
+  Boolean isstruct;
+  record MainStockBlock MainStockRec;
+  record INVc INr;
+  record SHVc SHr;
+  row SHVc SHrw2;
+  Integer shrwcnt;
+  Integer j;
+  string 255 location;
+     
+  location = IVCashp.Location;
+  BlockLoad(MainStockRec);
+  if (blank(location)) then begin location = MainStockRec.MainStock; end;
+  rwcnt = MatRowCnt(IVCashp);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(IVCashp,i,IVCashrw);
+    if (IVCashrw.stp==1) then begin
+      if (IVCashp.UpdStockFlag!=0) then begin
+        isstruct = ExpandStructItem(IVCashrw.ArtCode,IVCashrw.Recepy,IVCashrw.Quant,SHr);
+        if (isstruct==false) then begin
+          if (ShouldItemUpdateStock(IVCashrw.ArtCode)) then begin
+            t2 = -IVCashrw.Quant;
+            if (MainStockRec.UnitConvCalc==0) then begin
+              q2 = t2 * IVCashrw.Coefficient;
+            end else begin
+              q2 = t2 / IVCashrw.Coefficient;
+            end;
+            UpdateInstock("IVCashVc",IVCashp.SerNr,IVCashrw.ArtCode,location,IVCashp.TransDate,t2,t,t,t,t,q2,t,t,t);
+          end;
+        end else begin
+          shrwcnt = MatRowCnt(SHr);
+          for (j=0;j<shrwcnt;j=j+1) begin
+            MatRowGet(SHr,j,SHrw2);
+            if (ShouldItemUpdateStock(SHrw2.ArtCode)) then begin
+              t2 = -SHrw2.Ship;
+              if (MainStockRec.UnitConvCalc==0) then begin
+                q2 = t2 * SHrw2.Coefficient;
+              end else begin
+                q2 = t2 / SHrw2.Coefficient;
+              end;
+              UpdateInstock("IVCashVc",IVCashp.SerNr,SHrw2.ArtCode,location,IVCashp.TransDate,t2,t,t,t,t,q2,t,t,t);
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  RETURN;
+END;
+
+/*global
+updating function LongInt IVCashVcRecordImportAfter(var record IVCashVc IVCashp,record IVCashVc IVCash2p,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+LogText(0,"after");
+  if (IVCashp.Invalid==0) then begin
+    if (IVCashp.OKFlag!=0) then begin
+      IVCashArtStats(IVCashp);
+      if (ImportingTextBackup==false and CanOKStockRecord==true) then begin
+        IVCashUpdateItemHist(IVCashp);
+        IVCashUpdateStock(IVCashp);
+        IVCashUpdateSerialNr(IVCashp);
+      end;
+    end;
+  end; 
+  IVCashVcRecordImportAfter = res;
+  RETURN;
+END;*/
+
+global
+updating function LongInt IVCashVcRecordUpdate(var record IVCashVc IVCashp,record IVCashVc IVCash2p,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  val LocOKNr;
+  IVCashSumup(IVCashp,true);
+  if ((IVCash2p.Invalid==0) and (IVCashp.Invalid==0)) then begin
+    if ((IVCash2p.OKFlag==0) and (IVCashp.OKFlag!=0)) then begin
+      if (IVCashp.UpdStockFlag!=0) then begin
+        LocOKNr = IVCashp.LocOKNr;
+        UpdateLocOKNr(IVCashp.Location,LocOKNr);
+        IVCashp.LocOKNr = LocOKNr;
+      end;
+      IVCashp.Prntdf = 0;
+    end;  
+  end;
+  IVCashVcRecordUpdate = res;
+  RETURN;
+END;
+
+global
+updating function LongInt IVCashVcRecordUpdateAfter(var record IVCashVc IVCashp,record IVCashVc IVCash2p,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+
+  if ((IVCash2p.Invalid==0) and (IVCashp.Invalid==0)) then begin
+    if ((IVCash2p.OKFlag==0) and (IVCashp.OKFlag==1)) then begin
+      IVCashArtStats(IVCashp);
+    end;
+  end;
+  IVCashVcRecordUpdateAfter = res;
+  RETURN;
+END;

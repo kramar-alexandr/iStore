@@ -1,0 +1,505 @@
+external procedure VIVc_GetPrePaidAmount(record VIVc,var val);
+external function string 255 GetSupplierOnAccountAC(string);
+external procedure GetAPAcc(string,var string);
+external function Integer GetIntYc(Date);
+external procedure TRExtYc(record TRVc,var string);
+external function Integer TypeOfCurncy(var string,var Integer);
+external procedure CurValToOtherCur(Date,string,val,string,var val,Integer);
+external function val MulWithRateToBase1(var string,Date,val,Integer);
+external procedure VendHead(record CUVc,var val,Integer);
+external procedure AddCurncyTotals(var array string,var array val,var Integer,string,val);
+external function val MulRateToBase1(var string,val,val,val,val,val,val,Integer);
+
+
+procedure GetVIPrepaySum(record VIVc VIr,var val balp)
+BEGIN
+  row VIVc VIrw;
+  Integer i,rwcnt;
+  
+  rwcnt = MatRowCnt(VIr);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(VIr,i,VIrw);
+    if (VIrw.stp==6) then begin 
+      if (VIrw.PrepayNr<>-1) then begin
+        balp = balp + VIrw.PrepayAmount;
+      end;
+    end;
+  end;  
+  return;
+END;
+
+procedure GetOPPrepaymentAmount(record VIVc VIp,val cuscurval,val curval,record BaseCurBlock BCb,var val lossv)
+BEGIN
+  record APPayHistVc APPayHistr;
+  row VIVc VIrw;
+  Integer i,rwcnt;
+  val t,curv,v;
+  LongInt lastcupno;
+  Boolean foundf,onecurf;
+  val cvp;
+  val thesum;
+  val bases,realbases;
+  string 10 veperlastprepcur;
+
+  cvp = curval;
+  lastcupno = -1;
+  lossv = blankval;
+  rwcnt = MatRowCnt(VIp);
+  for (i=0; i<rwcnt; i=i+1) begin
+    MatRowGet(VIp,i,VIrw);
+    if ((VIrw.stp==6) and (VIrw.PrepayNr<>lastcupno)) then begin
+      thesum = VIrw.PrepayAmount;
+      curv = BlankVal;
+      onecurf = true;
+      realbases = BlankVal;
+      bases = BlankVal;
+      APPayHistr.VEPNr = VIrw.PrepayNr;
+      APPayHistr.FileName = "OPVc";
+      foundf = true;
+      ResetLoop(APPayHistr);
+      while (LoopMain(APPayHistr,2,foundf)) begin
+        if ((APPayHistr.VEPNr<>VIrw.PrepayNr) or (APPayHistr.FileName<>"OPVc")) then begin foundf = false; end;
+        if (foundf) then begin
+          if (nonblank(veperlastprepcur)) then begin
+            if (APPayHistr.CurncyCode!=veperlastprepcur) then begin   
+              onecurf = false;
+            end;
+          end;
+          if ((cvp>APPayHistr.Val) and (thesum>APPayHistr.Val)) then begin
+            cvp = cvp - APPayHistr.Val;
+            thesum = thesum - APPayHistr.Val;
+            curv = curv + APPayHistr.Val;
+            bases = bases + MulRateToBase1(VIp.CurncyCode,APPayHistr.Val,VIp.FrRate,VIp.ToRateB1,VIp.ToRateB2,VIp.BaseRate1,VIp.BaseRate2,2);
+            realbases = realbases + APPayHistr.BookVal;        
+           end else begin
+            cvp = cvp - VIrw.Sum;
+            curv = curv + APPayHistr.Val;
+            bases = bases + MulRateToBase1(VIp.CurncyCode,thesum,VIp.FrRate,VIp.ToRateB1,VIp.ToRateB2,VIp.BaseRate1,VIp.BaseRate2,2);
+            realbases = realbases + APPayHistr.BookVal;
+            foundf = false;
+          end;
+          veperlastprepcur = APPayHistr.CurncyCode;
+        end;
+      end;
+      ResetLoop(APPayHistr);
+      APPayHistr.VEPNr = VIrw.PrepayNr;
+      APPayHistr.FileName = "CLOutVc";
+      foundf = true;
+      ResetLoop(APPayHistr);
+      while (LoopMain(APPayHistr,2,foundf)) begin
+        if ((APPayHistr.VEPNr<>VIrw.PrepayNr) or (APPayHistr.FileName<>"CLOutVc")) then begin foundf = false; end;
+        if (foundf) then begin
+          if (nonblank(veperlastprepcur)) then begin
+            if (APPayHistr.CurncyCode!=veperlastprepcur) then begin   
+              onecurf = false;
+            end;
+          end;
+          if ((cvp>APPayHistr.Val) and (thesum>APPayHistr.Val)) then begin
+            cvp = cvp - APPayHistr.Val;
+            thesum = thesum - APPayHistr.Val;
+            curv = curv + APPayHistr.Val;
+            bases = bases + MulRateToBase1(VIp.CurncyCode,APPayHistr.Val,VIp.FrRate,VIp.ToRateB1,VIp.ToRateB2,VIp.BaseRate1,VIp.BaseRate2,2);
+            realbases = realbases + APPayHistr.BookVal;
+           end else begin
+            cvp = cvp - VIrw.Sum;
+            curv = curv + APPayHistr.Val;
+            bases = bases + MulRateToBase1(VIp.CurncyCode,thesum,VIp.FrRate,VIp.ToRateB1,VIp.ToRateB2,VIp.BaseRate1,VIp.BaseRate2,2);
+            realbases = realbases + APPayHistr.BookVal;
+            foundf = false;
+          end;
+          veperlastprepcur = APPayHistr.CurncyCode;
+        end;
+      end;
+      if (onecurf) then begin
+        thesum = VIrw.Sum;
+      end else begin
+        thesum = (VIrw.Sum*realbases)/curv;
+      end;
+      lossv = lossv - Round(bases-thesum,2);
+      if (APPayHistr.CurncyCode==VIp.CurncyCode) then begin
+//        lossv = 0;//why so, we have an option to show amounts in Base Curency, so there must be rate diffrence regardless of currency
+      end;
+      lastcupno = VIrw.PrepayNr;
+    end;
+  end;  
+  return;
+END;
+
+global
+procedure VEPer_PrintInvoice(record RcVc RepSpec,record CUVc VEr,record BaseCurBlock bascur,LongInt VISerNr,
+                             var array string acur,var array val av1,var array val av2,var array val av3,var Integer curcnt,
+                             var val balp,var val totgain,var val totloss,var val SumDebet,var val SumCredit)
+BEGIN
+  record VIVc VIr;
+  row VIVc VIrw;
+  record VIVc VI2r;
+  string 20 lastcur;
+  Boolean printf;
+  val v,v2,cuscurval,cuscurval2,lossv,taxv,ppval,curtaxv;
+  string 255 tstr;
+  val frrate,torate1,torate2,baserate1,baserate2;
+  Integer i,rwcnt;
+  record PDVc PDr;
+  
+  VIr.SerNr = VISerNr;
+  if (ReadFirstMain(VIr,1,true)) then begin
+    if ((VIr.OKFlag==1) and (VIr.Invalid==0)) then begin
+      if (nonblank(RepSpec.FirstAcc)) then begin
+        if (VIr.APAcc!=RepSpec.FirstAcc) then begin
+          goto LVEPer_PrintInvoice;
+        end;
+      end;
+      if (VIr.CurncyCode<>lastcur) then begin
+        if ((VEr.VECurncyCode<>"") and (nonblank(lastcur))) then begin printf = false; end;
+        lastcur = VIr.CurncyCode;
+      end;
+      if ((VIr.InvType==1) or (VIr.InvType==4) or (VIr.InvType==5)) then begin
+        v = VIr.PayVal;
+        cuscurval = MULRATETOBASE1(VIr.CurncyCode,v,VIr.FrRate,VIr.ToRateB1,VIr.ToRateB2,VIr.BaseRate1,VIr.BaseRate2,DefaultCurRoundOff); 
+        if (RepSpec.flags[2]==0) then begin
+          v = cuscurval;
+        end else begin
+          if (VIr.CurncyCode==VEr.VECurncyCode) then begin
+            cuscurval = v;
+          end;  
+        end;
+        GetOPPrepaymentAmount(VIr,cuscurval,VIr.PayVal,bascur,lossv);
+        if (RepSpec.flags[2]==0) then begin
+          balp = balp + lossv;
+        end else begin
+          if (VIr.CurncyCode<>VEr.VECurncyCode) then begin
+            balp = balp + lossv;
+          end;  
+        end;
+        if ((nonblank(VEr.VECurncyCode)) and (RepSpec.flags[2]==1)) then begin
+          lossv = 0;
+        end;
+        if (lossv>0) then begin
+          totloss = totloss + lossv;
+        end else begin
+          totgain = lossv + totgain;
+        end;
+        balp = balp + cuscurval;
+        SumCredit = SumCredit + cuscurval;
+        // Edit Start ---------------------------------------------- Edit Start
+	//Thursday, 18 October 2012 13:01:39
+        if(RepSpec.Media==2 or RepSpec.Media==20)then begin // Edit ************************** Thursday, 18 October 2012 13:02:36
+          StartFormat(15);
+          OutDate(0,0,VIr.TransDate,false);
+          OutString(90,0,USetStr(4185),false);
+          tstr = VIr.SerNr;
+          if (nonblank(VIr.InvoiceNr)) then begin
+            tstr = tstr & ", (";
+            tstr = tstr & VIr.InvoiceNr;
+            tstr = tstr & ")";
+          end;
+          OutString(140,"DblVePerVI",tstr,false);
+          OutString(140,0,"",false);
+          OutVal(4,0,v,M4Val,true);
+                         
+          OutVal(1,0,balp,M4Val,true);
+          
+          if (RepSpec.flags[2]==1) then begin
+            OutString(1,0,VIr.CurncyCode,false);              
+          end else begin
+            OutVal(1,0,lossv,M4Val,true);
+          end; 
+          PDr.Code = VIr.PayDeal;
+          readfirstmain(PDr,1,true);
+          OutString(140,0,PDr.pdComment,false);// Edit ************************** Thursday, 18 October 2012 13:14:46
+          OutString(140,0,VIr.DueDate,false);// Edit ************************** Thursday, 18 October 2012 13:14:45
+          
+          EndFormat;
+        end else begin
+                    StartFormat(15);
+          OutDate(0,0,VIr.TransDate,false);
+          OutString(90,0,USetStr(4185),false);
+          tstr = VIr.SerNr;
+          if (nonblank(VIr.InvoiceNr)) then begin
+            tstr = tstr & ", (";
+            tstr = tstr & VIr.InvoiceNr;
+            tstr = tstr & ")";
+          end;
+          OutString(140,"DblVePerVI",tstr,false);
+          OutVal(4,0,v,M4Val,true);
+          if (RepSpec.flags[2]==1) then begin
+            OutString(8,0,VIr.CurncyCode,false);              
+          end else begin
+            OutVal(420,0,lossv,M4Val,true);
+          end;                
+          OutVal(1,0,balp,M4Val,true);
+          
+          EndFormat;
+        end;
+	// Edit End ---------------------------------------------- Edit End
+	
+
+        if (nonblank(VEr.VECurncyCode)) then begin              
+          AddCurncyTotals(acur,av2,curcnt,VEr.VECurncyCode,v);
+          AddCurncyTotals(acur,av3,curcnt,VEr.VECurncyCode,v);
+        end else begin
+          AddCurncyTotals(acur,av2,curcnt,bascur.BaseCur1,cuscurval);
+          AddCurncyTotals(acur,av3,curcnt,bascur.BaseCur1,cuscurval);
+
+          AddCurncyTotals(acur,av2,curcnt,bascur.BaseCur1,lossv);
+          AddCurncyTotals(acur,av3,curcnt,bascur.BaseCur1,lossv);
+        end;            
+        if (VIr.WithHoldingTax<>0) then begin
+          StartFormat(15);
+          OutDate(0,0,VIr.TransDate,false);
+          OutString(90,0,USetStr(4194),false);
+          tstr = VIr.SerNr;
+          if (nonblank(VIr.InvoiceNr)) then begin
+            tstr = tstr & ", (";
+            tstr = tstr & VIr.InvoiceNr;
+            tstr = tstr & ")";
+          end;
+          OutString(140,"DblVePerVI",tstr,false);
+          taxv = VIr.WithHoldingTax;
+          curtaxv = MULRATETOBASE1(VIr.CurncyCode,taxv,VIr.FrRate,VIr.ToRateB1,VIr.ToRateB2,VIr.BaseRate1,VIr.BaseRate2,DefaultCurRoundOff); 
+          if (RepSpec.flags[2]==0) then begin
+            taxv = curtaxv;
+          end else begin
+            if (VIr.CurncyCode==VEr.VECurncyCode) then begin
+              curtaxv = taxv;
+            end;  
+          end;
+          OutVal(3,0,taxv,M4Val,true);
+          if (RepSpec.flags[2]==1) then begin
+            OutString(7,0,VIr.CurncyCode,false);              
+          end;     
+          balp = balp - curtaxv;
+          OutVal(1,0,balp,M4Val,true);
+          EndFormat;
+          SumDebet = SumDebet + curtaxv;
+          if (nonblank(VEr.VECurncyCode)) then begin              
+            AddCurncyTotals(acur,av2,curcnt,VEr.VECurncyCode,-taxv);
+            AddCurncyTotals(acur,av3,curcnt,VEr.VECurncyCode,-taxv);
+          end else begin
+            AddCurncyTotals(acur,av2,curcnt,bascur.BaseCur1,-curtaxv);
+            AddCurncyTotals(acur,av3,curcnt,bascur.BaseCur1,-curtaxv);
+          end; 
+        end;  
+      end;
+      if (VIr.InvType==2) then begin
+        v = VIr.PayVal + ppval;
+        GetVIPrepaySum(VIr,v2); // If you for some stupid reason use prepayment on a cash invoice, it needs to deduct Debit side of cash line...
+        v2 = v-v2;
+        cuscurval = MULRATETOBASE1(VIr.CurncyCode,v,VIr.FrRate,VIr.ToRateB1,VIr.ToRateB2,VIr.BaseRate1,VIr.BaseRate2,DefaultCurRoundOff); 
+        cuscurval2 = MULRATETOBASE1(VIr.CurncyCode,v2,VIr.FrRate,VIr.ToRateB1,VIr.ToRateB2,VIr.BaseRate1,VIr.BaseRate2,DefaultCurRoundOff); 
+        if (RepSpec.flags[2]==0) then begin
+          v = cuscurval;
+          v2 = cuscurval2;
+        end else begin
+          if (VIr.CurncyCode==VEr.VECurncyCode) then begin 
+            cuscurval = v;            
+            cuscurval2 = v2;            
+          end;  
+        end;
+        SumDebet = SumDebet + cuscurval2;
+        SumCredit = SumCredit + cuscurval;
+        balp = balp + v-v2;
+        if(RepSpec.Media==2 or RepSpec.Media==20)then begin // Edit ************************** Thursday, 18 October 2012 13:02:36
+          StartFormat(15);
+          OutDate(0,0,VIr.TransDate,false);
+          OutString(90,0,USetStr(4188),false);
+          tstr = VIr.SerNr;
+          if (nonblank(VIr.InvoiceNr)) then begin
+             tstr = tstr & ", (";
+             tstr = tstr & VIr.InvoiceNr;
+             tstr = tstr & ")";
+          end;
+          OutString(140,"DblVePerVI",tstr,false);
+          OutVal(3,0,v2,M4Val,true);
+          OutString(140,0,"",false);
+          if (RepSpec.flags[2]==1) then begin
+            OutString(7,0,VIr.CurncyCode,false);
+          end;  
+          OutVal(4,0,v,M4Val,true);
+          if (RepSpec.flags[2]==1) then begin
+            OutString(8,0,VIr.CurncyCode,false);
+          end;  
+          OutVal(1,0,balp,M4Val,true);
+          EndFormat;
+        end else begin
+          StartFormat(15);
+          OutDate(0,0,VIr.TransDate,false);
+          OutString(90,0,USetStr(4188),false);
+          tstr = VIr.SerNr;
+          if (nonblank(VIr.InvoiceNr)) then begin
+             tstr = tstr & ", (";
+             tstr = tstr & VIr.InvoiceNr;
+             tstr = tstr & ")";
+          end;
+          OutString(140,"DblVePerVI",tstr,false);
+          OutVal(3,0,v2,M4Val,true);
+          if (RepSpec.flags[2]==1) then begin
+            OutString(7,0,VIr.CurncyCode,false);
+          end;  
+          OutVal(4,0,v,M4Val,true);
+          if (RepSpec.flags[2]==1) then begin
+            OutString(8,0,VIr.CurncyCode,false);
+          end;  
+          OutVal(1,0,balp,M4Val,true);
+          EndFormat;        
+        end;
+        v = v-v2;
+        AddCurncyTotals(acur,av2,curcnt,VIr.CurncyCode,v);
+        AddCurncyTotals(acur,av3,curcnt,VIr.CurncyCode,v);
+        if (ppval<>0) then begin
+          SumCredit = SumCredit - ppval;            
+          StartFormat(15);
+          OutString(90,0,USetStr(1875),false);
+          AddCurncyTotals(acur,av2,curcnt,VIr.CurncyCode,-ppval);
+          AddCurncyTotals(acur,av3,curcnt,VIr.CurncyCode,-ppval);
+          OutVal(4,0,ppval,M4NegVal,true);
+          if (RepSpec.flags[2]==1) then begin
+            OutString(8,0,VIr.CurncyCode,false);              
+          end;  
+          balp = balp - ppval;
+          OutVal(1,0,balp,M4Val,true);
+          EndFormat;
+        end;
+      end;
+      if (VIr.InvType==3) then begin
+        v = VIr.PayVal;
+        frrate = VIr.FrRate;
+        torate1 = VIr.ToRateB1;
+        torate2 = VIr.ToRateB2;
+        baserate1 = VIr.BaseRate1;
+        baserate2 = VIr.BaseRate2;
+        rwcnt = MatRowCnt(VIr);
+        if (VIr.CredInv<>-1) then begin
+           VI2r.SerNr = VIr.CredInv;
+           if (ReadFirstMain(VI2r,1,true)) then begin
+             frrate = VI2r.FrRate;
+             torate1 = VI2r.ToRateB1;
+             torate2 = VI2r.ToRateB2;
+             baserate1 = VI2r.BaseRate1;
+             baserate2 = VI2r.BaseRate2;
+           end;
+        end;
+        cuscurval = MULRATETOBASE1(VIr.CurncyCode,v,frrate,torate1,torate2,baserate1,baserate2,DefaultCurRoundOff); 
+        if (RepSpec.flags[2]==0) then begin
+          v = cuscurval;
+        end else begin
+          if (VIr.CurncyCode==VEr.VECurncyCode) then begin
+            cuscurval = v;
+          end;  
+        end;            
+        balp = balp - cuscurval;
+        if (RepSpec.flags[7]!=0) then begin
+          SumCredit = SumCredit - cuscurval;
+        end else begin
+          SumDebet = SumDebet + cuscurval;
+        end;
+        // Edit Start ---------------------------------------------- Edit Start
+	//Thursday, 18 October 2012 13:24:57
+	if(RepSpec.Media==2 or RepSpec.Media==20)then begin // Edit ************************** Thursday, 18 October 2012 13:02:36
+          StartFormat(15);
+          OutDate(0,0,VIr.TransDate,false);
+          OutString(90,0,USetStr(4187),false);
+          tstr = VIr.SerNr;
+          if (nonblank(VIr.InvoiceNr)) then begin
+             tstr = tstr & ", (";
+             tstr = tstr & VIr.InvoiceNr;
+             tstr = tstr & ")";
+          end;
+          OutString(140,"DblVePerVI",tstr,false);
+          if (RepSpec.flags[7]!=0) then begin
+            if (RepSpec.Media==mtFile) then begin
+              OutString(3,0,"",true);
+            end;
+            OutVal(4,0,v,M4NegVal,true);
+          end else begin
+            OutVal(3,0,v,M4Val,true);
+            if (RepSpec.Media==mtFile or RepSpec.Media==20) then begin
+              OutString(4,0,"",true);
+            end;
+          end;
+          
+          OutVal(1,0,balp,M4Val,true);
+          if (RepSpec.flags[2]==1) then begin
+            OutString(7,0,VIr.CurncyCode,false);
+          end;  
+          PDr.Code = VIr.PayDeal;
+          readfirstmain(PDr,1,true);
+          OutString(140,0,PDr.pdComment,false);// Edit ************************** Thursday, 18 October 2012 13:14:46
+          OutString(140,0,VIr.DueDate,false);// Edit ************************** Thursday, 18 October 2012 13:14:45
+          EndFormat;
+        end else begin
+                    StartFormat(15);
+          OutDate(0,0,VIr.TransDate,false);
+          OutString(90,0,USetStr(4187),false);
+          tstr = VIr.SerNr;
+          if (nonblank(VIr.InvoiceNr)) then begin
+             tstr = tstr & ", (";
+             tstr = tstr & VIr.InvoiceNr;
+             tstr = tstr & ")";
+          end;
+          OutString(140,"DblVePerVI",tstr,false);
+          if (RepSpec.flags[7]!=0) then begin
+            if (RepSpec.Media==mtFile) then begin
+              OutString(3,0,"",true);
+            end;
+            OutVal(4,0,v,M4NegVal,true);
+          end else begin
+            OutVal(3,0,v,M4Val,true);
+            if (RepSpec.Media==mtFile) then begin
+              OutString(4,0,"",true);
+            end;
+          end;
+          if (RepSpec.flags[2]==1) then begin
+            OutString(7,0,VIr.CurncyCode,false);
+          end;  
+          OutVal(1,0,balp,M4Val,true);
+          EndFormat;
+
+        end;
+	// Edit End ---------------------------------------------- Edit End
+	
+        AddCurncyTotals(acur,av2,curcnt,VIr.CurncyCode,-v);
+        AddCurncyTotals(acur,av3,curcnt,VIr.CurncyCode,-v);
+        if (VIr.WithHoldingTax<>0) then begin
+          StartFormat(15);
+          OutDate(0,0,VIr.TransDate,false);
+          OutString(90,0,USetStr(4194),false);
+          tstr = VIr.SerNr;
+          if (nonblank(VIr.InvoiceNr)) then begin
+            tstr = tstr & ", (";
+            tstr = tstr & VIr.InvoiceNr;
+            tstr = tstr & ")";
+          end;
+          OutString(140,"DblVePerVI",tstr,false);
+          taxv = VIr.WithHoldingTax;
+          curtaxv = MULRATETOBASE1(VIr.CurncyCode,taxv,VIr.FrRate,VIr.ToRateB1,VIr.ToRateB2,VIr.BaseRate1,VIr.BaseRate2,DefaultCurRoundOff); 
+          if (RepSpec.flags[2]==0) then begin
+            taxv = curtaxv;
+          end else begin
+            if (VIr.CurncyCode==VEr.VECurncyCode) then begin
+              curtaxv = taxv;
+            end;  
+          end;
+          OutVal(4,0,taxv,M4Val,true);
+          if (RepSpec.flags[2]==1) then begin
+            OutString(8,0,VIr.CurncyCode,false);              
+          end;     
+          balp = balp + curtaxv;
+          OutVal(1,0,balp,M4Val,true);
+          EndFormat;
+          SumCredit = SumCredit + curtaxv;
+          if (nonblank(VEr.VECurncyCode)) then begin              
+            AddCurncyTotals(acur,av2,curcnt,VEr.VECurncyCode,taxv);
+            AddCurncyTotals(acur,av3,curcnt,VEr.VECurncyCode,taxv);
+          end else begin
+            AddCurncyTotals(acur,av2,curcnt,bascur.BaseCur1,curtaxv);
+            AddCurncyTotals(acur,av3,curcnt,bascur.BaseCur1,curtaxv);
+          end; 
+        end;  
+      end;
+    end;
+  end;
+LVEPer_PrintInvoice:;  
+  RETURN;
+END;
+

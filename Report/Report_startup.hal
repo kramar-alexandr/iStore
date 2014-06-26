@@ -1,0 +1,96 @@
+event startup
+begin
+
+	SetLangMode(LangUkrainian,"UKR",0);
+  
+//Setting("Отчет по стоку",MyRepSenderTClass,modIN);
+//Setting("Отчет по складам отдельно",MyRepSenderStockTClass,modIN);
+//Setting("Отчет по складам без коста",MyRepSenderManyStockTClass,modIN);
+//Setting("Отчет по стоку без коста",MyRepSenderStockNoCostTClass,modIN);
+//Setting("Отчет по транзитному складу",MyRepTransStockTClass,modIN);
+//Export("Cash Flow",MyCashFlowEClass,MyCashFlowEn,modNL);
+//Export("Резерв по клиентам",MyCustReservEClass,MyCustReservRn,modSO);
+Report("Резерв по клиентам",MyCustReservRClass,MyCustReservRn,0,modSO);
+Report("Залишки/постачальник/цiна",MyStockCustRClass,MyStockCustRn,0,modIN);
+Report("Залишки/постачальник/кiл-ть",MyStockCustRClass,OstatkiPoPostavchikamRn,0,modIN);
+//Report("Отчет по продажам(Computek)",MySaleRepRClass,MySaleRepRn,0,modIN);
+Report("Остатки с ценой",OstatkiSPraysomRClass,OstatkiSPraysomRn,0,modIN);
+Report("Отчет по продажам",MySalesReportRClass,SalesReportRn,0,modSL);
+
+Report("Середній чек по магазинам",MidSaleCheckRClass,MidSaleCheckRn,0,modSL);
+Report("Середній чек по магазинам",MidSaleCheckRClass,MidSaleCheckRn,0,modPOS);
+
+Report("Отчет по продажам менеджеров",MySalesReportRClass,ManagersSalesReportRn,0,modSL);
+
+Report("P&N IMobile",Res13RClass,Res13Rn,0,modSL);
+  
+Report("Заплановані передплати по замовленням",PUOrdersToPrepayRClass,PUOrdersToPrepayRn,0,modPO);
+
+Report("Отчет по продажам(Computek)",MySaleRepRClass,MySaleRepRn,0,modSL);
+Report("Отчет по продажам(Phototek)",MySaleRepRClass,MySalerepPhotoTeck,0,modSL);
+Report("Відомість розрахунків з клієнтами (новий)",CuPer2RClass,MyCuPerRn,0,modSL);
+Report("Відомість розрахунків з клієнтами (новий)",CuPer2RClass,MyCuPerRn,0,modSO);
+Report("Отчет по гарантии (iStore)",MyGarRClass,MyGarRn,0,modIN);
+Report("История серийных номеров 2",MySerhistRClass,MySerHistRn,0,modIN);
+Report("История серийных номеров 2",MySerhistRClass,MySerHistRn,0,modMSVO);
+
+Report("Аналiз оборотностi товарiв",ItemTurnoverRClass,ItemTurnoverRn,0,modSO);
+
+Report("Пошук замовлень на обслуговування",MySearchSVORClass,MySearchSVORn,0,modMSVO);
+Report("Retail Sales (iStore)",MyRetailSalesRClass,MyRetailSalesRn,0,modNL);
+Report("Stock/Cash (iStore)",MyStockCashRClass,MyStockCashRn,0,modNL);
+Report("Vendor/Stock (GPhTk)",MyVendorStockRClass,MyVendorStockRn,0,modIN);
+Report("Процес по замовленню",MyPOQCRClass,MyPOQCRn,0,modPO);
+Report("Розсилка процесів по замовленню",MyPOQC2RClass,ProcessWDEn,0,modPO);
+Report("FullStock Manual",MyFullStockRClass,MyItemReportRn,0,modIN);
+
+Report("Undelivered Items",UndeliveredItemsRClass,UndeliveredItemsReportRn,0,modIN);
+
+Export("BuhReport",ExportCashInvoicesEClass,ExportCashInvoicesEn,modPOS);
+//Report("BuhReport",MyFullStockRClass,BuhExportEn,0,modPOS);
+Maintenance("BuhReport",MyFullStockRClass,BuhExportEn,modPOS);
+Report("Пошук по нотаткам в замовленнях",MyNotSearchSVORClass,MyNotSearchSVORn,0,modMSVO);
+
+Report("Bonus",MyBonusRClass,MyBonusRn,0,modSL);
+Report("Stock (урезанный)",PHTManagerStocksRClass,LocManyStock1Rn,0,modSO);
+Report("Shops",MyShopsRecordRClass,MyShopsReportRn,0,modSO);
+Report("ManagerStocks",ManagerStocksRClass,LocManyStockRn,0,modIN);
+Report("ManagerStocks",ManagerStocksRClass,LocManyStockRn,0,modSO);
+
+Report("Резерв по рахункам",MyReservStatRClass,MyReservStstRn,0,modSO);
+
+Report("CUAServiceStocks",CUAServiceStocksRClass,LocManyStockRn,0,modIN);
+Report("CUAManagerStocks",CUAManagerStocksRClass,LocManyStockRn,0,modIN);
+Report("PHTManagerStocksGroup",PHTManagerStocksGroupRClass,LocManyStockGroupRn,0,modIN);
+Report("Інвентаризація (нова)",InventMyRClass,InventMyRn,0,modIN);
+Report("Неправильные резервы",MyBlankRClass,MyStatRepRn,0,modIN);
+Report("Проведенные таблицы работ",WSVcOKReportRClass,WSVcOKReportRn,0,modMSVO);
+
+Report("Клиенты с карточками",POSClientRClass,POSClientRn,0,modSL);
+Report("Клиенты с карточками",POSClientRClass,POSClientRn,0,modSO);
+Report("Клиенты с карточками",POSClientRClass,POSClientRn,0,modPOS);
+
+Report("Історія продажів по клієнтам ",CUSalesRepRClass,CustSalesReportRn,0,modSO);
+Report("Відомість (опис) товарних залишків по магазину",StoresStockRClass,StoresStockRn,0,modPOS);
+
+Setting("Настройка Cash Flow",MyCashFlowTClass,modNL);
+Setting("Настройка Cash Flow - прямий метод",MyCashFlowDirectTClass,modNL);
+//Report("Рух готівки",MyCashFlowRClass,MyCashFlowRn,0,modNL);
+Report("Рух готівки",MyCashFlowRClass,MyNewCashFlowRn,0,modNL);
+Report("Рух готівки - прямий метод",MyCashFlowRClass,MyNewCashFlowDirectRn,0,modNL);
+
+Maintenance("AutoUnResev",MyRepSenderVClass,AutoUnreservOrderMn,modIN);
+Maintenance("Отчет по стоку",MyRepSenderVClass,MyItemReport,modIN);
+Maintenance("Отчет по складам отдельно",MyRepSenderStockVClass,MyItemReportForEachStock,modIN);
+Maintenance("Отчет по складам без коста",MyRepSenderManyStockVClass,LocManyStock,modIN);
+Maintenance("Отчет по стоку без коста",MyRepSenderStockNoCostVClass,MyItemReportNoCost,modIN);
+Maintenance("Отчет по транзитному складу",MyRepTransStockVClass,RunTransReportRemote,modIN);
+Maintenance("Поменять карточки товаров",MyRepTransStockVClass,ChangeINMn,modIN);
+Maintenance("Исправить кост товаров",MyRepTransStockVClass,MyUpdateCost,modIN);
+
+
+//Report("AutoSendReportManual",MyFullStockRClass,AutoSendReportManual,0,modIN);
+//Maintenance("AutoSendReportManual",MyRepSenderVClass,AutoSendReportManual,modIN);
+///Export("AutoSendReportManual",MyRepSender2EClass,AutoSendReportManual,modIN);
+ return;
+end;  

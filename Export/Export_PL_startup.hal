@@ -1,0 +1,10 @@
+event startup
+begin
+
+  SetLangMode(LangUkrainian,"UKR",0);
+   Export("Prices export",MyExportPLEClass,MyExportPLEn,modDI);
+   
+   Export("…кспорт опису товаґв (‘клад)",MyGigieneEClass,MyExportGigieneTextEn,modIN);
+   Export("…кспорт опису товаґв (…тикетки)",MyGigieneEClass,MyExportGigieneTextEn,modLabPrint);
+ return;
+end;  

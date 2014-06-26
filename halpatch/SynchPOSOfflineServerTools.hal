@@ -1,0 +1,35 @@
+global
+updating procedure POSServToOffLine_SynchRegisters(Integer servcomp,Integer offlinecomp,
+   var LongInt DIVcSeqNr,var LongInt UnitVcSeqNr,var LongInt PLQVcSeqNr,var LongInt RebVcSeqNr,
+   var LongInt ITVcSeqNr,var LongInt PLVcSeqNr,var LongInt INVcSeqNr,var LongInt CUVcSeqNr,
+   var LongInt PLDefVcSeqNr,var LongInt UserVcSeqNr,var LongInt CTypeVcSeqNr,var LongInt StyleVcSeqNr,
+   var LongInt ArtUpdStockVcSeqNr,var LongInt RecVcSeqNr,var LongInt DrawerVcSeqNr,
+   var LongInt ItemStatusVcSeqNr,var LongInt Custom1VcSeqNr,var LongInt Custom2VcSeqNr,
+   var LongInt Custom3VcSeqNr,var LongInt Custom4VcSeqNr,var LongInt Custom5VcSeqNr,
+   var LongInt Custom6VcSeqNr,var LongInt Custom7VcSeqNr,var LongInt Custom8VcSeqNr,
+   var LongInt Custom9VcSeqNr,var LongInt Custom10VcSeqNr,string location)
+begin
+    
+  DIVcSeqNr = SynchroniseRegister("DIVc",servcomp,offlinecomp,DIVcSeqNr,"");
+  UnitVcSeqNr = SynchroniseRegister("UnitVc",servcomp,offlinecomp,UnitVcSeqNr,"");    
+  PLQVcSeqNr = SynchroniseRegister("PLQVc",servcomp,offlinecomp,PLQVcSeqNr,"");    
+  RebVcSeqNr = SynchroniseRegister("RebVc",servcomp,offlinecomp,RebVcSeqNr,"");    
+  ITVcSeqNr = SynchroniseRegister("ITVc",servcomp,offlinecomp,ITVcSeqNr,"");
+  PLVcSeqNr = SynchroniseRegister("PLVc",servcomp,offlinecomp,PLVcSeqNr,"");
+  RecVcSeqNr = SynchroniseRegister("RecVc",servcomp,offlinecomp,RecVcSeqNr,"");
+  INVcSeqNr = SynchroniseRegister("INVc",servcomp,offlinecomp,INVcSeqNr,"");
+  CUVcSeqNr = SynchroniseRegister("CUVc",servcomp,offlinecomp,CUVcSeqNr,"");
+  PLDefVcSeqNr = SynchroniseRegister("PLDefVc",servcomp,offlinecomp,PLDefVcSeqNr,"");
+  UserVcSeqNr = SynchroniseRegister("UserVc",servcomp,offlinecomp,UserVcSeqNr,"");
+  CTypeVcSeqNr = SynchroniseRegister("CTypeVc",servcomp,offlinecomp,CTypeVcSeqNr,"");  
+  StyleVcSeqNr = SynchroniseRegister("StyleVc",servcomp,offlinecomp,StyleVcSeqNr,"");    
+  ArtUpdStockVcSeqNr = SynchroniseRegister("ArtUpdStockVc",servcomp,offlinecomp,ArtUpdStockVcSeqNr,"");    
+  DrawerVcSeqNr = SynchroniseRegister("DrawerVc",servcomp,offlinecomp,DrawerVcSeqNr,"");
+  ItemStatusVcSeqNr = SynchroniseRegister("ItemStatusVc",servcomp,offlinecomp,ItemStatusVcSeqNr,"");  
+  
+  Custom1VcSeqNr = SynchroniseRegister("SerBalVc",servcomp,offlinecomp,Custom1VcSeqNr,location); // Edit ************************** Monday, 28 May 2012 10:40:03
+  Custom2VcSeqNr = SynchroniseRegister("ERVc",servcomp,offlinecomp,Custom2VcSeqNr,""); // Edit ************************** Monday, 28 May 2012 10:40:04
+  
+  return;
+end;
+

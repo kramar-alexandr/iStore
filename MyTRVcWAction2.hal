@@ -1,0 +1,82 @@
+external inner procedure TrBal(record TRVc,var val,var val,Integer);
+
+
+procedure BlankDebVal(integer rownr,integer wn,Integer changed)
+begin
+record TRVc TRr;
+row TRVc TRrw;
+  if (changed!=0) then begin
+    GetWindowRecord(wn,TRr);
+    MatRowGet(TRr,rownr,TRrw);
+    TRrw.DebVal = blankval;
+    MatRowPut(TRr,rownr,TRrw);
+    PutWindowRecord(wn,TRr);
+  end;
+  return;
+end;
+
+procedure BlankCredVal(integer rownr,integer wn,Integer changed)
+begin
+record TRVc TRr;
+row TRVc TRrw;
+  
+  if (changed!=0) then begin
+    GetWindowRecord(wn,TRr);
+    MatRowGet(TRr,rownr,TRrw);
+    TRrw.CredVal = blankval;
+    MatRowPut(TRr,rownr,TRrw);
+    PutWindowRecord(wn,TRr);
+  end;
+  return;
+end;
+
+
+
+global
+function Boolean TRDClassAfterEditField(Integer wn,string fieldname,Integer fn, Integer rownr,Integer changed)
+BEGIN
+  Boolean res;
+  record TRVc TRr;
+  row TRVc TRrw;
+  integer rwcnt,i;
+  val temp,temp2;
+  
+  GetWindowRecord(wn,TRr);
+  rwcnt = matRowCnt(TRr);
+  /*TrBal(TRr,temp,temp2,-1);
+  if (temp!=0) then begin
+    MessageBox(1011," " & TRr.Number);
+    
+  end;*/
+  switch (fieldname) begin
+    case "CurDebVal": BlankDebVal(rownr,wn,changed);
+    case "CurCredVal": BlankCredVal(rownr,wn,changed);   
+  end;
+  
+  res = inner.TRDClassAfterEditField(wn,fieldname,fn,rownr,changed);
+
+ switch (fieldname) begin
+   case "TransDate": 
+   if(changed!=0)then begin
+     for(i=0;i<rwcnt;i=i+1) begin
+       res = inner.TRDClassAfterEditField(wn,"TransDate",fn,i,1);
+       res = inner.TRDClassAfterEditField(wn,"Curncy",fn,i,1);
+       matrowget(TRr,i,TRrw);
+       if (nonblank(TRrw.CurDebVal)) then begin
+        //res = inner.TRDClassAfterEditField(wn,"DebVal",fn,i,1);
+        BlankDebVal(i,wn,changed);
+        res = inner.TRDClassAfterEditField(wn,"CurDebVal",fn,i,changed);
+       end;
+       if (nonblank(TRrw.CurCredVal)) then begin
+         //res = inner.TRDClassAfterEditField(wn,"CredVal",fn,i,1);
+         BlankCredVal(i,wn,changed);
+         res = inner.TRDClassAfterEditField(wn,"CurCredVal",fn,i,changed);
+       end;
+     end;
+   end;
+  end;
+
+ 
+  TRDClassAfterEditField = res;
+  RETURN;
+END;

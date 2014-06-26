@@ -1,0 +1,152 @@
+global
+updating procedure SaveOffLineLastIVCashNr(LongInt sernr)
+BEGIN
+  record OffLineSetBlock OffLineSetRec;
+  record LocalOffLineNrBlock LastRecNr;
+  Integer offlinecomp;
+  
+  BlockLoad(OffLineSetRec);
+  offlinecomp = StringToInt(OffLineSetRec.OffLineComp);
+  if (offlinecomp>0) or (ServingClient==false) then begin
+    BlockLoad(LastRecNr);    
+    LastRecNr.LastIVCashNr = sernr;
+    BlockStore(LastRecNr);  
+  end;
+  RETURN;
+END;
+
+global 
+function Boolean IVCashVcRecordShouldBeSynchronised(record IVCashVc IVCashr,string tagstr)
+begin
+  Boolean res;
+  
+  res = true;
+  IVCashVcRecordShouldBeSynchronised = res;
+  return;
+end;
+
+global 
+function Boolean IVCashVcRecordSync(record IVCashVc IVCashr,string tagstr)
+begin
+  Boolean res;
+  
+  res = true;
+  IVCashVcRecordSync = res;
+  return;
+end;
+
+global
+function LongInt IVCashVcRecordRemoveTest(var record IVCashVc IVCashr,record IVCashVc IVCash2r,LongInt long3,LongInt long4)
+BEGIN
+  LongInt res;
+  record DBLockBlock DBLockRec;
+
+  res = 1;
+  BlockLoad(DBLockRec);
+  if (IVCashr.TransDate<=DBLockRec.DeleteBeforeDate) then begin
+    res = 1;
+    goto LIVCashVcRecordRemoveTest;
+  end;
+  if (IVCashr.OKFlag!=0) then begin
+    if (long3>0) then begin MessageBox(1560,""); end;
+    res = 0;
+  end;    
+LIVCashVcRecordRemoveTest:;
+
+  if(currentuser=="POSSRV")then begin
+    res = 1;
+  end;
+  IVCashVcRecordRemoveTest = res; 
+  RETURN;
+END;
+
+global
+updating function LongInt IVCashVcRecordRemove(var record IVCashVc IVCashr,record IVCashVc IVCash2r,LongInt long3,LongInt long4)
+BEGIN
+  LongInt res;
+  record LocalOffLineNrBlock LastRecNr;
+
+  BlockLoad(LastRecNr);//from client DB
+  if (ServingClient==false) then begin
+    if (LastRecNr.LastIVCashNr>0) then begin
+      if (IVCashr.SerNr==LastRecNr.LastIVCashNr) then begin
+        LastRecNr.LastIVCashNr = LastRecNr.LastIVCashNr - 1;
+        BlockStore(LastRecNr);
+      end;    
+    end;
+  end;  
+  
+LIVCashVcRecordRemove:;
+  IVCashVcRecordRemove = res; 
+  RETURN;
+END;
+
+global
+updating procedure UpdateLastSerNrBlock(string LocalMachineCode,LongInt SerNr)
+BEGIN
+  record LastSerNrBlock LastSerNrRec;
+  row LastSerNrBlock LastSerNrrw;
+  Integer i,rwcnt;
+  Boolean found;
+  
+  if ((nonblank(LocalMachineCode)) and (SerNr>0)) then begin
+    BlockLoad(LastSerNrRec);
+    rwcnt = MatRowCnt(LastSerNrRec);
+    for (i=0;i<rwcnt;i=i+1) begin
+      MatRowGet(LastSerNrRec,i,LastSerNrrw);
+      if (LastSerNrrw.LocalMachineCode==LocalMachineCode) then begin
+        LastSerNrrw.LastIVCashNr = SerNr;
+        MatRowPut(LastSerNrRec,i,LastSerNrrw);
+        i = rwcnt;
+        found = true;
+      end;
+    end;
+    if (found==false) then begin
+      LastSerNrrw.LocalMachineCode = LocalMachineCode;
+      LastSerNrrw.LastIVCashNr = SerNr;
+      MatRowPut(LastSerNrRec,rwcnt,LastSerNrrw);
+    end;
+    BlockStore(LastSerNrRec);
+  end;
+  RETURN;
+END;
+
+global
+function LongInt IVCashNrFromLastSerNrBlock(string LocalMachineCode)
+BEGIN
+  LongInt res;
+  record LastSerNrBlock LastSerNrRec;
+  row LastSerNrBlock LastSerNrrw;
+  Integer i,rwcnt;
+
+  if (nonblank(LocalMachineCode)) then begin
+    BlockLoad(LastSerNrRec);
+    rwcnt = MatRowCnt(LastSerNrRec);
+    for (i=0;i<rwcnt;i=i+1) begin
+      MatRowGet(LastSerNrRec,i,LastSerNrrw);
+      if (LastSerNrrw.LocalMachineCode==LocalMachineCode) then begin
+        res = LastSerNrrw.LastIVCashNr;
+        i = rwcnt;
+      end;
+    end;
+  end;
+  IVCashNrFromLastSerNrBlock = res;
+  RETURN;
+END;
+
+global
+function LongInt IVCashVcRecordInvalidateTest(var record IVCashVc IVCashr,record IVCashVc IVCash2r,LongInt long3,LongInt long4)
+BEGIN
+  LongInt res;
+  
+  if(currentuser=="POSSRV")then begin
+  res = 1;
+  IVCashr.Invalid = 1;
+  end else begin
+    res = 0;
+  end;
+  
+  IVCashVcRecordInvalidateTest = res;
+  
+return;
+end;

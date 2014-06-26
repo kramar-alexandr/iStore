@@ -1,0 +1,543 @@
+
+external function val MulRateToBase1(var string,val,val,val,val,val,val,Integer);
+external function val MulWithRateToBase1(var string,Date,val,Integer);
+external function LongInt DateDiff(Date,Date);
+external procedure HTVends(string, string, var string);
+external procedure HTObj(string,var string);
+external procedure HTOT(string,var string);
+external procedure SumAged(Date,Integer,var val,var val,var val,var val,var val,var val,var val,var val,var val);
+external procedure PrintAgedLine(val,val,val,val,val,val,val,val,val,Integer,Integer);
+external procedure CountPeriods(var Integer);
+external procedure GetPDVRebt(string,var val);
+external procedure HTCustClass(string,var string);
+external procedure HTCustClassType(string,var string);
+external function Boolean SetInSet2(string,string);
+external procedure ClassTypef(string,string,var Boolean);
+
+procedure PrintAgedHeader(Integer nrofper)
+begin
+  record AgedBlock AgedRec;
+  string 30 tstr1,tstr2,tstr3,tstr4,tstr5,tstr6,tstr7;
+  LongInt p1,p2;
+
+  BlockLoad(AgedRec);  
+  p1 = AgedRec.Per1;
+  p2 = AgedRec.Per2;
+  if (p1==-1) then begin p1 = 15; end;
+  if (p2==-1) then begin p2 = 30; end;
+  tstr1 = "0 - " & p1;
+  tstr2 = "" & p1+1 & " - " & p2;
+  tstr3 = "" & p2+1 & " - "; 
+  if (AgedRec.Per3>-1) then begin tstr3 = tstr3 & AgedRec.Per3; end;
+  tstr4 = "" & AgedRec.Per3+1 & " - ";
+  if (AgedRec.Per4>-1) then begin tstr4 = tstr4 & AgedRec.Per4; end;
+  tstr5 = "" & AgedRec.Per4+1 & " - ";
+  if (AgedRec.Per5>-1) then begin tstr5 = tstr5 & AgedRec.Per5; end;
+  tstr6 = "" & AgedRec.Per5+1 & " - ";
+  if (AgedRec.Per6>-1) then begin tstr6 = tstr6 & AgedRec.Per6; end;
+  tstr7 = "" & AgedRec.Per6+1 & " - ";
+  StartFormat(15);
+  OutString(2,0,USetStr(4137),true);
+  OutString(3,0,tstr1,true);
+  OutString(4,0,tstr2,true);
+  OutString(5,0,tstr3,true);
+  if (nrofper>2) then begin
+    OutString(6,0,tstr4,true);
+  end;
+  if (nrofper>3) then begin
+    OutString(7,0,tstr5,true);
+  end;
+  if (nrofper>4) then begin
+    OutString(8,0,tstr6,true);
+  end;
+  if (nrofper>5) then begin
+    OutString(9,0,tstr7,true);
+  end;
+  OutString(450,0,USetStr(4046),true);
+  EndFormat;
+  Gray_Divider(0,1);
+  return;
+end;
+
+procedure PrintNSumOPInstall(record RcVc RepSpec,record VIVc VIp,var val APSump,val s0,val s1,val s2,val s3,val s4,val s5,val s6,val s7)
+BEGIN
+  record APInstallVC APIr;
+  Boolean TrHs;
+  LongInt latedays;
+
+  APIr.SerNr = VIp.SerNr;
+  TrHs = true;
+  while (LoopMain(APIr,1,TrHs)) begin
+    if (APIr.SerNr!=VIp.SerNr) then begin
+      TrHs = false;
+    end;  
+    if (TrHs) then begin
+      latedays = DateDiff(APIr.DueDate,CurrentDate);
+      APSump = APSump + APIr.BookRVal;
+      if (RepSpec.flags[0]==0) then begin
+        StartFormat(15);
+        OutDate(0,0,APIr.DueDate,false);
+        OutLongInt(60,0,VIp.SerNr,false);
+        OutString(120,0,VIp.VECode,false);
+        OutString(200,0,VIp.VEName,false);
+        OutVal(380,0,APIr.BookRVal,M4Val,true);
+        OutVal(480,0,APSump,M4Val,true);
+        EndFormat;
+        if (nonblank(VIp.Comment)) then begin
+          StartFormat(15);
+          OutString(40,0,VIp.Comment,false);
+          EndFormat;
+       end;
+      end;
+      SumAged(CurrentDate,-latedays,APIr.BookRVal,s0,s1,s2,s3,s4,s5,s6,s7);
+    end;
+  end;
+  RETURN;
+END;
+
+global
+procedure OPProgRn(record RcVc RepSpec) 
+BEGIN
+  record APVc APr;
+  record VIVc VIr;
+  record ObjVc OBr;  
+  Boolean TrHs;
+  val APSum,rs;
+  val APVal,pdvrebt,tv;
+  val s0,s1,s2,s3,s4,s5,s6,s7,tot;
+  LongInt latedays;
+  Boolean testf,vif,Accs;
+  string 255 ckey,tstr,t2,curcode;
+  Date pd,curdate;
+  Integer rw,nrofper;
+  record RoundBlock RoundRec;
+  record CUVc VEr;
+
+  BlockLoad(RoundRec);  
+  curdate = CurrentDate;
+  StartReportJob(USetStr(4121));
+  rw = 1;    
+  HTVends(RepSpec.f2,RepSpec.f2,tstr);
+  Header(rw,tstr,1);
+  rw = rw + 1;
+  HTCustClass(RepSpec.f4,tstr);
+  if (nonblank(tstr)) then begin
+    Header(rw,tstr,1);
+    rw = rw + 1;
+  end; 
+  HTCustClassType(RepSpec.f5,tstr);
+  if (nonblank(tstr)) then begin
+    Header(rw,tstr,1);
+    rw = rw + 1;
+  end; 
+   if (RepSpec.ArtMode==1) then begin
+     tstr = USetStr(4128);
+   end else begin
+     tstr = USetStr(4127);
+   end;  
+   Header(rw,tstr,0);
+   if (RepSpec.flags[1]==0) then begin
+     tstr = USetStr(4133);
+   end else begin
+     tstr = USetStr(4134);
+   end;  
+   Header(rw,tstr,1);
+   rw = rw + 1;
+   if (RepSpec.flags[0]==0) then begin
+     tstr = USetStr(4129);
+   end else begin
+     tstr = USetStr(4130);
+   end;  
+   Header(rw,tstr,0);
+   if (nonblank(RepSpec.ObjStr)) then begin
+     HTObj(RepSpec.ObjStr,tstr);
+     Header(rw,tstr,1);
+     rw = rw + 1;
+   end else begin
+     if (nonblank(RepSpec.ObjType)) then begin
+       HTOT(RepSpec.ObjType,tstr);
+       Header(rw,tstr,1);
+       rw = rw + 1;
+     end;
+   end;
+  EndHeader;
+  if (RepSpec.flags[0]!=0) then begin
+  CountPeriods(nrofper);
+  if (nrofper==2) then begin
+    SetRepCol(2,250);
+    SetRepCol(3,300);
+    SetRepCol(4,350);
+    SetRepCol(5,400);
+  end;
+  if (nrofper==3) then begin
+    SetRepCol(2,100);
+    SetRepCol(3,180);
+    SetRepCol(4,260);
+    SetRepCol(5,320);
+    SetRepCol(6,400);
+  end;
+  if (nrofper==4) then begin
+    SetRepCol(2,80);
+    SetRepCol(3,160);
+    SetRepCol(4,240);
+    SetRepCol(5,320);
+    SetRepCol(6,380);
+    SetRepCol(7,430);
+  end;
+  if (nrofper==5) then begin
+    SetRepCol(2,60);
+    SetRepCol(3,120);
+    SetRepCol(4,180);
+    SetRepCol(5,240);
+    SetRepCol(6,300);
+    SetRepCol(7,360);
+    SetRepCol(8,420);    
+  end;
+  if (nrofper==6) then begin
+    SetRepCol(2,50);
+    SetRepCol(3,100);
+    SetRepCol(4,150);
+    SetRepCol(5,200);
+    SetRepCol(6,250);
+    SetRepCol(7,300);
+    SetRepCol(8,350);
+    SetRepCol(9,400);
+  end;
+  end;
+  if (RepSpec.ArtMode==1) then begin
+    ckey = "RebDate";
+  end else begin
+    ckey = "DueDate";
+  end;
+  if (RepSpec.flags[0]==0) then begin
+    StartFormat(15);
+    OutString(0,0,USetStr(4122),false);
+   // OutString(60,0,USetStr(4136),false);
+    OutString(70,0,USetStr(2361),false);// Edit ************************** Thursday, 29 April 2010 1:40:14 PM
+    OutString(120,0,USetStr(4126),false);
+    OutString(200,0,USetStr(4132),false);
+    OutString(300,0,USetStr(7672),false);// Edit ************************** Thursday, 29 April 2010 1:30:03 PM
+    OutString(400,0,USetStr(4124),true);
+    OutString(1,0,USetStr(3057),true);// Edit ************************** Tuesday, 11 May 2010 1:45:51 PM
+   // OutString(1,0,USetStr(4125),true);
+    EndFormat;
+  end else begin
+    PrintAgedHeader(nrofper);
+  end;
+  APr.SerNr = 0;
+  if (RepSpec.flags[0]==0) then begin
+    Gray_Divider(0,1);
+  end;  
+  TrHs = true;
+  while (LoopKey(ckey,APr,2,TrHs)) begin
+    VIr.SerNr = APr.SerNr;
+    vif = ReadFirstMain(VIr,1,true);
+    if (RepSpec.ArtMode==1) then begin
+      if (vif) then begin
+        pd = VIr.RebDate;
+      end else begin
+        pd = APr.RebDate;
+      end;  
+    end else begin
+      if (vif) then begin
+        pd = VIr.DueDate;
+      end else begin
+        pd = APr.DueDate;
+      end;  
+    end;
+    if (nonblankdate(RepSpec.d1)) then begin
+      if (pd>RepSpec.d1) then begin
+        TrHs = false;
+      end;  
+    end;  
+    if (TrHs) then begin
+      if (blank(RepSpec.f2) or (RepSpec.f2==APr.VECode)) then begin
+        testf = true;
+        if (RepSpec.flags[1]==1) then begin
+          if (vif) then begin
+            if (VIr.Closed!=0) then begin
+              testf = false;
+            end;
+          end;    
+        end;
+        if (testf) then begin
+          VEr.Code = VIr.VECode;
+          if ReadFirstMain(VEr,1,true) then begin end;
+          if (nonblank(RepSpec.f4)) then begin
+            if (SetInSet2(RepSpec.f4,VEr.Classification)==false) then begin
+              testf = false;
+             end;
+          end;
+          if (nonblank(RepSpec.f5)) then begin
+            if (testf) then begin
+              testf = false;
+              ClassTypef(RepSpec.f5,VEr.Classification,testf);
+            end;
+          end;
+        end;
+        if (nonblank(RepSpec.ObjStr)) then begin 
+          if (SetInSet(RepSpec.ObjStr,VIr.Objects)==false) then begin
+            testf = false;
+          end;  
+        end else begin
+          if ((testf==true) and (nonblank(RepSpec.ObjType))) then begin
+            testf = false;
+            OBr.OTCode = RepSpec.ObjType;
+            OBr.Code = "";
+            Accs = true;
+            ResetLoop(OBr);
+            while (LoopKey("OTCode",OBr,1,Accs)) begin
+              if ((Accs==true) and (RepSpec.ObjType==OBr.OTCode)) then begin
+                if (SetInSet(OBr.Code,VIr.Objects)) then begin
+                  testf = true;
+                  Accs = false;
+                end;
+              end;
+            end; 
+          end;
+        end;
+        if (testf) then begin
+          if ((vif==false) or (VIr.InstallmentInv==0)) then begin
+            if (RepSpec.ArtMode==1) then begin
+              latedays = DateDiff(pd,curdate);
+              APVal = APr.RVal;
+              GetPDVRebt(VIr.PayDeal,pdvrebt);
+              if (pdvrebt!=0) then begin
+                tv = APVal*pdvrebt;
+                tv = tv/100;
+                tv = Round(tv,RoundRec.RndTotal);
+                APVal = APVal - tv;
+//pdvrebt2                
+              end;
+            end else begin
+              if (vif) then begin
+                latedays = DateDiff(VIr.DueDate,curdate);
+              end else begin
+                latedays = DateDiff(APr.DueDate,curdate);
+              end;   
+              APVal = APr.RVal;
+            end;
+            APVal = APVal - VIr.HoldSum;
+            curcode = ""; // Edit ************************** Thursday, 29 April 2010 1:03:40 PM
+            if (vif) then begin
+//              rs = MulRateToBase1(VIr.CurncyCode,APVal,VIr.FrRate,VIr.ToRateB1,VIr.ToRateB2,VIr.BaseRate1,VIr.BaseRate2,DefaultCurRoundOff);
+//they say it should be todays rate in forecast
+              rs = MulWithRateToBase1(VIr.CurncyCode,CurrentDate,APVal,DefaultCurRoundOff); 
+              curcode = VIr.CurncyCode;
+            end else begin
+              rs = MulWithRateToBase1(APr.CurncyCode,APr.DueDate,APVal,DefaultCurRoundOff);
+              curcode = APr.CurncyCode;
+            end;  
+            APSum = APSum + rs;
+            if (vif==false) then begin
+              VIr.SerNr = APr.SerNr;
+              VIr.VECode = APr.VECode;
+              VIr.VEName = APr.VEName;
+              VIr.Comment = "";
+              t2 = USetStr(2530);
+            end;
+            tstr = VIr.SerNr;
+            if (VIr.POSerNr>=1) then begin
+              t2 = VIr.POSerNr;
+            end else begin
+              t2 = "";
+            end;
+            if (vif==false) then begin
+              tstr = t2;
+            end;  
+            if (RepSpec.flags[0]==0) then begin
+              StartFormat(15);
+              OutDate(0,0,pd,false);
+              OutString(70,"DblVIVc",VIr.SerNr,false);
+              OutString(120,0,VIr.VECode,false);
+              OutString(200,0,VIr.VEName,false);
+              OutString(300,0,curcode,false);// Edit ************************** Thursday, 29 April 2010 1:30:12 PM
+              //OutVal(400,0,rs,M4Val,true);
+              OutVal(400,0,APVal,M4Val,true);
+               OutString(1,0,VIr.RefStr,true);// Edit ************************** Tuesday, 11 May 2010 1:47:28 PM
+              
+              //OutVal(1,0,APSum,M4Val,true);
+/*              
+              OutString(70,"DblVIVc",tstr,false);
+              OutString(110,"DblPOVc",t2,false);
+              OutString(150,0,VIr.VECode,false);
+              OutString(210,0,VIr.VEName,false);
+              OutVal(380,0,rs,M4Val,true);
+              OutVal(480,0,APSum,M4Val,true);
+*/              
+              EndFormat;
+              if (nonblank(VIr.Comment)) then begin
+                StartFormat(15);
+                OutString(40,0,VIr.Comment,false);
+                EndFormat;
+              end;
+            end;
+            SumAged(curdate,-latedays,rs,s0,s1,s2,s3,s4,s5,s6,s7);        
+          end else begin
+            PrintNSumOPInstall(RepSpec,VIr,APSum,s0,s1,s2,s3,s4,s5,s6,s7);
+          end;
+        end;
+      end;
+    end;  
+  end;
+  if (RepSpec.flags[0]==0) then begin
+    Gray_Divider(0,1);
+  end;  
+  if (RepSpec.flags[0]==1) then begin
+    PrintAgedLine(s0,s1,s2,s3,s4,s5,s6,s7,tot,nrofper,480);
+  end;
+  if ((RepSpec.flags[2]!=0) or (RepSpec.flags[3]!=0)) then begin
+    if (RepSpec.flags[3]!=0) then begin
+      tstr = USetStr(2366);        
+      if (RepSpec.flags[2]!=0) then begin
+        t2 = USetStr(2891);
+        tstr = tstr & t2;
+        t2 = USetStr(3023);        
+        tstr = tstr & t2;
+      end;      
+    end else begin
+      tstr = USetStr(3023);        
+    end;
+    StartFormat(15);
+    if (RepSpec.flags[0]==0) then begin
+      OutString(0,0,tstr,false);
+    end else begin
+      OutString(140,0,tstr,false);
+    end;
+    EndFormat;
+    APSum = 0;
+    s0 = 0;
+    s1 = 0;
+    s2 = 0;
+    s3 = 0;
+    s4 = 0;
+    s5 = 0;
+    s6 = 0;
+    s7 = 0;      
+    VIr.OKFlag = 0;
+    VIr.SerNr = -1;
+    TrHs = true;
+    while (LoopKey("OKFlag",VIr,2,TrHs)) begin
+      if (VIr.OKFlag!=0) then begin TrHs = false; end;
+      if (TrHs) then begin
+        testf = true;        
+        if (RepSpec.ArtMode==1) then begin
+          pd = VIr.RebDate;
+        end else begin
+          pd = VIr.DueDate;
+        end;        
+        if (nonblankdate(RepSpec.d1)) then begin
+          if (RepSpec.ArtMode==1) then begin
+            if (pd>RepSpec.d1) then begin testf = false; end;
+          end else begin
+            if (pd>RepSpec.d1) then begin testf = false; end;
+          end;          
+        end;  
+        if (nonblank(RepSpec.f2) and (RepSpec.f2!=VIr.VECode)) then begin
+          testf = false;
+        end;  
+        if (blank(RepSpec.f2) or (RepSpec.f2==VIr.VECode)) then begin
+          if (RepSpec.flags[1]==1) then begin
+            if (VIr.Closed!=0) then begin testf = false; end;
+          end;
+        end;
+        if (testf) then begin
+          VEr.Code = VIr.VECode;
+          if ReadFirstMain(VEr,1,true) then begin end;
+          if (nonblank(RepSpec.f4)) then begin
+            if (SetInSet2(RepSpec.f4,VEr.Classification)==false) then begin
+              testf = false;
+             end;
+          end;
+          if (nonblank(RepSpec.f5)) then begin
+            if (testf) then begin
+              testf = false;
+              ClassTypef(RepSpec.f5,VEr.Classification,testf);
+            end;
+          end;
+        end;        
+        if (RepSpec.flags[2]==0) then begin
+          if (VIr.PrelBook!=0) then begin testf = false; end;
+        end;  
+        if (RepSpec.flags[3]==0) then begin
+          if (VIr.PrelBook==0) then begin testf = false; end;
+        end;  
+        if (testf) then begin
+          if (nonblank(RepSpec.ObjStr)) then begin 
+            if (SetInSet(RepSpec.ObjStr,VIr.Objects)==false) then begin
+              testf = false;
+            end;  
+          end else begin
+            if ((testf==true) and (nonblank(RepSpec.ObjType))) then begin
+              testf = false;
+              OBr.OTCode = RepSpec.ObjType;
+              OBr.Code = "";
+              Accs = true;
+              ResetLoop(OBr);
+              while (LoopKey("OTCode",OBr,1,Accs)) begin
+                if ((Accs==true) and (RepSpec.ObjType==OBr.OTCode)) then begin
+                  if (SetInSet(OBr.Code,VIr.Objects)==true) then begin
+                    testf = true;
+                    Accs = false;
+                  end;
+                end;
+              end; 
+            end;
+          end;
+        end;  
+        if (testf) then begin
+          if (RepSpec.ArtMode==1) then begin
+            latedays = DateDiff(pd,curdate);
+            APVal = VIr.PayVal;
+            GetPDVRebt(VIr.PayDeal,pdvrebt);
+            if (pdvrebt!=0) then begin
+              tv = APVal*pdvrebt;
+              tv = tv/100;
+              tv = Round(tv,RoundRec.RndTotal);
+              APVal = APVal - tv;
+//pdvrebt2              
+            end;
+          end else begin            
+            latedays = DateDiff(VIr.DueDate,curdate);
+            APVal = VIr.PayVal;
+          end;
+          APVal = APVal - VIr.HoldSum;
+          rs = MulRateToBase1(VIr.CurncyCode,APVal,VIr.FrRate,VIr.ToRateB1,VIr.ToRateB2,VIr.BaseRate1,VIr.BaseRate2,DefaultCurRoundOff);
+          if (VIr.InvType==3) then begin
+            rs = -rs;
+          end;  
+          APSum = APSum + rs;
+          tstr = VIr.SerNr;
+          if (vif==false) then begin
+            tstr =  tstr & t2;
+          end;  
+          if (RepSpec.flags[0]==0) then begin
+            StartFormat(15);
+            OutDate(0,0,pd,false);
+           // OutString(60,0,t2,false);
+            OutString(70,"DblVIVc",VIr.SerNr,false);
+            OutString(140,0,VIr.VECode,false);
+            OutString(200,0,VIr.VEName,false);
+            OutVal(400,0,rs,M4Val,true);
+            OutVal(1,0,APSum,M4Val,true);
+            EndFormat;
+            if (nonblank(VIr.Comment)) then begin
+              StartFormat(15);
+              OutString(70,0,VIr.Comment,false);
+              EndFormat;
+            end;
+          end;
+          SumAged(curdate,-latedays,rs,s0,s1,s2,s3,s4,s5,s6,s7);        
+        end;
+      end;
+    end;
+    if (RepSpec.flags[0]==0) then begin
+      Gray_Divider(0,1);    
+    end;  
+    if (RepSpec.flags[0]==1) then begin
+      PrintAgedLine(s0,s1,s2,s3,s4,s5,s6,s7,tot,nrofper,480);
+    end;        
+  end;  
+  EndJob;
+  RETURN;
+END;

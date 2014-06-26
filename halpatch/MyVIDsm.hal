@@ -1,0 +1,62 @@
+remote updating function Boolean CreateCreditNoteVI(record VIVc,var record VIVc);
+remote updating function Integer PasteSHInRet(var record SHVc,var record RetVc,string);
+
+global
+updating procedure CreateCreditNoteVIDsm()
+BEGIN
+  record VIVc VIr,credVIr; 
+  Integer wn,nwn;
+  Integer iNormalState;
+  
+  iNormalState = 0;
+  wn = CurWindow;
+  if (WindowState(wn)==iNormalState) then begin
+    GetWindowRecord(wn,VIr);
+    if (VIr.OKFlag!=0) and (VIr.InvType!=2) and (VIr.InvType!=3) then begin      
+      if  (CreateCreditNoteVI(VIr,credVIr)) then begin
+        nwn = OpenWindow("VIDClass",1,0,"","",credVIr);
+        if (WindowDoOK(nwn,0)) then begin
+          GetWindowRecord(nwn,credVIr);
+          CreateRecordLink(credVIr,CurrentCompany,VIr,CurrentCompany);
+          CreateRecordLink(VIr,CurrentCompany,credVIr,CurrentCompany);
+          UpdateBrowses("VIVc");
+        end;        
+      end else begin
+        Beep;
+      end;
+    end;  
+  end;
+  RETURN;
+END;
+
+
+global
+updating procedure RetFromSHSpec()
+BEGIN
+  record SHVc SHr;
+  record RetVc Retr;
+  Integer r,wn,nwn;
+  record LocalMachineBlock LMb;
+
+  wn = CurWindow;
+  GetWindowRecord(wn,SHr);
+  if ((WindowState(wn)==0) and (SHr.OKFlag!=0)) then begin
+    BlockLoad(LMb);
+    r = PasteSHInRet(SHr,Retr,LMb.DefReturnLocation);
+    switch (r) begin
+      case 0:
+        if (MatRowCnt(Retr)!=0) then begin
+          nwn = OpenWindow("RetDClass",1,0,"","",Retr);
+          GetWindowRecord(nwn,Retr);
+          CreateRecordLink(SHr,CurrentCompany,Retr,CurrentCompany);
+          CreateRecordLink(Retr,CurrentCompany,SHr,CurrentCompany);
+        end else begin
+          Beep;
+        end;
+      otherwise
+        MessageBox(r,"");
+    end;
+  end;  
+//  PutWindowRecord(wn,SHr);
+  RETURN;
+END;

@@ -1,0 +1,234 @@
+event startup
+begin
+
+	SetLangMode(LangRussian,"RUS",0);
+	
+	   SString(4,"Внимание! Вы находитесь в ОНЛАЙН компании. Чтобы создать продажу перейдите в ОФФЛАЙН компанию.");
+	   SString(5,"Внимание! В одной накладной не могут быть проданы одинаковые товары по разной цене");
+   	 SString(6,"Внимание! Не поставлена галочка о вынесении денег и закрытой сессии");
+	
+ Maintenance("Change Customer Rating",MyVClass,ChangeCatMn,modDI);
+  Report("MyReport",MyReportRClass,MyRn,0,modNL);
+  Maintenance("Transaction",MyTransVClass,MyTransMn,modPOS);
+  Maintenance("Удалить продавца из карточки",DellSealerVClass,DelSealMn,modSL);
+  //Export("Отчет по продажам (iStore)",StoreRepEClass,StoreRepEn,modIN);
+  Report("Звіт по складу(новий)",INRClass,MyInvValRn,0,modIN);
+  Register("Переміщення товарів","Переміщення",StockMovVc,modPOS);
+  Register("Внутрішні замовлення","Внутрішні замовлення",IntORVc,modPOS);
+  Report("Дебіторска заборгованість",ARRClass,ARRn,0,modSO);
+  
+  Module("_Обслуговування та ремонт","",730,modMSVO);
+  
+  Setting("Sequence Numbers",SeqNrTClass,modUserSet);
+
+  Register("Замовлення на обслуговування","Зам-ня на обсл-ня",SVOVc,modMSVO);
+  Register("Замовлення на роботу","Зам-ня на роботу",WOVc,modMSVO);
+  Register("Таблиці робіт","Таблиці робіт",WSVc,modMSVO);
+  Register("Операції по складу обслуговування","Операції обсл-ня",SVGMVc,modMSVO);
+  Register("Записи операцій по табл. робіт","Записи операцій",WSIVVc,modMSVO);
+  Register("Контакти","Контакти",CUVc,modMSVO);
+  Register("Товари","Товари",INVc,modMSVO);
+  Register("Відомі серійні №","Відомі сер.№",SVOSerVc,modMSVO);
+
+  Setting("Настройки записів",AccSVOTClass,modMSVO);
+  Setting("Контроль якості партії",QualConLClass,modMSVO);
+  Setting("Правила контролю якості партії",QCTestRulesTClass,modMSVO);
+//  Setting("Одиниці виміру якості партії",QCUnitLClass,modMSVO);
+  Setting("Шаблони контролю якості партії",QCTemplateLClass,modMSVO);
+  Setting("Тести контролю якості партії",QCTestLClass,modMSVO);
+  Setting("Статус партії",BatchStatusLClass,modMSVO);
+  Setting("Види класифікації",CTypeLClass,modMSVO);
+  Setting("Класифікації контактів",CClassLClass,modMSVO);
+//  Setting("Контактні особи",ContactLClass,modMSVO);
+  Setting("Довідка по звіту по клієнту",CustPSLClass,modMSVO);
+  Setting("Склади",LocationLClass,modMSVO);
+  Setting("Скарги",IssueLClass,modMSVO);
+  Setting("Дефекти",DefectLClass,modMSVO);
+  Setting("Серії номерів - Замовлення на обслуговування",SVOSerTClass,modMSVO);
+  Setting("Серії номерів - Записи операцій обслуговування",SVGMSerTClass,modMSVO);
+  Setting("Серії номерів - Замовлення на роботу",WOSerTClass,modMSVO);
+  Setting("Серії номерів - Таблиці робіт",WSSerTClass,modMSVO);
+  Setting("Види замовлень",OrderClassLClass,modMSVO);
+  Setting("Умови сплати",PDLClass,modMSVO);
+  Setting("Заплановане відвант.",PlanDeliveryTClass,modMSVO);
+  Setting("Товари на заміну",ReplItemsLClass,modMSVO);
+  Setting("Коментарі до сер. номерів",SVOTextLClass,modMSVO);
+  Setting("Стандартні проблеми",StandProblemLClass,modMSVO);
+  Setting("Настройки складу",MainStockTClass,modMSVO);
+
+  Import("Відомі серійні номери",SVOSerIn,SVOSerIn,modMSVO); // Now it is possible to use, I have changed how it works.
+
+  Document("Замовлення на обслуговування",SVORClass,SVOForm,SVOFClass,modMSVO);
+  Document("Записи операцій обслуговування",SVGMRClass,SVGMForm,SVGMFClass,modMSVO);
+  Document("Замовлення на роботу",WOrdRClass,WOrdForm,WOrdFClass,modMSVO);
+  Document("Таблиці робіт",WSRClass,WSForm,WSFClass,modMSVO);
+
+  Report("Результати контролю якості партії",QualConResRClass,QualConResRn,0,modMSVO);
+  Report("Тести контролю якості партії",QualConRClass,QualConRn,0,modMSVO);
+  Report("Рекламації по якості партії",QualConRecRClass,QualConRecRn,0,modMSVO);
+  Report("Статистика по співробітниках",SVOEMStatRClass,SVOEMStatRn,0,modMSVO);
+  Report("Статистика по товарах",ArtSTRClass,ArtSTRn,0,modMSVO);
+  Report("Історія серійних номерів",SerialNrRClass,SerialNrRn,0,modMSVO);
+  Report("Журнал замовлень на обслуговування",SVOListRClass,SVOListRn,0,modMSVO);
+  Report("Статус замовленя на обслуговування",SVOStaRClass,SVOStaRn,0,modMSVO);  
+  Report("Невиконані замовлення на обслуговування",SVOStockRClass,SVOStockRn,0,modMSVO);
+  Report("Історія по товарах в зам. на обслуговування",SVOINRClass,SVOItemRn,0,modMSVO);
+  Report("Журнал записів операцій обслуговування",GIOListRClass,GIOListRn,0,modMSVO);
+  Report("Журнал замовлень на роботу",WOListRClass,WOListRn,0,modMSVO);
+  Report("Журнал обліку таблиць робіт",WSListRClass,WSListRn,0,modMSVO);
+//  Report("Average Service Interval ##",AvgServIntRClass,AvgServIntRn,0,modMSVO);
+//  Report("Standard Problems ##",StandProblemsRClass,StandProblemsRn,0,modMSVO);
+
+  Maintenance("Зміна статусу партії",BatchStatChVClass,BatchStatChMn,modMSVO);
+  Maintenance("Створити замовлення на роботу",WorkOrderVClass,WorkOrderMn,modMSVO);
+  Maintenance("Перерахувати акти/накладні",RecSVOVClass,RecSVOMn,modMSVO);
+//  Maintenance("Створити акти/накладні",SVOInvVClass,MakeInvMn,modMSVO);//doesn't exist
+
+  
+ /* Module("_Кредити","",730,modMCuAcc);
+  
+  // modMCuAcc
+
+  Register("Акти/накл. клієнтам","Акти/накл. клієнтам",CuAccVc,modMCuAcc);
+  Register("Кредитні ставки","Кредитні ставки",IRVc,modMCuAcc);
+  Register("Контакти","Контакти",CUVc,modMCuAcc);
+  Register("Коди кредитних ставок","Коди кредитних ставок",IntVc,modMCuAcc);
+
+  Setting("Настройка записів",CuAccTClass,modMCuAcc);
+  Setting("Статус позики",LoanStatusTClass,modMCuAcc);
+  Setting("Успіх позики",LoanSuccessTClass,modMCuAcc);
+
+  Report("Розрахунок процентів",Int2RClass,Int2Rn,0,modMCuAcc);
+  Report("Статус позики",LoanStatRClass,LoanStatRn,0,modMCuAcc);
+
+
+  Maintenance("Створити акт/накладну",CreateLoanIVVClass,CreateLoanIVMn,modMCuAcc);
+  Maintenance("Перерахувати внески",RecLoanIntVClass,RecLoanIntMn,modMCuAcc);
+
+*/
+  Module("_Прогнози","",730,modMPOProg);
+
+
+  Register("Sales Forecast","Sales Forecast",SalesForecastVc,modMPOProg);
+  Register("Production Plan","Production Plan",ProdPlanVc,modMPOProg);
+  Register("Purchase Order Plan","Purchase Order Plan",POPlanVc,modMPOProg);
+  Register("Purchase Items","Purchase Items",PIVc,modMPOProg);
+  Register("Items","Items",INVc,modMPOProg);
+  Register("Recipes","Recipes",RecVc,modMPOProg);
+
+  Setting("Auto Production Items",AutoProdLClass,modMPOProg);
+  Setting("Forecast Settings",SFPeriodsTClass,modMPOProg);
+//  Setting("No. of Production Days",SFProdDaysTClass,modMPOProg);
+//  Setting("No. of Sales Days",SFSalesDaysTClass,modMPOProg);
+  Setting("No. of Work Days",SFWorkDaysLClass,modMPOProg);
+  Setting("Number Series - Production Plans",ProdPlanSerTClass,modMPOProg);
+  Setting("Number Series - Purchase Order Plans",POPlanSerTClass,modMPOProg);
+  Setting("Number Series - Sales Forecasts",SalesForSerTClass,modMPOProg);
+  Setting("Production Item Alternatives",ProdItemLClass,modMPOProg);
+  Setting("Production Plan Components",ProdPlanCompLClass,modMPOProg); // should possibly not be on screen
+  Setting("Stock Policies",StockPolicyLClass,modMPOProg);
+
+  Report("Basic Item Requirements",BasicItemReqRClass,BasicItemReqRn,0,modMPOProg);
+  Report("Calculated Month Closing Stock Levels",CalcStockLevelsRClass,CalcStockLevelsRn,0,modMPOProg);
+  Report("Create Production Plan - Preview",ProdPlanRClass,ProdPlanRn,0,modMPOProg);
+  Report("Create Productions - Preview",ProdPlanProdRClass,ProdPlanProdRn,0,modMPOProg);
+  Report("Create Purchase Orders - Preview",POPlanOrdRClass,POPlanOrdRn,0,modMPOProg);
+  Report("Create Purchase Order Plan - Preview",POPlanRClass,POPlanRn,0,modMPOProg);
+  Report("Expected Arrivals",ExpArrivalRClass,ExpArrivalRn,0,modMPOProg);
+  Report("Sales Forecast",SalesForecastRClass,SalesForecastRn,0,modMPOProg);
+  Report("Sales Forecast Accuracy",SalesFCompRClass,SalesFCompRn,0,modMPOProg);
+  Report("Stock Levels based on Stock Policy",PolicyForecastRClass,PolicyForecastRn,0,modMPOProg);
+  Report("Stock List",INRClass,InvValRn,0,modMPOProg);
+
+  Maintenance("Create Production Plan",ProdPlanVClass,ProdPlanMn,modMPOProg);  
+  Maintenance("Create Productions",ProdPlanProdVClass,ProdPlanProdMn,modMPOProg);  
+  Maintenance("Create Purchase Orders",POPlanOrdVClass,POPlanOrdMn,modMPOProg);  
+  Maintenance("Create Purchase Order Plan",POPlanVClass,POPlanMn,modMPOProg);  
+  
+  
+  Module("_Оренда","",730,modMRent);
+  /* modRent */
+
+  Register("Угоди","Угоди",AgreementVc,modMRent);
+  Register("Резервування оренди","Резервування",RentResVc,modMRent);
+  Register("Пропозиції оренди","Пропозиції",RentQTVc,modMRent);
+  Register("Набори","Набори",CollectionVc,modMRent);
+  Register("Товари оренди","Товари",RentINVc,modMRent);
+  Register("Перевірка товарів оренди","Перевірка",InspectConLClass,modMRent);
+
+  Setting("Примірник ціноутворення",AdvPriceTemplLClass,modMRent);
+  Setting("Авторизовані клієнти",AuthCustLClass,modMRent);
+  Setting("Святкові дні",BHollLClass,modMRent);
+  Setting("Базовий прейскурант оренди",RentPriceListLClass,modMRent);
+  Setting("Святкові дні клієнтів",BHollCustLClass,modMRent);
+  Setting("Адреси доставки",DelAddrLClass,modMRent);
+  Setting("Статус перевірки",InspectStatusLClass,modMRent);
+  Setting("Окремий акт/накл. на відділ",RentDepTClass,modMRent);
+  Setting("Класификації товарів",DILClass,modMRent);
+  Setting("Товари",INLClass,modMRent);
+  Setting("Серії номерів - Пропозиції по оренді",RentQTSerTClass,modMRent);
+  Setting("Структури",RecLClass,modMRent);
+  Setting("Типи оцінки оренди",AgreeTypeLClass,modMRent);
+  Setting("Додаткові нарахування оренди",RentChargesTClass,modMRent);
+  Setting("Настройки актів оренди",RentInvoiceTClass,modMRent);
+  Setting("Групи товарів оренди",RentITLClass,modMRent);
+  Setting("Настройки модуля Оренда",RentControlTClass,modMRent);
+  Setting("Лист пропозиції оренди",RentQTMailTClass,modMRent);
+  Setting("Прейскурант оренди",RentalPriceListsLClass,modMRent);
+  Setting("Настройки ціноутворення оренди",RentPriceSetTClass,modMRent);
+  Setting("Статус резервування оренди",AgreeStatusLClass,modMRent);
+  Setting("Планування ресурсів",ResPlanTClass,modMRent);
+//  Setting("Sites",SiteLClass,modMRent); // Replaced by Delivery Address
+  Setting("Стандартні тексти",LTxtLClass,modMRent); 
+//  Setting("Advanced Prices",AdvPriceRecLClass,modMRent);
+
+  Report("Угоди, що фактуруються",AgreeInvRClass,AgreeInvRn,0,modMRent);
+  Report("Доступність",RentResAvailRClass,RentResAvailRn,0,modMRent);
+  Report("Статус зборки",CollectionStatusRClass,CollectionStatusRn,0,modMRent);
+  Report("Поточне резервування оренди",CurRentResRClass,CurRentResRn,0,modMRent);
+  Report("Статус оренди",CustRentStatRClass,CustRentStatRn,0,modMRent);
+  Report("Статус інпекції",InspectionStatusRClass,InspectionStatusRn,0,modMRent);
+  Report("Статус внутрішнього переміщення",IntStockMovStatusRClass,IntStockMovStatusRn,0,modMRent);
+  Report("Товар на місці",ItemAtSiteRClass,ItemAtSiteRn,0,modMRent);
+  Report("Статус товару, що надходить",ItemInStatusRClass,ItemInStatusRn,0,modMRent);
+  Report("Статус товару, що вибуває",ItemOutStatusRClass,ItemOutStatusRn,0,modMRent);
+  Report("Пропущені можливості оренди",MissedRentOppRClass,MissedrentOppRn,0,modMRent);
+  Report("Журнал пропозиції оренди",RentQTJRClass,RentQTJRn,0,modMRent);
+  Report("Статистика пропозицій оренди по продовцям",RentQTSMStatsRClass,RentQTSMStatRn,0,modMRent);
+  Report("Склад пропозицій оренди",RentQTStkRClass,RentQTStkRn,0,modMRent);
+  Report("Статус пропозиції оренди",RentQTStatusRClass,RentQTStatusRn,0,modMRent);
+  Report("Прейскурант на оренду",RentResAccesPLRClass,RentResAccesPLRn,0,modMRent);
+  Report("Записи операцій по резервуванню",CRentResTransRClass,RentResTransRn,0,modMRent);
+  Report("Історія резервуваннь",RentResHistRClass,RentResHistRn,0,modMRent);
+  Report("Річний дохід",RentRevenueRClass,RentRevenueRn,0,modMRent);
+  Report("Статус сер.номеру товару оренди",SerialItemRentalStatusRClass,SerialItemRentalStatusRn,0,modMRent);
+  Report("Історія серійних номерів",SerialNrRClass,SerialNrRn,0,modMRent);
+  Report("Списання неповернень",UncOffHireRClass,UncOffHireRn,0,modMRent);
+
+  Document("Угоди",AgreementRClass,AgreementForm,AgreementFClass,modMRent);
+  Document("Набори",CollectionRClass,CollectionForm,CollectionFClass,modMRent);
+  Document("Детальна Угода",AgreementDetRClass,AgreementDetForm,AgreementDetFClass,modMRent);
+  Document("Резервування оренди",RentResRClass,RentResForm,RentResFClass,modMRent);
+  Document("Ком. пропозиціі по оренді",RentQTRClass,RentQTForm,RentQTFClass,modMRent);
+
+  Export("Утілізація товару оренди",InstrUtilEClass,InstrUtilEn,modMRent);
+
+  Maintenance("Створити нарахування за резервування",GenRentChargesVClass,ChargeAgreementMn,modMRent);
+  Maintenance("Створити набори",RentResCollectionVClass,RentResCollectionMn,modMRent);
+  Maintenance("Створити Надходження товару",RentResOffHireVClass,RentResOffHireMn,modMRent);
+  Maintenance("Створити Видачу товару",RentResDispatchVClass,RentResDispatchMn,modMRent);
+  Maintenance("Створити акти/накладні для угод",GenAgreeInvVClass,GenAgreeInvMn,modMRent);
+//  Maintenance("Recalculate Rental Reservations",RecalcRentResVClass,RecalcRentResMn,modMRent);
+
+  Module("_Генератор звітів","",730,modMRepGen);
+  
+  /* modRepGen */
+
+  Register("Звіти","Звіти",RepGenVc,modMRepGen);
+  Register("Форми","Форми",DocVc,modMRepGen);
+  Register("Стилі","Стилі",StyleVc,modMRepGen);
+ //  Register("Sets","Sets",RepSetVc,modRepGen);
+ 
+ Setting("Reports in Interface",UIReportLClass,modMRepGen);
+ return;
+end;  

@@ -1,0 +1,450 @@
+global
+updating procedure INClrMn(record RcVc RepSpec)
+begin
+	record INVc MyRecordR;
+	Boolean TrHs;
+
+	TrHs = true;
+	while (LoopMain(MyRecordR,1,TrHs)) begin
+		if (TrHs) then begin
+			RecordDelete(MyRecordR);
+			StepBack(MyRecordR);
+		end;
+	end;
+return;
+end;
+
+global
+updating procedure ORClrMn(record RcVc RepSpec)
+begin
+	record ORVc MyRecordR;
+	Boolean TrHs;
+
+	TrHs = true;
+	while (LoopMain(MyRecordR,1,TrHs)) begin
+		if (TrHs) then begin
+			RecordDelete(MyRecordR);
+			StepBack(MyRecordR);
+		end;
+	end;
+return;
+end;
+
+global
+updating procedure IVClrMn(record RcVc RepSpec)
+begin
+	record IVVc MyRecordR;
+	Boolean TrHs;
+
+	TrHs = true;
+	while (LoopMain(MyRecordR,1,TrHs)) begin
+		if (TrHs) then begin
+			RecordDelete(MyRecordR);
+			StepBack(MyRecordR);
+		end;
+	end;
+return;
+end;
+
+global
+updating procedure IVCashClrMn(record RcVc RepSpec)
+begin
+	record IVCashVc MyRecordR;
+	Boolean TrHs;
+
+	TrHs = true;
+	while (LoopMain(MyRecordR,1,TrHs)) begin
+		if (TrHs) then begin
+			RecordDelete(MyRecordR);
+			StepBack(MyRecordR);
+		end;
+	end;
+return;
+end;
+
+global
+updating procedure SVOClrMn(record RcVc RepSpec)
+begin
+	record SVOVc MyRecordR;
+	Boolean TrHs;
+
+	TrHs = true;
+	while (LoopMain(MyRecordR,1,TrHs)) begin
+		if (TrHs) then begin
+			RecordDelete(MyRecordR);
+			StepBack(MyRecordR);
+		end;
+	end;
+return;
+end;
+
+global
+updating procedure POClrMn(record RcVc RepSpec)
+begin
+	record POVc MyRecordR;
+	Boolean TrHs;
+
+	TrHs = true;
+	while (LoopMain(MyRecordR,1,TrHs)) begin
+		if (TrHs) then begin
+			RecordDelete(MyRecordR);
+			StepBack(MyRecordR);
+		end;
+	end;
+return;
+end;
+
+/////
+
+global
+updating procedure AT2UnitClrMn(record RcVc RepSpec)
+begin
+	record AT2UnitVc MyRecordR;
+	Boolean TrHs;
+
+	TrHs = true;
+	while (LoopMain(MyRecordR,1,TrHs)) begin
+		if (TrHs) then begin
+			RecordDelete(MyRecordR);
+			StepBack(MyRecordR);
+		end;
+	end;
+return;
+end;
+
+global
+updating procedure AT2ClrMn(record RcVc RepSpec)
+begin
+	record AT2Vc MyRecordR;
+	Boolean TrHs;
+
+	TrHs = true;
+	while (LoopMain(MyRecordR,1,TrHs)) begin
+		if (TrHs) then begin
+			RecordDelete(MyRecordR);
+			StepBack(MyRecordR);
+		end;
+	end;
+return;
+end;
+
+global
+updating procedure TRClrMn(record RcVc RepSpec)
+begin
+	record TRVc MyRecordR;
+	Boolean TrHs;
+
+	TrHs = true;
+	while (LoopMain(MyRecordR,1,TrHs)) begin
+		if (TrHs) then begin
+			RecordDelete(MyRecordR);
+			StepBack(MyRecordR);
+		end;
+	end;
+return;
+end;
+
+global
+updating procedure VIClrMn(record RcVc RepSpec)
+begin
+	record VIVc MyRecordR;
+	Boolean TrHs;
+
+	TrHs = true;
+	while (LoopMain(MyRecordR,1,TrHs)) begin
+		if (TrHs) then begin
+			RecordDelete(MyRecordR);
+			StepBack(MyRecordR);
+		end;
+	end;
+return;
+end;
+
+global
+updating procedure OPClrMn(record RcVc RepSpec)
+begin
+	record OPVc MyRecordR;
+	Boolean TrHs;
+
+	TrHs = true;
+	while (LoopMain(MyRecordR,1,TrHs)) begin
+		if (TrHs) then begin
+			RecordDelete(MyRecordR);
+			StepBack(MyRecordR);
+		end;
+	end;
+return;
+end;
+
+global
+updating procedure IPClrMn(record RcVc RepSpec)
+begin
+	record IPVc MyRecordR;
+	Boolean TrHs;
+
+	TrHs = true;
+	while (LoopMain(MyRecordR,1,TrHs)) begin
+		if (TrHs) then begin
+			RecordDelete(MyRecordR);
+			StepBack(MyRecordR);
+		end;
+	end;
+return;
+end;
+
+global
+updating procedure SHClrMn(record RcVc RepSpec)
+begin
+	record SHVc MyRecordR;
+	Boolean TrHs;
+
+	TrHs = true;
+	while (LoopMain(MyRecordR,1,TrHs)) begin
+		if (TrHs) then begin
+			RecordDelete(MyRecordR);
+			StepBack(MyRecordR);
+		end;
+	end;
+return;
+end;
+
+global
+updating procedure PUClrMn(record RcVc RepSpec)
+begin
+	record PUVc MyRecordR;
+	Boolean TrHs;
+
+	TrHs = true;
+	while (LoopMain(MyRecordR,1,TrHs)) begin
+		if (TrHs) then begin
+			RecordDelete(MyRecordR);
+			StepBack(MyRecordR);
+		end;
+	end;
+return;
+end;
+
+global
+updating procedure SDClrMn(record RcVc RepSpec)
+begin
+	record SDVc MyRecordR;
+	Boolean TrHs;
+
+	TrHs = true;
+	while (LoopMain(MyRecordR,1,TrHs)) begin
+		if (TrHs) then begin
+			RecordDelete(MyRecordR);
+			StepBack(MyRecordR);
+		end;
+	end;
+return;
+end;
+
+global
+updating procedure StockMovClrMn(record RcVc RepSpec)
+begin
+	record StockMovVc MyRecordR;
+	Boolean TrHs;
+
+	TrHs = true;
+	while (LoopMain(MyRecordR,1,TrHs)) begin
+		if (TrHs) then begin
+			RecordDelete(MyRecordR);
+			StepBack(MyRecordR);
+		end;
+	end;
+return;
+end;
+
+global
+updating procedure RetClrMn(record RcVc RepSpec)
+begin
+	record RetVc MyRecordR;
+	Boolean TrHs;
+
+	TrHs = true;
+	while (LoopMain(MyRecordR,1,TrHs)) begin
+		if (TrHs) then begin
+			RecordDelete(MyRecordR);
+			StepBack(MyRecordR);
+		end;
+	end;
+return;
+end;
+
+global
+updating procedure RetPUClrMn(record RcVc RepSpec)
+begin
+	record RetPUVc MyRecordR;
+	Boolean TrHs;
+
+	TrHs = true;
+	while (LoopMain(MyRecordR,1,TrHs)) begin
+		if (TrHs) then begin
+			RecordDelete(MyRecordR);
+			StepBack(MyRecordR);
+		end;
+	end;
+return;
+end;
+
+global
+updating procedure DocClrMn(record RcVc RepSpec)
+begin
+	record DocVc MyRecordR;
+	Boolean TrHs;
+
+	TrHs = true;
+	while (LoopMain(MyRecordR,1,TrHs)) begin
+		if (TrHs) then begin
+			RecordDelete(MyRecordR);
+			StepBack(MyRecordR);
+		end;
+	end;
+return;
+end;
+
+global
+updating procedure StockTakeClrMn(record RcVc RepSpec)
+begin
+	record StockTakeVc MyRecordR;
+	Boolean TrHs;
+
+	TrHs = true;
+	while (LoopMain(MyRecordR,1,TrHs)) begin
+		if (TrHs) then begin
+			RecordDelete(MyRecordR);
+			StepBack(MyRecordR);
+		end;
+	end;
+return;
+end;
+
+global
+updating procedure SRClrMn(record RcVc RepSpec)
+begin
+	record SRVc MyRecordR;
+	Boolean TrHs;
+
+	TrHs = true;
+	while (LoopMain(MyRecordR,1,TrHs)) begin
+		if (TrHs) then begin
+			RecordDelete(MyRecordR);
+			StepBack(MyRecordR);
+		end;
+	end;
+return;
+end;
+
+global
+updating procedure ObjClrMn(record RcVc RepSpec)
+begin
+	record ObjVc MyRecordR;
+	Boolean TrHs;
+
+	TrHs = true;
+	while (LoopMain(MyRecordR,1,TrHs)) begin
+		if (TrHs) then begin
+			RecordDelete(MyRecordR);
+			StepBack(MyRecordR);
+		end;
+	end;
+return;
+end;
+
+global
+updating procedure ItemHistClrMn(record RcVc RepSpec)
+begin
+	record ItemHistVc MyRecordR;
+	Boolean TrHs;
+
+	TrHs = true;
+	while (LoopMain(MyRecordR,1,TrHs)) begin
+		if (TrHs) then begin
+			RecordDelete(MyRecordR);
+			StepBack(MyRecordR);
+		end;
+	end;
+return;
+end;
+
+global
+updating procedure ItemStatusClrMn(record RcVc RepSpec)
+begin
+	record ItemStatusVc MyRecordR;
+	Boolean TrHs;
+
+	TrHs = true;
+	while (LoopMain(MyRecordR,1,TrHs)) begin
+		if (TrHs) then begin
+			RecordDelete(MyRecordR);
+			StepBack(MyRecordR);
+		end;
+	end;
+return;
+end;
+
+global
+updating procedure ITClrMn(record RcVc RepSpec)
+begin
+	record ITVc MyRecordR;
+	Boolean TrHs;
+
+	TrHs = true;
+	while (LoopMain(MyRecordR,1,TrHs)) begin
+		if (TrHs) then begin
+			RecordDelete(MyRecordR);
+			StepBack(MyRecordR);
+		end;
+	end;
+return;
+end;
+
+global
+updating procedure APPClrMn(record RcVc RepSpec)
+begin
+	record APPayHistVc MyRecordR;
+	Boolean TrHs;
+
+	TrHs = true;
+	while (LoopMain(MyRecordR,1,TrHs)) begin
+		if (TrHs) then begin
+			RecordDelete(MyRecordR);
+			StepBack(MyRecordR);
+		end;
+	end;
+return;
+end;
+
+global
+updating procedure CLInClrMn(record RcVc RepSpec)
+begin
+	record CLInVc MyRecordR;
+	Boolean TrHs;
+
+	TrHs = true;
+	while (LoopMain(MyRecordR,1,TrHs)) begin
+		if (TrHs) then begin
+			RecordDelete(MyRecordR);
+			StepBack(MyRecordR);
+		end;
+	end;
+return;
+end;
+
+/*global		//Delete Archives in all Companies!!!
+updating procedure ArchiveClrMn(record RcVc RepSpec)
+begin
+	record ArchiveVc MyRecordR;
+	Boolean TrHs;
+
+	TrHs = true;
+	while (LoopMain(MyRecordR,1,TrHs)) begin
+		if (TrHs) then begin
+			RecordDelete(MyRecordR);
+			StepBack(MyRecordR);
+		end;
+	end;
+return;
+end;
+*/

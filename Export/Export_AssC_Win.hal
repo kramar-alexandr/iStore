@@ -1,0 +1,24 @@
+
+event DefineWindows
+begin
+	Real h,h1,h2,h3,h4,h5,h6,h7,hs,hm,v,v3,l,vs,vm,f,t,x,v2;
+	string 60 label;
+	record RcVc recc;
+	SetLangMode(LangUkrainian,"UKR",0);
+	//recc.f1 = "asd";
+	
+
+ 
+  WindowBegin("Assets Categories Export",MyExportAssCEClass,CGEcW,RcType);
+  SetWrect(20,80,450,150);
+  v = 10; vs = 20; h = 160;
+ 
+    //EditField(120,10,20,"",Normal,f1,false,0);
+    //CheckBox(10,10,0,"Use Separator",flags[0]);
+    //CheckBox(10,40,0,"Add Header to export file",flags[1]);
+    
+  EndWindow;
+  
+  return;
+  end;
+  

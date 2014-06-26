@@ -1,0 +1,16 @@
+event startup
+begin
+
+	SetLangMode(LangUkrainian,"UKR",0);
+	
+	
+	
+	Module("Фін. планування","",730,modFinPlan);
+	
+	Register("Заплановані платежі","Заплановані платежі",OtherInPlanVc,modFinPlan);
+  Register("Заплановані виплати","Заплановані виплати",OtherOutPlanVc,modFinPlan);
+	
+	Report("Заплановані розрахунки",FinPlanRepRClass,FinPlanRepRn,0,modFinPlan);
+	
+	return;
+	end;

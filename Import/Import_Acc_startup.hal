@@ -1,0 +1,9 @@
+event startup
+begin
+
+  SetLangMode(LangUkrainian,"UKR",0);
+  
+  Import("Accaunts Import",ImportAccIClass,ImportAccIn,modNL);
+
+ return;
+end;  

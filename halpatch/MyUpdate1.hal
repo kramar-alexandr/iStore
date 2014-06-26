@@ -1,0 +1,1110 @@
+external updating procedure RA_MyCreateSDFromPUDsm(record PUVc, record SDVc);
+external updating procedure RA_MyCreatePUFromSDDsm(record SDVc,record PUVc);
+external updating procedure RA_MyCreatePUFromWSDsm(record WSVc,record PUVc);
+remote updating procedure RA_CreatePOCQDsm(record POVc,var record POCQStatVc);
+remote updating procedure RA_CreateATRecostDsm(record AT2UnitVc,var record AT2DprVc);
+remote updating procedure RA_AvansCreateDsm(record PPVc,var record ExpVc);
+
+global updating procedure MyCreateSDFromPUDsm()
+begin
+integer wn,i,mtrw; 
+record SDVc SDr;
+record PUVc PUr;
+
+  wn = curwindow;
+  if (WindowState(wn)==0) then begin//Rs_normal
+    GetWindowRecord(wn,PUr);
+    RecordNew(SDr);
+    RA_MyCreateSDFromPUDsm(PUr,SDr);
+    OpenWindow("SDDClass",1,0,"","",SDr);
+	end;
+
+return;
+end;
+
+
+
+global updating procedure MyCreatePUFromSDDsm()
+begin
+integer wn,i,mtrw; 
+record SDVc SDr;
+record PUVc PUr;
+
+    wn = curwindow;
+  if (WindowState(wn)==0) then begin//Rs_normal
+    GetWindowRecord(wn,SDr);
+    RecordNew(PUr);
+    RA_MyCreatePUFromSDDsm(SDr,PUr);
+    OpenWindow("PUDClass",1,0,"","",PUr);
+	end;
+	
+return;
+end;
+
+global updating procedure MyCreatePUFromWSDsm()
+begin
+integer wn,i,mtrw; 
+record WSVc WSr;
+record PUVc PUr;
+
+    wn = curwindow;
+  if (WindowState(wn)==0) then begin//Rs_normal
+    GetWindowRecord(wn,WSr);
+    RecordNew(PUr);
+    RA_MyCreatePUFromWSDsm(WSr,PUr);
+    OpenWindow("PUDClass",1,0,"","",PUr);
+	end;
+	
+return;
+end;
+
+
+global updating procedure CreatePOCQDsm()
+begin
+integer wn,i,mtrw; 
+record POVc POr;
+record POCQStatVc POCQStatr;
+integer curcomp;
+
+    wn = curwindow;
+  if (WindowState(wn)==0) then begin//Rs_normal
+    GetWindowRecord(wn,POr);
+    RecordNew(POCQStatr);
+    RA_CreatePOCQDsm(POr,POCQStatr);
+    
+    OpenWindow("POCQStatDClass",1,0,"","",POCQStatr);
+
+  
+	end;
+	
+return;
+end;
+
+global updating procedure MyUpdateCost()
+begin
+record INVc INr;
+record ItemHistVc IHr;
+record PUVc PUr;
+Record SRVc SRr;
+boolean TrHs,testf;
+  
+ // testf = true;
+  INr.Code = "";
+  While(loopmain(INr,1,true))begin
+    IHr.ArtCode = INr.Code;
+    TrHs = true;
+    while(LoopBackKey("ArtCode",IHr,1,TrHs))begin
+      If(IHr.ArtCode==INr.Code and (IHr.FileName=="SRVc" or IHr.FileName=="PUVc") and IHr.Qty>0 and TrHs) then begin
+              TrHs = false;
+              INr.InPrice = round(IHr.TotCostPrice/IHr.Qty,defaultcurroundoff); 
+              RecordStore(INr,true);
+      end; 
+    end; 
+    Resetloop(IHr);
+  end;  
+return;
+end;
+
+
+global updating procedure CreateATRecostDsm()
+begin
+integer wn,i,mtrw; 
+record AT2UnitVc ATr;
+record AT2DprVc ATRr;
+
+    wn = curwindow;
+  if (WindowState(wn)==0) then begin//Rs_normal
+    GetWindowRecord(wn,ATr);
+    RecordNew(ATRr);
+    RA_CreateATRecostDsm(ATr,ATRr);
+    
+    OpenWindow("AT2DprDClass",1,0,"","",ATRr);
+	end;
+	
+return;
+end;
+
+
+global
+updating procedure DelRs2WClass()
+BEGIN
+  Integer wn,nwn;
+  string 255 tstr;
+  record RepDefBlock RepDefRec;
+  row RepDefBlock RepDefrw;
+  Integer i,rwcnt;
+  record RepDefVc RepDefr;
+  
+  wn = CurWindow;
+  tstr = GetListString(wn,SelectedListLine(wn));  
+  if (nonblank(tstr)) then begin
+    BlockLoad(RepDefRec);
+    rwcnt = MatRowCnt(RepDefRec);
+    for (i=0;i<rwcnt;i=i+1) begin
+      MatRowGet(RepDefRec,i,RepDefrw);
+      if (RepDefrw.shortname==tstr) then begin
+        MatRowDelete(RepDefRec,i);
+        BlockStore(RepDefRec);
+        goto LEditRs2WClass;
+      end;
+    end;
+  end;
+LEditRs2WClass:; 
+
+  RETURN;
+END;
+
+global updating procedure AvansCreateDsm()
+begin
+integer wn,i,mtrw; 
+record ExpVc Expr;
+record PPVc PPr;
+
+    wn = curwindow;
+  if (WindowState(wn)==0) then begin//Rs_normal
+    GetWindowRecord(wn,PPr);
+    RecordNew(Expr);
+    RA_AvansCreateDsm(PPr,Expr);
+    
+    OpenWindow("ExpDClass",1,0,"","",Expr);
+	end;
+	
+return;
+end;
+
+
+global updating procedure MyEditBalanceMn(record RcVc RepSpec)
+begin
+record ObjBalVc OBr;
+val debit,credit,turnover;
+  
+  OBr.AccNumber = RepSpec.f1;
+  //OBr.Object = "APPLE";
+  /*debit = getturnover(OBr,"transdebit","1/3/2011","31/3/2011");
+  credit = getturnover(OBr,"transcredit","1/3/2011","31/3/2011");*/
+  if(currentuser=="SA")then begin
+    OBr.AccNumber = RepSpec.f1;
+    OBr.Object = RepSpec.f2;
+    ReadFirstMain(OBr,2,true);
+    debit = evaltoval(RepSpec.f3);
+    credit = evaltoval(RepSpec.f4);
+    AddBalance(OBr,RepSpec.d1,"transdebit",debit,"transdebit2",blankval,"simdebit",blankval,"transcredit",credit,"transcredit2",blankval,"simcredit",blankval); 
+  end;
+  
+return;
+end;
+
+
+global updating procedure MyChangeBalAcc1Mn(record RcVc RepSpec)
+begin
+record ObjBalVc OBr;
+val debit,credit,turnover,bal;
+record ObjVc Objr;  
+record SMVc SMr;
+row SMVc SMrw;
+integer i,j,k,mtrw,smmtrw;
+record TRVc TRr;
+row TRVc TRrw;
+boolean TrHs,testf;
+date sdat,edat;
+  
+  
+  sdat = RepSpec.d1;
+  edat = RepSpec.d2;
+  /*sdat = stringtodate("1/1/2011");
+  edat = stringtodate("31/1/2011");*/
+  OBr.AccNumber = RepSpec.f1;
+  recordNew(SMr);
+  
+  i = 0;
+  SMrw.AccNumber = RepSpec.f1;
+  MatrowInsert(Smr,i,SMrw);
+  
+  Objr.Code = "";
+  While(loopmain(Objr,1,true))begin
+    i=i+1;
+    SMrw.Objects = Objr.Code;
+    MatrowInsert(Smr,i,SMrw);
+  end;
+  smmtrw = i+1;
+  
+  TRr.TransDate = sdat;
+  TrHs = true;
+  while(loopkey("TransDate",TRr,1,TrHs))begin
+  testf = true;
+    if(TRr.TransDate>edat)then begin testf = false; TrHs = false; end;
+    if(testf)then begin
+      mtrw = matrowcnt(TRr);
+      for(i=0;i<mtrw;i=i+1)begin
+        matrowget(TRr,i,TRrw);
+        if(TRrw.stp==1 and TRrw.ovst==0)then begin
+          if(TRrw.AccNumber==RepSpec.f1)then begin
+            j=0;
+            matrowget(SMr,j,SMrw);
+            SMrw.DebVal = SMrw.DebVal+TRrw.DebVal;
+            SMrw.CredVal = SMrw.CredVal+TRrw.CredVal;
+            matrowput(SMr,j,SMrw);
+            for(j=1;j<smmtrw;j=j+1)begin
+              matrowget(SMr,j,SMrw);
+              if(setinset(SMrw.Objects,TRrw.Objects))begin
+                SMrw.DebVal = SMrw.DebVal+TRrw.DebVal;
+                SMrw.CredVal = SMrw.CredVal+TRrw.CredVal;
+              end;
+              matrowput(SMr,j,SMrw);
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  
+
+    for(j=0;j<smmtrw;j=j+1)begin
+      matrowget(SMr,j,SMrw);
+        OBr.Object = SMrw.Objects;
+        debit = getturnover(OBr,"transdebit",sdat,edat);
+        credit = getturnover(OBr,"transcredit",sdat,edat);
+        bal = debit - credit;
+        AddBalance(OBr,sdat,"transdebit",SMrw.DebVal-debit,"transdebit2",blankval,"simdebit",blankval,"transcredit",SMrw.CredVal-credit,"transcredit2",blankval,"simcredit",blankval); 
+    end;
+return;
+end;
+
+global updating procedure MyChangeBalAccMn(record RcVc RepSpec)
+begin
+  record TRVc TRr;
+  row TRVc TRrw;
+  integer i,mtrw;
+  boolean TrHs;
+  
+  
+  RepSpec.d1 = stringtodate("1/8/2011");
+  RepSpec.d2 = stringtodate("31/8/2011");
+  RepSpec.f1 = "150/1/2";
+  MyChangeBalAcc1Mn(RepSpec);
+  RepSpec.f1 = "500/1/2";
+  MyChangeBalAcc1Mn(RepSpec);
+  RepSpec.f1 = "150/1/7";
+  MyChangeBalAcc1Mn(RepSpec);
+  RepSpec.f1 = "500/1/7";
+  MyChangeBalAcc1Mn(RepSpec);
+  RepSpec.f1 = "150/6/1";
+  MyChangeBalAcc1Mn(RepSpec);
+  RepSpec.f1 = "500/6/1";
+  MyChangeBalAcc1Mn(RepSpec);
+  
+return;
+end;
+
+global updating procedure POSObjChangeMn(record RcVc RepSpec)
+begin
+record IVCashVc IVr;
+row IVCashVc IVrw;
+integer i,mtrw;
+record INVc INr;
+boolean testf,TrHs;
+
+ if(currentuser=="SA")then begin
+    IVr.SerNr = 0;
+    IVr.TransDate = RepSpec.sStartDate;
+    TrHs = true;
+    while(loopkey("TransDate",IVr,1,TrHs))begin
+      If(IVr.TransDate>RepSpec.sEndDate)then begin TrHs = false; end;
+      if(TrHs)then begin
+        testf = false;
+        mtrw = matrowcnt(IVr);
+        for(i=0;i<mtrw;i=i+1)begin
+          matrowget(IVr,i,IVrw);
+          if(nonblank(IVrw.ArtCode) and nonblank(RepSpec.f2))then begin
+            INr.Code = IVrw.ArtCode;
+            if(readfirstmain(INr,1,true))then begin
+              if(INr.Group==RepSpec.f1)then begin
+                if(setinset(RepSpec.f2,IVrw.Objects)==false)then begin
+                  if(nonblank(IVrw.Objects))then begin
+                    IVrw.Objects = IVrw.Objects & "," & RepSpec.f2;
+                  end else begin
+                    IVrw.Objects = RepSpec.f2;
+                  end;
+                  Matrowput(IVr,i,IVrw);
+                  testf = true;
+                end;
+              end;
+            end;
+          end;
+        end;
+        if(testf)then begin
+          RecordStore(IVr,true);
+        end;
+      end;
+    End;
+  end;
+  
+return;
+end;
+
+global updating procedure POSObjChangeTRMn(record RcVc RepSpec)
+begin
+record IVCashVc IVr;
+row IVCashVc IVrw;
+integer i,mtrw;
+record INVc INr;
+boolean testf,TrHs,changef;
+record TRVc TRr,oldTRr;
+row TRVc TRrw;
+integer t,trmtrw;
+
+ if(currentuser=="SA")then begin
+    IVr.SerNr = 0;
+    IVr.TransDate = RepSpec.sStartDate;
+    TrHs = true;
+    
+    createfile("222.txt");
+    closefile;
+    openexportfile("222.txt",false);
+    while(loopkey("TransDate",IVr,1,TrHs))begin
+      If(IVr.TransDate>RepSpec.sEndDate)then begin TrHs = false; end;
+      if(TrHs)then begin
+        testf = false;
+        mtrw = matrowcnt(IVr);
+        for(i=0;i<mtrw;i=i+1)begin
+          matrowget(IVr,i,IVrw);
+          if(nonblank(IVrw.ArtCode) and nonblank(RepSpec.f2))then begin
+            INr.Code = IVrw.ArtCode;
+            if(readfirstmain(INr,1,true))then begin
+              if(INr.Group==RepSpec.f1)then begin
+                TRr.Number = IVr.SerNr;
+                TRr.IntYc = 666;
+                if(ReadFirstMain(TRr,2,true))then begin
+                  RecordCopy(oldTRr,TRr);
+                  changef = false;
+                  matrowget(TRr,i+1,TRrw);
+                  if(TRrw.stp==1 and TRrw.ovst==0)then begin
+                    if(setinset(RepSpec.f2,TRrw.Objects)==false)then begin
+                      TRrw.Objects = TRrw.Objects & "," & RepSpec.f2;
+                      matrowput(TRr,i+1,TRrw);
+                      changef = true;
+                    end;
+                  end else begin
+                    StartFormat(15);
+                      OutString(0,0,TRr.Number,true);
+                      OutString(0,0,"FAIL edited",true);
+                    endformat;
+                  end;
+                  if(changef)then begin
+                    if(RecordUpdate(oldTRr,TRr,true)==0)then begin
+                      StartFormat(15);
+                        OutString(0,0,TRr.Number,true);
+                        OutString(0,0,"DONE",true);
+                      endformat;
+                    end else begin
+                      StartFormat(15);
+                        OutString(0,0,TRr.Number,true);
+                        OutString(0,0,"FAIL update",true);
+                      endformat;
+                    end;
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+    End;
+    closefile;
+  end;
+  
+return;
+end;
+
+global updating procedure FillSVOHistSerialMn()
+begin
+record SVOVc SVOr;
+row SVOVc SVOrw;
+record SVOHistSerialVc SVHistr;
+integer mtrw,i;
+  
+  
+  while(loopmain(SVOr,1,true))begin
+    mtrw = matrowcnt(SVOr);
+    for(i=0;i<mtrw;i=i+1)begin
+      matrowget(SVOr,i,SVOrw);
+      if(nonblank(SVOrw.SerialNr))then begin
+        recordnew(SVHistr);
+        SVHistr.SerialNr = SVOrw.SerialNr;
+        SVHistr.ArtCode = SVOrw.ArtCode;
+        SVHistr.Qty = SVOrw.Quant;
+        SVHistr.TransNr = SVOr.SerNr;
+        SVHistr.FileName = "SVOVc";
+        SVHistr.OKFlag = SVOr.DoneMark;
+        SVHistr.Type = SVOrw.ItemType;
+        SVHistr.TransDate = SVOr.TransDate;
+        SVHistr.OkDate = SVOr.PlanShip;
+        SVHistr.ReturnDate = SVOr.RegDate;
+        SVHistr.SalesMan = SVOr.CustomField7;
+        SVHistr.Client = SVOr.CustCode;
+        SVHistr.Vlastnik = SVOr.Vlastnik;
+        recordinsert(SVHistr,true);
+      end;
+    end;
+  end;
+
+
+return;
+end;
+
+updating procedure AddTextToNote(var record NotepadVc Noter,string tstr)
+BEGIN
+    AddToText(tstr,Noter);
+    AddToText(Chr(13) & Chr(10),Noter);
+    
+  RETURN;
+END;
+
+global updating procedure CreateSVOSerNoter(record SVOVc SVOr,string tstr)
+begin
+record NotepadVc Noter,OldNoter;
+record RLinkVc RLinkr;
+Integer notenr;
+boolean findf;
+
+
+    notenr = 1;
+    findf = false;
+    while (ReadRecordLink(SVOr,notenr,Noter,RLinkr)) begin
+       if(RLinkr.Comment==USetStr(1243))then begin 
+         findf = true;
+         goto Lfindnoter; 
+       end;
+       notenr = notenr + 1;
+    end;
+Lfindnoter:;
+    if(findf)then begin
+      OldNoter.SerNr = Noter.SerNr;
+      OldNoter.LangCode = Noter.LangCode;
+      OldNoter.Classification = Noter.Classification;
+      OldNoter.FromRecidStr = Noter.FromRecidStr;
+      OldNoter.CompanyNr = Noter.CompanyNr;
+      RecordClear(Noter);
+      if (RecordStore(Noter,true)) then begin  end;
+      recordCopy(Noter,OldNoter);
+      
+      AddTextToNote(Noter,tstr);// Edit ************************** Wednesday, 8 June 2011 11:45:42
+      if (RecordStore(Noter,true)) then begin  end;
+    end else begin
+      recordNew(Noter);
+      AddTextToNote(Noter,tstr);// Edit ************************** Wednesday, 8 June 2011 11:45:46
+      Noter.SerNr = NextSerNr("NotepadVc",CurrentDate,-1,false,"");
+      if (RecordStore(Noter,false)) then begin
+        CreateRecordLink(SVOr,CurrentCompany,Noter,CurrentCompany);  
+        notenr = 1;
+        while (ReadRecordLink(SVOr,notenr,Noter,RLinkr)) begin
+          notenr = notenr + 1;
+        end;
+        if (ReadRecordLink(SVOr,notenr-1,Noter,RLinkr)) then begin
+          RLinkr.Comment = USetStr(1243);//"Printed Docs";   
+          if (RecordStore(RLinkr,true)) then begin  end;
+        end;
+      end;
+    end;
+  
+return;
+end;
+
+global function string 200 DuplicateSVOSerial(string Serial)
+begin
+record SVOHistSerialVc SVHistr;
+string 200 tstr;
+boolean testf;
+
+    testf = true;
+    tstr = "";
+    SVHistr.SerialNr = Serial;
+    while(loopmain(SVHistr,1,testf))begin
+      if(SVHistr.SerialNr!=Serial) then begin testf=false; end;
+      if(testf and SVHistr.Qty>-1)then begin
+        if(nonblank(tstr))then begin
+          tstr = tstr & "," & SVHistr.TransNr;
+        end else begin
+          tstr = SVHistr.TransNr;
+        end;
+      end;
+    end;
+DuplicateSVOSerial = tstr;
+
+return;
+end;
+
+global updating procedure UpdateItemMarginMn(record RcVc RepSpec)
+begin
+record INVc INr;
+string 20 KeyLoop;
+boolean TrHs,testf;
+  
+  TrHs = true;
+  if(nonblank(RepSpec.vals0))then begin
+    if(nonblank(RepSpec.f1))then begin
+      KeyLoop = "Group";
+      INr.Group = RepSpec.f1;
+      while(loopkey(KeyLoop,INr,1,TrHs))begin
+        testf = true;
+        if(INr.Group!=RepSpec.f1)then begin testf = false; TrHs = false; end;
+        if(testf)then begin
+          INr.Markup = RepSpec.vals0;
+          recordStore(INr,true);
+        end;
+      end;
+    end else begin
+      INr.Code = "";
+      while(loopMain(INr,1,TrHs))begin
+        INr.Markup = RepSpec.vals0;
+        recordStore(INr,true);
+      end;
+    end;
+  end;  
+return;
+end;
+
+
+global updating procedure RecalcWebRegMn()
+begin
+	record WebSyncRegVc WSRr;
+	record ItemStatusVc ISr,ISfind;
+	record WebSyncBlock WSBb;
+	record WebSyncMatBlock WSMBb;
+	row WebSyncMatBlock WSMBwr;
+	integer i,mtrw;
+	record PLDefVc PLDr;
+	record PLVc PLr;
+	boolean TrHs,testf,testf1,TrHs1;
+	string 200 available;
+	
+	blockload(WSMBb);
+  blockload(WSBb);
+  mtrw = matrowcnt(WSMBb);
+	
+	WSRr.ArtCode = "";
+	While(loopmain(WSRr,1,true)) begin
+	  
+		ISfind.Code = WSRr.ArtCode;
+		TrHs1 = true;
+		available = "";
+		while(loopmain(ISfind,1,TrHs1))begin
+			testf1 = true;
+			if(ISfind.Instock<=0)then begin testf1 = false; end;
+			if(ISfind.Code!=WSRr.ArtCode)then begin testf1 = false; TrHs1 = false; end;
+		
+			if(testf1)then begin
+				for(i=0;i<mtrw;i=i+1)begin
+					matrowget(WSMBb,i,WSMBwr);
+					if(ISfind.Location==WSMBwr.Location)then begin
+						if(nonblank(available))then begin available = available & ","; end;
+						available = available & WSMBwr.ID;
+					end;
+				end;
+			end;
+		end;
+		resetloop(ISfind);
+	  WSRr.Available = available;
+    WSRr.DateChange = CurrentDate;
+	  recordstore(WSRr,true);
+	  
+	end; 
+	
+return;
+end;
+
+
+global updating procedure SyncWebRegMn()
+begin
+record WebSyncRegVc WSRr;
+record ItemStatusVc ISr,ISfind;
+record WebSyncBlock WSBb;
+record WebSyncMatBlock WSMBb;
+row WebSyncMatBlock WSMBwr;
+integer i,mtrw;
+record PLDefVc PLDr;
+record PLVc PLr;
+boolean TrHs,testf,testf1,TrHs1;
+string 200 available;
+
+  blockload(WSMBb);
+  blockload(WSBb);
+  mtrw = matrowcnt(WSMBb);
+  
+  
+  ISr.Code = "";
+  ISr.Location = ";;;";
+  TrHs = true;
+  while(loopkey("Location",ISr,2,TrHs))begin
+    testf = true;
+    if(ISr.Location!=";;;")then begin TrHs = false; testf = false; end;
+    if(ISr.Instock<=0)then begin testf = false; end;
+    
+    if(testf)then begin
+      ISfind.Code = ISr.Code;
+      TrHs1 = true;
+      available = "";
+      while(loopmain(ISfind,1,TrHs1))begin
+        testf1 = true;
+        if(ISfind.Instock<=0)then begin testf1 = false; end;
+        if(ISfind.Code!=ISr.Code)then begin testf1 = false; TrHs1 = false; end;
+        
+        if(testf1)then begin
+          for(i=0;i<mtrw;i=i+1)begin
+            matrowget(WSMBb,i,WSMBwr);
+            if(ISfind.Location==WSMBwr.Location)then begin
+              if(nonblank(available))then begin available = available & ","; end;
+              available = available & WSMBwr.ID;
+            end;
+          end;
+        end;
+      end;
+      resetloop(ISfind);
+      WSRr.ArtCode = ISr.Code;
+      if(readfirstmain(WSRr,1,true) and (WSRr.ArtCode==ISr.Code))then begin
+        PLr.PLCode = WSBb.DefPriceList;
+        PLr.ArtCode = ISr.Code;
+        if(readfirstmain(PLr,2,true))then begin
+          WSRr.Price = PLr.ExVatPrice;
+        end;
+        WSRr.Available = available;
+        WSRr.DateChange = CurrentDate;
+        if(nonblank(WSRr.Available))then begin
+          recordStore(WSRr,true);
+        end;
+      end else begin
+        Recordnew(WSRr);
+        WSRr.ArtCode = ISr.Code;
+        PLr.PLCode = WSBb.DefPriceList;
+        PLr.ArtCode = ISr.Code;
+        if(readfirstmain(PLr,2,true))then begin
+          WSRr.Price = PLr.ExVatPrice;
+        end;
+        WSRr.Available = available;
+        WSRr.DateChange = CurrentDate;
+        if(nonblank(WSRr.Available))then begin
+          recordStore(WSRr,true);
+        end;
+      end;
+      resetloop(WSRr);
+    end;
+  end;
+  resetloop(ISr);
+  
+  WSBb.DateLastTime = currentdate;
+  blockstore(WSBb);
+  
+return;
+end;
+
+global updating procedure UpdateWebRegMn()
+begin
+record WebSyncRegVc WSRr;
+record ItemStatusVc ISr,ISfind;
+record WebSyncBlock WSBb;
+record WebSyncMatBlock WSMBb;
+row WebSyncMatBlock WSMBwr;
+integer i,mtrw;
+record PLDefVc PLDr;
+record PLVc PLr;
+boolean TrHs,testf,testf1,TrHs1;
+string 200 available;
+
+  WSRr.ArtCode = "";
+  While(loopmain(WSRr,1,true))begin
+      WSRr.DateChange = currentdate;
+      recordstore(WSRr,true);
+  end;
+ 
+return;
+end;
+
+
+global updating procedure SyncWebRegUpdateFromIS(record ItemStatusVc ISr)
+begin
+record WebSyncRegVc WSRr;
+record WebSyncBlock WSBb;
+record WebSyncMatBlock WSMBb;
+row WebSyncMatBlock WSMBwr;
+integer i,mtrw;
+record PLDefVc PLDr;
+record PLVc PLr;
+boolean TrHs,testf,testf1,TrHs1;
+string 200 available,aval,newaval;
+integer lenth,k;
+string 5 achar,char;
+  
+  blockload(WSBb);
+  blockload(WSMBb);
+  mtrw = matrowcnt(WSMBb);
+  testf = false;
+  for(i=0;i<mtrw;i=i+1)begin
+    matrowget(WSMBb,i,WSMBwr);
+    if(WSMBwr.Location==ISr.Location)then begin
+      aval = WSMBwr.ID;
+      testf = true;
+    end;
+  end;
+  
+  if(testf)then begin
+    WSRr.ArtCode = ISr.Code;
+    if(readfirstmain(WSRr,1,true) and WSRr.ArtCode==ISr.Code)then begin
+      PLr.PLCode = WSBb.DefPriceList;
+        PLr.ArtCode = ISr.Code;
+        if(readfirstmain(PLr,2,true))then begin
+          WSRr.Price = PLr.ExVatPrice;
+        end;
+        if(setinset(aval,WSRr.Available))then begin
+          if(ISr.Instock<=0)then begin
+            lenth = len(WSRr.Available);
+            achar = "";
+            char = "";
+            newaval = "";
+            
+            for(i=0;i<lenth;i=i+1)begin
+              char = mid(WSRr.Available,i,1);
+              if(char!=",")then begin
+                achar = achar & char;
+              end else begin
+                if(achar!=aval)then begin
+                  if(nonblank(newaval))then begin
+                    newaval = newaval & "," & achar;
+                  end else begin
+                    newaval = achar;
+                  end;
+                end;
+                achar = "";
+              end;
+            end;
+            if(achar!=aval)then begin
+              if(nonblank(newaval))then begin
+                newaval = newaval & "," & achar;
+              end else begin
+                newaval = achar;
+              end;
+            end;
+          WSRr.Available = newaval;
+          end;
+        end else begin
+          if(nonblank(WSRr.Available))then begin
+            WSRr.Available = WSRr.Available & "," & aval;
+          end else begin
+            WSRr.Available = aval;
+          end;
+        end;
+        WSRr.DateChange = CurrentDate;
+        recordStore(WSRr,true);
+    end else begin
+      Recordnew(WSRr);
+      WSRr.ArtCode = ISr.Code;
+      PLr.PLCode = WSBb.DefPriceList;
+      PLr.ArtCode = ISr.Code;
+      if(readfirstmain(PLr,2,true))then begin
+        WSRr.Price = PLr.ExVatPrice;
+      end;
+      WSRr.Available = aval;
+      WSRr.DateChange = CurrentDate;
+      recordStore(WSRr,true);
+    end;
+  end;
+return;
+end;
+
+
+
+global
+updating function LongInt ItemStatusVcRecordSaveAfter(var record ItemStatusVc ISr,record ItemStatusVc IS2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  
+  SyncWebRegUpdateFromIS(ISr);
+  ItemStatusVcRecordSaveAfter = res;
+  RETURN;
+END;
+
+global
+updating function LongInt ItemStatusVcRecordUpdate(var record ItemStatusVc ISr,record ItemStatusVc IS2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  
+  SyncWebRegUpdateFromIS(ISr);
+  ItemStatusVcRecordUpdate = res;
+  RETURN;
+END;
+
+
+global
+updating function LongInt PLVcRecordSaveAfter(var record PLVc PLr,record PLVc PL2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  record WebSyncRegVc WSRr;
+  record WebSyncBlock WSBb;
+  
+  
+  blockload(WSBb);
+  if(WSBb.DefPriceList==PLr.PLCode)then begin
+    WSRr.ArtCode = PLr.ArtCode;
+    if(readfirstmain(WSRr,1,true))then begin
+      WSRr.Price = PLr.ExVatPrice;
+      WSRr.DateChange = currentdate;
+      recordstore(WSRr,true);
+    end;
+  end;
+  
+  PLVcRecordSaveAfter = res;
+  RETURN;
+END;
+
+
+global
+updating function LongInt WebSyncRegVcRecordUpdate(var record WebSyncRegVc WSRr,record WebSyncRegVc WSR2r,LongInt stat,LongInt long4)
+BEGIN
+	
+	WSRr.DateChange = currentdate;
+	
+return;
+end;
+
+global
+updating function LongInt WebSyncRegVcRecordSave(var record WebSyncRegVc WSRr,record WebSyncRegVc WSR2r,LongInt stat,LongInt long4)
+BEGIN
+	
+	WSRr.DateChange = currentdate;
+	
+return;
+end;
+
+
+global
+updating function LongInt PLVcRecordUpdateAfter(var record PLVc PLr,record PLVc PL2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  record WebSyncRegVc WSRr;
+  record WebSyncBlock WSBb;
+  
+  
+  blockload(WSBb);
+  if(WSBb.DefPriceList==PLr.PLCode)then begin
+    WSRr.ArtCode = PLr.ArtCode;
+    if(readfirstmain(WSRr,1,true))then begin
+      WSRr.Price = PLr.ExVatPrice;
+      WSRr.DateChange = currentdate;
+      recordstore(WSRr,true);
+    end;
+  end;
+  
+  PLVcRecordUpdateAfter = res;
+  RETURN;
+END;
+
+global updating procedure AddVATToCustomerMn()
+begin
+record CUVc CUr;
+boolean testf,TrHs;
+    
+  TrHs = true;
+  CUr.CustCat = "POS";
+  
+  while(loopkey("Group",CUr,1,TrHs))begin
+    testf = true;
+    if(CUr.CustCat!="POS")then begin testf = false; TrHs = false; end;
+      
+    if(testf)then begin
+      CUr.VATCode = "O0";
+      recordStore(CUr,true);
+    end;
+    
+  end;
+
+  
+
+return;
+end;
+
+
+global updating procedure MyPrintWinsm()
+begin
+  record RcVc RepSpec;
+  integer wn,nwn;
+  area a;
+  LongInt i,rwcnt;
+  row MailVc Mailrw;
+  record RLinkVc RLr;
+  string 255 rlink;
+  string 255 subset;
+  string 255 namearg;
+  
+  /*wn = curwindow;
+  getwindowrecord(wn,RepSpec);
+  
+  subset = GetWindowSubset(wn);
+  namearg = GetWindowNameArg(wn);
+
+  addrecordtoarea(RepSpec,"RcVc",a);
+  
+
+  //RepSpec.f1 = "IVVc";
+  //putwindowrecord(wn,RepSpec);
+  RepSpec.Media = 5;*/
+  //OpenForm("ORDER");
+  createfile("11111.txt");
+  closefile;
+  openexportfile("11111.txt",true);
+  OpenForm("ORDER");
+  OUTFORMFIELD("F_KUNDNR","sad");
+  CloseForm;
+  closefile
+  //CloseForm;
+  
+  //openwindow("DocPreWClass",1,0,subset,namearg,RepSpec);
+  
+  //writeareatofile(a,"111",1);
+  
+
+return;
+end;
+
+global updating procedure SyncCustCardsIn()
+begin
+  string 100 name,sername,card_number,phone,email,birthday,city,is_seminar,is_children,job,equipments;
+  record CUVc CUr;
+  integer sem,chil;
+  
+  while (TestEOF()==false) begin
+
+    name=ImportField;
+    sername=ImportField;
+    card_number=ImportField;
+    phone=ImportField;
+    email=ImportField;
+    birthday=ImportField;
+    city=ImportField;
+    is_seminar=ImportField;
+    is_children=ImportField;
+    job=ImportField;
+    equipments=ImportField;
+      
+    CUr.Code = card_number;
+		if(ReadFirstMain(CUr,1,true))then begin
+		  CUr.Name = sername & " " & name;
+		  CUr.Phone = phone;
+		  CUr.eMail = email;
+		  CUr.BirthDate = birthday;
+		  CUr.InvAddr1 = city;
+		  sem=0;
+		  if(is_seminar=="true")then begin
+		    sem=1;
+		  end;
+		  CUr.Smoking = sem;
+		  chil=0;
+		  if(is_children=="true")then begin
+		    chil=1;
+		  end;
+		  CUr.Blacklist = chil;
+		  CUr.Profesion = job;
+		  CUr.Comment = equipments;
+		  
+		  if(recordstore(CUr,true))then begin
+		  end;
+		end;
+      
+    NextImportLine(true);
+	
+	end;
+
+  
+return;
+end;
+
+global procedure ExportPriceFromPODsm()
+begin
+  record POVc POr;
+  row POVc POrw;
+  integer i,mtrw,wn;
+  record PLVc PLr;
+  val price;
+  
+  wn = curwindow;
+  getwindowrecord(wn,POr);
+  mtrw = matrowcnt(POr);
+  if(mtrw>0)then begin
+    createfile("Price_from_PO.txt");
+    closefile;
+    millisleep(50);
+    openexportfile("Price_from_PO.txt",0);
+    
+    for(i=0;i<mtrw;i=i+1)begin
+      matrowget(POr,i,POrw);
+      switch(currentcompany)begin
+        case 1: PLr.PLCode = "RRP_U";
+        case 2: PLr.PLCode = "RRPUA";
+      end;
+      PLr.ArtCode = POrw.ArtCode;
+      price = 0;
+      if(readfirstmain(PLr,2,true))then begin
+        price = PLr.ExVatPrice;
+      end;
+      startformat(15);
+        outstring(0,0,POrw.ArtCode,false);
+        outstring(0,0,price,false);
+      endformat;
+    end;
+    
+    closefile;
+  end;
+  
+  
+
+return; 
+end;
+
+global procedure ExportTRDsm()
+begin
+  integer wn;
+  record TRVc TRr;
+  
+  wn = curwindow;
+  Getwindowrecord(wn,TRr);
+  
+  createfile("TRExort.txt");
+  closefile;
+  
+  openexportfile("TRExort.txt",true);
+    exportstring("compnr");
+    exportstring(currentcompany);
+    
+    NewLine;
+    
+    NewLine;
+    
+    exportstring("format");
+    NewLine;
+    exportstring("1");
+    exportstring("46");
+    exportstring("1");
+    exportstring("0");
+    exportstring("0");
+    exportstring("0");
+    exportstring("0");
+    exportstring("/");
+    
+    NewLine;
+    
+    exportstring("codepage");
+    exportstring("UTF-8");
+    
+    NewLine;
+    NewLine;
+    
+    exportstring("TRVc1");
+    
+    NewLine;
+    
+    ExportRecord(TRr);
+        
+    
+  closefile;
+
+return;
+end;
+

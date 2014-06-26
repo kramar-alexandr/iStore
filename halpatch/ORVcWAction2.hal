@@ -1,0 +1,379 @@
+remote updating function Integer RecordAction_raPasteOrdInStockMov(var record StockMovVc,LongInt);
+remote updating function Boolean BA_ORMinMarkupWarning(record ORVc,var Integer);
+remote updating function Integer RecordAction_raPasteOrdInShip(var record SHVc,LongInt,var string);
+external procedure CustMessages(string,string);
+remote updating function Integer RecordAction_raPasteOrdInInv(var record IVVc,LongInt,var Integer);
+external function Boolean DateWarned(Date,string);
+
+SetLangMode(LangUkrainian,"UKR",0);
+
+global
+function Boolean ORDClassUpdateTest(Integer wn)
+BEGIN
+  Boolean res;
+  record ORVc ORr;
+  
+  
+  res = true;
+  GetWindowRecord(wn,ORr);
+  if (ORr.Closed!=0 and (UserCanAction("UnCloseAll",false)==false)) then begin
+    res = false;
+  end;
+  ORDClassUpdateTest = res;
+  RETURN;
+END;
+
+
+global
+procedure IVOpenPrepExists(string custcode) // There is one in Tool18....
+BEGIN
+  record ARPayVc ARPayr;
+  
+  ARPayr.CustCode = custcode;
+  if (ReadFirstKey("CustCode",ARPayr,1,true)) then begin
+    MessageBox(0,USetStr(2025));
+  end;           
+  RETURN;
+END;
+
+function
+Boolean IsProjOrder(record ORVc ORp)
+BEGIN
+  record PRVc PRr;
+  Boolean res;
+
+  if (nonblank(ORp.PRCode)) then begin
+    PRr.Code = ORp.PRCode;
+    if (ReadFirstMain(PRr,1,true)) then begin
+      res = true;
+    end;
+  end;
+  IsProjOrder = res;
+  RETURN;
+END;
+
+global
+updating procedure StockMovFromORDsm()
+BEGIN
+  record ORVc ORr;
+  record StockMovVc StockMovr;
+  Integer wn,r,nwn;
+  Integer normalstate;
+
+  normalstate = 0;//Rs_normal
+  wn = CurWindow;
+  DeselectWindow(wn,false);
+  if (WindowState(wn)==normalstate) then begin
+    GetWindowRecord(wn,ORr);
+    if (UserCanAction("ORToStockMov",true)) then begin
+      r = RecordAction_raPasteOrdInStockMov(StockMovr,ORr.SerNr);
+      if (r!=-1) then begin
+        if (MatRowCnt(StockMovr)!=0) then begin
+        CreateRecordLink(StockMovr,CurrentCompany,ORr,CurrentCompany);  
+        CreateRecordLink(ORr,CurrentCompany,StockMovr,CurrentCompany);
+          nwn = OpenWindow("StockMovDClass",1,0,"","",StockMovr);
+        end else begin
+          Beep;
+        end;
+      end else begin
+        Beep;
+      end;
+    end else begin
+      MessageBox(1274,StringFromStringSet(3,"ORToStockMov"));
+    end;
+  end else begin
+    Beep;
+  end;
+  RETURN;
+END;
+
+
+global
+updating procedure SHFromORDsm()
+BEGIN
+  record ORVc ORr;
+  record SHVc SHr;
+  Integer wn,r,nwn,i;
+  Integer normalstate;
+  Boolean testf;
+  string 60 warning;
+
+  normalstate = 0;//Rs_normal
+  wn = CurWindow;
+  DeselectWindow(wn,false);
+  if (WindowState(wn)==normalstate) then begin
+    GetWindowRecord(wn,ORr);
+    if (ORr.Closed==0) then begin
+      if (UserCanAction("ORToSH",true)) then begin
+        testf = true;
+        if (ORr.OKFlag==0) then begin 
+          if (UserCanAction("NotOKORToSH",false)) then begin
+            MessageBox(20054,"");
+            testf = false;
+          end; 
+        end;
+        if (testf) then begin
+          if (BA_ORMinMarkupWarning(ORr,i)) then begin
+          end;
+        end;
+        if (testf) then begin
+          if (UserCanAction("DisallowSaleBelowGP",false)) then begin
+            testf = false;
+            MessageBox(1274,StringFromStringSet(3,"DisallowSaleBelowGP"));
+          end;
+        end;
+        //StopAlert(ORr.InvFlag);
+        if (ORr.InvFlag==1 and ORr.InvBeforeShip==1) then begin 
+            //StopAlert(ORr.InvFlag);
+            MessageBox(2636,"");
+            testf = false;
+        end;
+        if (testf) then begin  
+          r = RecordAction_raPasteOrdInShip(SHr,ORr.SerNr,warning);
+          if (r==0) then begin
+            if (MatRowCnt(SHr)!=0) then begin
+              nwn = OpenWindow("SHDClass",1,0,"","",SHr);
+              UpdateBrowses("ORVc");
+              CustMessages("SHVc",SHr.CustCode);
+              if (nonblank(warning)) then begin
+                MessageBox(0,warning);
+              end;
+            end else begin
+              Beep;
+            end;
+          end else begin
+            if (r==-1) then begin
+              Beep;
+            end else begin
+              MessageBox(r,"");
+            end;
+          end;
+        end;  
+      end else begin
+        Beep;
+      end;
+    end else begin
+      MessageBox(1274,StringFromStringSet(3,"ORToSH"));
+    end;
+  end else begin
+    Beep;
+  end;
+  RETURN;
+END;
+
+global
+updating procedure IVFromORDsm()
+BEGIN
+  record ORVc ORr,OR2r;
+  record IVVc IVr;
+  Integer wn,r,nwn;
+  Integer errcode;
+  Integer normalstate;
+
+  normalstate = 0;//Rs_normal
+  wn = CurWindow;
+  DeselectWindow(wn,false);
+  if (WindowState(wn)==normalstate) then begin
+    GetWindowRecord(wn,ORr);
+//    if (ORr.Closed==0) then begin
+      if (UserCanAction("ORToInv",true)) then begin
+        r = RecordAction_raPasteOrdInInv(IVr,ORr.SerNr,errcode);
+        if (r==0) then begin
+          if (MatRowCnt(IVr)!=0) then begin
+            // Edit Start ---------------------------------------------- Edit Start
+	//Thursday, 13 May 2010 11:53:30 AM
+            OR2r.SerNr = ORr.SerNr;
+            ReadFirstMain(OR2r,1,true);
+            DeselectWindow(wn,true);
+            PutWindowRecord(wn,OR2r);
+            SelectWindow(wn);
+            WindowDoOk(wn,0);
+	// Edit End ---------------------------------------------- Edit End
+	
+            nwn = OpenWindow("IVDClass",1,0,"","",IVr);
+            UpdateBrowses("ORVc");
+            
+            IVOpenPrepExists(IVr.CustCode);
+            
+            if (errcode>0) then begin
+              MessageBox(errcode,"");
+            end;
+          end else begin
+            if (IsProjOrder(ORr)) then begin
+              MessageBox(1096,"");
+            end;
+            Beep;
+          end;
+          if (DateWarned(IVr.TransDate,"IVVc")) then begin
+            MessageBox(1045,"");
+          end;
+        end else begin
+          if (r!=-1) then begin
+            MessageBox(r,"");
+          end else begin
+            Beep;
+          end;
+        end;
+      end else begin
+        MessageBox(1274,StringFromStringSet(3,"ORToDownPay"));
+      end;
+//    end else begin
+//      MessageBox(1274,"");
+//    end;
+  end else begin
+    Beep;
+  end;
+  RETURN;
+END;
+
+global
+updating procedure SHFromORLsm()
+BEGIN
+  record ORVc ORr;
+  record SHVc SHr;
+  Integer wn,nwn;
+  LongInt r;
+  string 60 warning;
+  Boolean testf;
+
+  wn = CurWindow;
+  if (ReadMarkedRecord(wn,ORr)) then begin
+    if (UserCanAction("ORToSH",true)) then begin
+      if (ORr.Closed==0) then begin
+        testf = true;
+        SHr.OrderNr = ORr.SerNr;
+        if (ORr.OKFlag==0) then begin 
+          if (UserCanAction("NotOKORToSH",false)) then begin
+            MessageBox(20054,"");
+            testf = false;
+          end;
+        end;
+        if (ORr.InvFlag==1 and ORr.InvBeforeShip==1) then begin 
+            MessageBox(2636,"");
+            testf = false;
+        end;
+        if (testf) then begin
+          r = RecordAction_raPasteOrdInShip(SHr,ORr.SerNr,warning);
+          if (r==0) then begin
+            if (MatRowCnt(SHr)!=0) then begin
+              nwn = OpenWindow("SHDClass",1,0,"","",SHr);        
+              UpdateBrowses("ORVc");
+              if (nonblank(warning)) then begin
+                MessageBox(0,warning);
+              end;
+            end else begin
+              Beep;
+            end;
+          end else begin
+            if (r==-1) then begin
+              Beep;
+            end else begin
+              MessageBox(r,"");          
+            end;
+          end;
+        end;
+      end;  
+    end else begin
+      MessageBox(1274,StringFromStringSet(3,"ORToSH"));
+    end;
+  end;
+  RETURN;
+END;
+
+procedure AddORLineBonus(Integer t,Boolean firstf)
+begin
+  record ORVc ORr;
+  row ORVc ORrw;
+  Integer wn,rownr;
+  string 20 tstr;
+  record ARPayVc ARPayr;
+  boolean TrHs,testf;
+  val sum;
+  
+  sum = 0;
+  wn = CurWindow;
+  GetWindowRecord(wn,ORr);
+  
+  ARPayr.CustCode = ORr.CustCode;
+  if (ReadFirstKey("CustCode",ARPayr,1,true)) then begin
+    resetloop(ARPayr);
+    
+    ARPayr.CustCode = ORr.CustCode;
+    TrHs = true;
+    while(loopkey("CustCode",ARPayr,1,TrHs))begin
+      if(ARPayr.CustCode!=ORr.CustCode)then begin TrHs = false; testf = false; end;
+      
+      if(TrHs)then begin
+        sum = sum + ARPayr.RVal;
+      end;
+    end;
+    if (ORr.Closed==0) then begin
+      rownr = WindowActiveRow(wn);
+      DeselectWindow(wn,false);
+      if (rownr==-1) then begin
+        if (firstf) then begin
+          rownr = 0;
+        end else begin
+          rownr = MatRowCnt(ORr);
+        end;
+      end else begin
+        rownr = rownr;
+      end;
+      ClearRow(ORr,ORrw,t);
+            
+      ORrw.Spec = "Використано бонус у розмірі " & sum & "грн.";
+      MatRowInsert(ORr,rownr,ORrw);
+      PutWindowRecord(wn,ORr);
+    end;
+    
+  end else begin
+    MessageBox(0,"Немає активних бонусів");
+  end;
+  return;
+end;
+
+procedure AddORLineBonusAdd(Integer t,Boolean firstf)
+begin
+  record ORVc ORr;
+  row ORVc ORrw;
+  Integer wn,rownr;
+  string 20 tstr;
+  
+  wn = CurWindow;
+  GetWindowRecord(wn,ORr);
+      
+  if (ORr.Closed==0) then begin
+    rownr = WindowActiveRow(wn);
+    DeselectWindow(wn,false);
+    if (rownr==-1) then begin
+      if (firstf) then begin
+        rownr = 0;
+      end else begin
+        rownr = MatRowCnt(ORr);
+      end;
+    end else begin
+      rownr = rownr;
+    end;
+    ClearRow(ORr,ORrw,t);
+          
+    ORrw.Spec = "Нараховано бонус у розмірі 700 грн.";
+    MatRowInsert(ORr,rownr,ORrw);
+    PutWindowRecord(wn,ORr);
+  end;
+
+  return;
+end;
+
+global
+procedure ORAddBonusLine()
+BEGIN
+  AddORLineBonus(17,true)
+  RETURN;
+END;
+
+global
+procedure ORAddBonusAddLine()
+BEGIN
+  AddORLineBonusAdd(17,true)
+  RETURN;
+END;

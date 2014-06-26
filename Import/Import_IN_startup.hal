@@ -1,0 +1,10 @@
+event startup
+begin
+
+  SetLangMode(LangUkrainian,"UKR",0);
+  
+  Import("§мпорт товарґв",ImportINIClass,ImportINIn,modIN);
+  Import("§мпорт Љласифґкацґй",ImportDispGroupsIClass,ImportDispGroupsIn,modIN);
+
+ return;
+end;  

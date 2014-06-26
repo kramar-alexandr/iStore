@@ -1,0 +1,34 @@
+Global updating procedure ImportINIn()
+begin
+    SetImportCodepage("UTF-8");
+		RegisterImport("INVc");
+
+ return;
+end;
+
+
+Global updating procedure ImportDispGroupsIn()
+begin
+string 100 artcode,classification;
+record INVc INr;
+
+    SetImportCodepage("UTF-8");
+
+		while (TestEOF()==false) begin
+			
+			artcode = ImportField;
+			classification = ImportField;
+			INr.Code = artcode;
+			if(readfirstmain(INr,1,true))then begin
+				INr.DispGroups = classification;
+				recordstore(INr,true);
+			end;
+			NextImportLine(true);
+		end;
+ return;
+end;
+	 
+
+	 
+	
+	 

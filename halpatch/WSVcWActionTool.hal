@@ -1,0 +1,355 @@
+external function Boolean GetCostAcc(string,string,record AccBlock,record INVc,Integer,var string,var string);
+external function Boolean WSDchrsum(record WSVc,Integer,Integer);
+external function Integer GetItemType(LongInt,LongInt,string,Integer);
+external function val FindVAT(string,val,Integer,Integer);
+external function Boolean GetCustAndBal(var record CUVc,var val,var val,Integer,Integer,Integer,Integer,Integer,Integer);
+external function string 255 FindINObjects(string,string);
+external procedure RoundRowSum(string,string,var val);
+external function Boolean WSVc_ExplodeRecepy(record INVc,val,record WSVc,string,Integer);
+external function Boolean GetItemNameStr(Integer,var string,string,string,string);
+external procedure CalcSum(val,val,val,val,var val,Integer);
+external procedure AddCalcPrice(record INVc,record CPMVc,string,val,string,Integer,var val);
+external procedure WSSumup(record WSVc);
+external function Boolean QtyDepPriceL(string);
+external function Boolean GetItemPriceDiscount3(string,val,var record INVc,string,val,val,val,val,val,string,string,string,string,
+                                                var val,var string,var val,var string,var val,var string,Integer,var Boolean,Date,
+                                                string,Boolean,var Boolean,string,var string,var val,string);
+external procedure GetFullCurncyRate (var string,Date,var val,var val,var val,var val,var val);
+external procedure GetSalesGroup(string,var string);
+external procedure GetUserName(string,var string);
+
+global
+procedure WSGetCalcItemPrice(record INVc INr,record WSVc WSp,Integer rownr,var val pricep)
+BEGIN
+  row WSVc WSrw;
+  record CPMVc CPr;
+  Integer i,rwcnt;
+  val price;
+  
+  rwcnt = MatRowCnt(WSp);
+  MatRowGet(WSp,rownr,WSrw);
+  WSrw.Price = blankval;
+  MatRowPut(WSp,rownr,WSrw);
+
+  CPr.Code = INr.CalcPrice;
+  if (ReadFirstMain(CPr,1,true)) then begin
+    for (i=0;i<rwcnt;i=i+1) begin
+      MatRowGet(WSp,i,WSrw);
+      if (i!=rownr) then begin
+        if (WSrw.stp==1) then begin
+          AddCalcPrice(INr,CPr,WSrw.ArtCode,WSrw.Sum,WSrw.VATCode,WSp.InclVAT,price);
+        end;
+      end;  
+    end;
+    price = Round(price,DefaultCurRoundOff);
+    MatRowGet(WSp,rownr,WSrw);
+    WSrw.Price = price;
+    MatRowPut(WSp,rownr,WSrw);
+  end;
+  if (pricep!=-1) then begin pricep = price; end;
+      
+  RETURN;
+END;  
+
+global
+procedure WSVc_PasteEMCode(var record WSVc WSp)
+BEGIN
+  string 255 tstr;
+  record UserVc Userr;
+  
+  Userr.Code = WSp.EMCode;
+  ReadFirstMain(Userr,1,true);
+  WSp.EMName = Userr.Name;
+  WSp.SalesGroup = Userr.SalesGroup;
+  WSp.Objects = Userr.PersObjx;
+  RETURN;
+END;
+
+procedure GetWOMotherNr(LongInt wonr,var string mothernr, var val itemtype)
+BEGIN
+  record WOVc WOr;
+  row WOVc WOrw;
+  Integer i,rwcnt,monr;
+  string 255 lastmothernr;
+    
+  lastmothernr = mothernr;
+  WOr.SerNr = wonr;
+  if (ReadFirstMain(WOr,1,true)) then begin
+    rwcnt = MatRowCnt(WOr);
+    for (i=0;i<rwcnt;i=i+1) begin      
+      MatRowGet(WOr,i,WOrw);
+      if (nonblank(WOrw.ArtCode)) then begin
+        if (nonblank(WOrw.SerialNr)) then begin
+          if (mothernr==WOrw.SerialNr) then begin
+            itemtype = WOrw.ItemType;
+            goto LGetWOMotherNr;
+          end;
+          if (lastmothernr!=WOrw.SerialNr) then begin
+            lastmothernr = WOrw.SerialNr;
+          end;
+        end;
+      end;                
+    end;
+  end;
+  mothernr = lastmothernr;
+LGetWOMotherNr:;
+  RETURN;
+END;
+
+procedure GetSVOMotherNr(LongInt wonr,var string mothernr,var val itemtype)
+BEGIN
+  record SVOVc SVOr;
+  row SVOVc SVOrw;
+  Integer i,rwcnt,monr;
+  string 255 lastmothernr;
+    
+  lastmothernr = mothernr;
+  SVOr.SerNr = wonr;
+  if (ReadFirstMain(SVOr,1,true)) then begin
+    rwcnt = MatRowCnt(SVOr);
+    for (i=0;i<rwcnt;i=i+1) begin      
+      MatRowGet(SVOr,i,SVOrw);
+      if (nonblank(SVOrw.ArtCode)) then begin
+        if (nonblank(SVOrw.SerialNr)) then begin
+          if (mothernr==SVOrw.SerialNr) then begin
+            itemtype = SVOrw.ItemType;
+            goto LGetSVOMotherNr;
+          end;
+          if (lastmothernr!=SVOrw.SerialNr) then begin
+            lastmothernr = SVOrw.SerialNr;
+          end;
+        end;
+      end;                
+    end;
+  end;
+  mothernr = lastmothernr;
+LGetSVOMotherNr:;
+  RETURN;
+END;
+
+global
+procedure WSMultiLineText(record WSVc WSr,record INVc INr,string  langcode,Integer arow)
+BEGIN
+  row WSVc WSrw;
+  string 255 tstr;
+  Integer tcnt;
+ 
+  tcnt = 2;
+  while (GetItemNameStr(tcnt,tstr,langcode,INr.Name,INr.Code)) begin      
+    ClearRow(WSr,WSrw,1);
+    WSrw.Spec = tstr;
+    MatRowInsert(WSr,arow+tcnt-1,WSrw);
+    tcnt = tcnt + 1;
+  end;
+  RETURN;
+END;
+
+procedure WSVcCheckItemPrice(record WSVc WSp,var row WSVc WSrw, Boolean getprice)//is this all right
+BEGIN
+  record PLVc PLr;
+  record PLQVc PLQr;
+  record PLDefVc PLDefr;
+  record AccBlock ARAccRec;
+  string 20 artcode;
+  string 2 vatcode;
+  string 10 pricelist,tax2code;
+  Boolean recalcprice,pldeffound,pricefound,priceqfound,deppr;
+  Boolean res,dummyf;
+  val price,vatval,t1,tax2prc;
+  record INVc INr;
+  Boolean calcprice;
+  string 255 tstr;
+  string 2 fakeVATCode;
+  val t;
+
+  res = true;
+  recalcprice = false;
+  pldeffound = false;
+  pricefound = false;
+  priceqfound = false;
+  deppr = false;
+  BlockLoad(ARAccRec);
+  pricelist = WSp.PriceList;
+  vatcode = WSrw.VATCode;
+  artcode = WSrw.ArtCode;
+  price = WSrw.Price;
+  if (blank(VATCode)) then begin goto LWSCIP; end;
+  if ((ARAccRec.BasePriceInclVAT==0) and blank(pricelist)) then begin
+    recalcprice = true;
+  end else begin
+    if (nonblank(pricelist)) then begin
+      PLDefr.Code = PriceList;
+      pldeffound = ReadFirstMain(PLDefr,1,true);
+      if (PLDefr.DepPrice!=0) then begin deppr = true; end;
+    end;    
+    PLr.PLCode = PriceList;
+    PLr.ArtCode = ArtCode;
+    pricefound = ReadFirstMain(PLr,2,true);    
+    if (deppr) then begin
+      PLQr.PLCode = PriceList;
+      PLQr.ArtCode = ArtCode;
+      priceqfound = ReadFirstMain(PLQr,2,true);
+    end;
+    if ((!priceqfound and (ARAccRec.BasePriceInclVAT==0)) or
+         (pricefound and pldeffound and (PLDefr.InclVAT==0)) or
+         (priceqfound and pldeffound and (PLDefr.InclVAT==0))) then begin
+      recalcprice = true;
+    end;  
+  end;
+  if (recalcprice) then begin
+    if (getprice) then begin
+      price = blankval;
+      if (GetItemPriceDiscount3(artcode,WSrw.Quant,INr,WSp.CurncyCode,
+          WSp.FrRate,WSp.ToRateB1,WSp.ToRateB2,WSp.BaseRate1,WSp.BaseRate2,
+          WSp.LangCode,WSp.CustCat,WSp.PriceList,WSp.RebCode,
+          price,tstr,WSrw.vRebate,
+          fakeVATCode,t,WSrw.SalesAcc,0,calcprice,WSp.TransDate,WSp.CustCode,true,dummyf,"",tax2code,tax2prc,"")) then begin 
+      end;
+      WSrw.Price = price;          
+    end;
+    vatval = FindVAT(vatcode,price,0,0);
+    price = price + vatval;
+  end;
+LWSCIP:;
+  RETURN;
+END;
+
+global
+function Boolean WSVc_PasteArtCode(var record WSVc WSr,Integer rownr)
+BEGIN
+  Boolean res;
+  Boolean chsum;
+  Boolean chrsum;
+  record INVc INr;
+  row WSVc WSrw;
+  row WSVc WS2rw;
+  val itemtype;
+  val t,s,price,vreb,baseprice,temp,tax2prc;
+  string 255 curitemname,salesacc,vatcode,tstr,tax2code;
+  Boolean calcprice,dummyf;
+  record GeneralOptionBlock GenOptRec;
+  record CostAccBlock CAb;
+  record AccBlock ARb;
+  record ObjectsAccBlock OAb;// Edit ************************** Friday, 8 April 2011 14:43:19
+  row ObjectsAccBlock OAbrw;
+  integer mtrw,j;
+  
+  BlockLoad(CAb);
+  BlockLoad(ARb);
+  BlockLoad(GenOptRec);
+  chsum = false;
+  chrsum = false;
+  MatRowGet(WSr,rownr,WSrw);
+  WSrw.Price = BlankVal;
+  WSrw.vRebate = BlankVal;  
+  if (GetItemPriceDiscount3(WSrw.ArtCode,WSrw.Quant,INr,WSr.CurncyCode,
+                            WSr.FrRate,WSr.ToRateB1,WSr.ToRateB2,WSr.BaseRate1,WSr.BaseRate2,
+                            WSr.LangCode,WSr.CustCat,WSr.PriceList,WSr.RebCode,
+                            price,curitemname,vreb,vatcode,baseprice,salesacc,
+                            WSr.ExportFlag,calcprice,WSr.TransDate,WSr.CustCode,false,dummyf,"",tax2code,tax2prc,"")) then begin
+    WSrw.Price = price;
+    WSrw.Spec = curitemname;
+    WSrw.vRebate = vreb;
+    WSrw.VATCode = vatcode;
+    WSrw.BasePrice = baseprice;
+    WSrw.SalesAcc = salesacc;
+    WSrw.ArtCode = INr.Code;
+    WSrw.Objects = FindINObjects(INr.Objects,INr.Group);
+    if (calcprice) then begin
+      MatRowPut(WSr,rownr,WSrw);
+      temp = -1;
+      WSGetCalcItemPrice(INr,WSr,rownr,temp);
+      MatRowGet(WSr,rownr,WSrw);
+    end;
+    if (nonblank(WSr.CustVATCode)) then begin
+      WSrw.VATCode = WSr.CustVATCode;
+    end;
+    if ((INr.ItemType==2) and (nonblank(INr.Recepy))) then begin
+      WSrw.Recepy = INr.Recepy;
+    end;
+    if (GetItemNameStr(1,tstr,WSr.LangCode,INr.Name,INr.Code)) then begin end;
+    WSrw.Spec = tstr;
+    WSVcCheckItemPrice(WSr,WSrw,false);
+    WSrw.Coefficient = INr.UnitCoefficient;
+    tstr = "";
+    if (rownr>0) then begin
+      MatRowGet(WSr,rownr-1,WS2rw);
+      tstr = WS2rw.MotherNr;
+      WSrw.ItemType = WS2rw.ItemType;
+    end;
+    if (WSr.WONr>-1) then begin
+      GetWOMotherNr(WSr.WONr,tstr,itemtype);
+    end else begin
+      GetSVOMotherNr(WSr.SVONr,tstr,itemtype);
+    end;
+    WSrw.MotherNr = tstr;
+    WSrw.Objects = FindINObjects(INr.Objects,INr.Group);
+    WSrw.ItemType = itemtype;
+    if (itemtype==0) then begin
+      WSrw.ItemType = GetItemType(WSr.SVONr,WSr.WONr,WSrw.MotherNr,WSrw.ItemType);
+    end;
+    WSrw.ACShort = "";
+    blockload(OAb);                                                // Edit ************************** Friday, 8 April 2011 12:19:17
+    /*if(WSrw.ItemType==2)then begin*/                                    // Edit ************************** Friday, 8 April 2011 12:19:18
+      mtrw = matrowcnt(OAb);
+      For(j=0;j<mtrw;j=j+1)begin
+        matrowget(OAb,j,OAbrw);
+        if(setinset(OAbrw.Objects,WSr.Objects))then begin
+          salesacc = OAbrw.AccCode;                                // Edit ************************** Friday, 8 April 2011 12:19:19
+        end;
+      end;
+    /*end else begin                                                    // Edit ************************** Friday, 8 April 2011 12:19:20
+      if (GetCostAcc("",WSr.CustCode,ARb,INr,CAb.ItemGroupAccounts,salesacc,tstr)==false) then begin  end;
+    end;*/                                                              // Edit ************************** Friday, 8 April 2011 12:19:21
+    
+    
+    /*if(blank(salesacc))then begin
+      if (GetCostAcc("",WSr.CustCode,ARb,INr,CAb.ItemGroupAccounts,salesacc,tstr)==false) then begin  end;  //Edit***************************Sasha2,16:34 19.06.2014
+    end;*/
+    
+    WSrw.CostAcc = salesacc;
+    MatRowPut(WSr,rownr,WSrw);
+    chrsum = true;
+    WSMultiLineText(WSr,INr,WSr.LangCode,rownr);
+    if (nonblank(INr.WarnText1)) then begin
+      MessageBox(0,INr.WarnText1);
+    end;
+    res = true;
+  end else begin
+    res = false;
+  end;
+  if (chrsum) then begin
+    chsum = WSDchrsum(WSr,rownr,GenOptRec.UseDiscount);
+  end;
+  if (chsum) then begin
+    WSSumup(WSr);
+  end;
+  WSVc_PasteArtCode = res;
+  RETURN;
+END;
+
+global //Edit***************************Sasha2,17:17 19.06.2014
+function Boolean PasteCUInWS(var record WSVc WSp,var string warning)
+BEGIN
+  record CUVc CUr;
+  val bal;
+  val limit;
+  Boolean res;
+  
+  CUr.Code = WSp.CustCode;
+  if (GetCustAndBal(CUr,limit,bal,0,0,0,0,0,0))   then begin
+    WSp.Addr0 = CUr.Name;
+    WSp.CustContact = CUr.Person;
+    WSp.Phone = CUr.Phone;
+    WSp.Fax = CUr.Fax;
+    WSp.InvoiceToCode = CUr.InvoiceToCode;
+    //WSp.Objects = CUr.Objects; //Edit***************************Sasha2,17:22 19.06.2014
+    WSp.PriceList = CUr.PLCode;
+    WSp.RebCode = CUr.RebCode;
+    WSp.CustVATCode = CUr.VATCode;
+    warning = CUr.WarnText1;
+    res = true;
+  end;
+  PasteCUInWS = res;
+  RETURN;
+END; //Edit***************************Sasha2,17:18 19.06.2014

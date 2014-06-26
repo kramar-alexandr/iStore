@@ -1,0 +1,1309 @@
+external updating function Boolean BA_GRNCostVarianceWarning(record PUVc,var Integer);
+external procedure FindBatchBestBeforeDate(string,string,var Date);
+external procedure B1ToB2StrVal(string,val,val,var string);
+external procedure B1ToB2Val(val,val,val,var val);
+external procedure SwapM4Val(var val,var val);
+external function Integer ArtCodePrimaryCostModel(string);
+external function Integer FIFOPerSerialNr(record INVc,record CostAccBlock);
+external function Boolean CanOKStockRecord();
+external function Boolean IsStockSettingsOK();
+external updating procedure AddTTrans_PUVc(record TRVc,record PUVc);
+external updating procedure UpdateStockResFromPU(record PUVc,record PUVc);
+external function Integer CheckRates(string,val,val,val,val,val,var string);
+external procedure FillAmForVariancePU(record PUVc);
+external updating procedure UpdateVarianceStatusPU(record PUVc);
+external function Integer CheckObjs(string,string,var string);
+external procedure StockMovSumUp(var record StockMovVc);
+external function Integer IsPositionFree(string);
+external updating procedure RemovePU_PORows(var record PUVc);
+external procedure SetPOFlags(record POVc,Boolean);
+external updating procedure SetPositionStatus(string,Integer);
+external function string 20 FindFreePositionInLocArea(record INVc,string,string,string);
+external function Integer GetPO(LongInt,var record POVc,string);
+external updating procedure UpdatePOFromPURows(record PUVc,Boolean,record PUVc,Boolean);
+external function Boolean ReadFirstItem(string,var record INVc,Boolean,Boolean);
+external function Boolean DateWarned(Date,string);
+external function Boolean IsSerialNrCorrect(string);
+external updating procedure UpdateSerStock(string,string,string,val,val);
+external updating procedure InvalidatePU(record PUVc);
+external updating procedure InvalidateTR(Integer,LongInt);
+external updating procedure PurUpdateOvst(record PUVc,record PUVc);
+external function string 255 CheckTrans(var record TRVc,Integer,Boolean);
+external updating procedure SaveTrans(record TRVc);
+external function Integer MakeTransFromPU(record TRVc,record PUVc,record LocationVc,Boolean);
+external updating procedure PurUpdateCostPrice(record PUVc,Boolean);
+external updating function Boolean UpdatePOFromPU(record PUVc,record PUVc,Boolean);
+external updating procedure PurUpdateSerialNr(record PUVc,Boolean);
+external updating procedure PurUpdateItemHist(record PUVc);
+external updating procedure UpdateInstock(string,string,string,string,date,val,val,val,val,val,val,val,val,val);
+external function Boolean ShouldItemUpdateStock(string);
+external procedure ConvertToDualBase(var string,date,var val,var val,var val,var val,var val,var val,Boolean);
+external updating procedure UpdateLocOKNr(string,var val);
+external function Boolean ExistStockTrans(string,Date,var Integer,string,LongInt,Integer);
+external function Integer SerialNrOnThisPU(record PUVc,string,string);
+external function Boolean SerialNrAvail2(string,string,val);
+external function Boolean CheckAllowedSize(record INVc,val,val,val);
+external function Integer GetVATLaw();
+external function Integer CheckPosition(string,string,Integer,val,val,val);
+external function Boolean IsOffice(Boolean);
+external function Integer CheckObjs(string,string,var string);
+external function Boolean Date2Test(string,Date,string,Integer);
+external function Boolean SerNrTestPUVc(LongInt,Date,var Boolean);
+external function LongInt GetCurUserLastNr(string);
+external procedure PUSumUp(var record PUVc);
+external procedure GetFullCurncyRate (var string,Date,var val,var val,var val,var val,var val);
+external procedure GetCurUser(var record UserVc);
+
+global
+function LongInt PUVcRecordDefaults(var record PUVc PUr,record PUVc PU2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  record UserVc Userr;
+  string 10 curcode;
+  val fr,to1,to2,br1,br2;
+  record AccBlock ARAccb;
+  
+  BlockLoad(ARAccb);
+  PUr.SerNr = -1;  
+  PUr.RegDate = CurrentDate;
+  PUr.TransDate = CurrentDate;
+  PUr.Invalid = 0;
+  if (SingleUserMode) then begin
+    PUr.SerNr = NextSerNr("PUVc",PUr.TransDate,-1,false,"");
+  end;
+  PUr.PONr = -1;
+  PUr.POCOSerNr = -1;
+  curcode = PUr.CurncyCode;
+  GetFullCurncyRate(curcode,PUr.TransDate,fr,to1,to2,br1,br2);
+  PUr.CurncyCode = curcode;
+  PUr.FrRate = fr;
+  PUr.ToRateB1 = to1; 
+  PUr.ToRateB2 = to2;
+  PUr.BaseRate1 = br1;
+  PUr.BaseRate2 = br2;
+  PUr.Cost1 = blankval;
+  PUr.Cost2 = blankval;
+  PUr.Cost3 = blankval;
+  PUr.Cost4 = blankval;
+  PUr.Cost5 = blankval;
+  PUr.SumQuant = blankval;
+  PUr.ShipCost = blankval;
+  PUr.CustomsCost = blankval;
+  PUr.SumCostPrice = blankval;
+  PUr.SubTotal = blankval;
+  PUr.VATVal = blankval;
+  PUr.PayVal = blankval;
+  GetCurUser(Userr);
+  PUr.Location = Userr.Location;
+  PUr.NoTAXonVAT = ARAccb.NoTAXonVAT;
+  PUVcRecordDefaults = res; 
+  RETURN;
+END;
+
+global
+function LongInt PUVcRecordDuplicate(var record PUVc PUr,record PUVc PU2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  row PUVc PUrw;   
+  Integer rwcnt,i;
+  string 10 curcode;
+  val fr,to1,to2,br1,br2;
+      
+  PUr.SerNr = -1;
+  PUr.PONr = -1;
+  PUr.OKFlag = 0;
+  PUr.Invalid = 0;
+  rwcnt = MatRowCnt(PUr);
+  for (i=0; i<rwcnt; i=i+1) begin
+    MatRowGet(PUr,i,PUrw);
+    if ((PUrw.ovst!=0) or (PUrw.stp==3)) then begin
+      MatRowDelete(PUr,i);
+      rwcnt = MatRowCnt(PUr);
+      i = i - 1;
+    end else begin
+      PUrw.OrdRow = -1;
+      PUrw.ChargeNumber = -1;
+      PUrw.SerialNr = "";
+      MatRowPut(PUr,i,PUrw);
+    end;
+  end;
+  if (SingleUserMode) then begin
+    PUr.SerNr = NextSerNr("PUVc",PUr.TransDate,-1,false,"");
+  end;
+  curcode = PUr.CurncyCode;
+  GetFullCurncyRate(curcode,PUr.TransDate,fr,to1,to2,br1,br2);
+  PUr.CurncyCode = curcode;
+  PUr.FrRate = fr;
+  PUr.ToRateB1 = to1; 
+  PUr.ToRateB2 = to2;
+  PUr.BaseRate1 = br1;
+  PUr.BaseRate2 = br2;
+  PUr.LocOKNr = blankval;
+  PUSumUp(PUr); 
+  PUVcRecordDuplicate = res; 
+  RETURN;
+END;
+
+global
+function LongInt PUVcRecordRemoveTest(var record PUVc PUr,record PUVc PU2r,LongInt long3,LongInt long4)
+BEGIN
+  LongInt res;
+  record DBLockBlock DBLockRec;
+
+  res = 1;
+  BlockLoad(DBLockRec);
+  if (PUr.TransDate<=DBLockRec.DeleteBeforeDate) then begin
+    res = 1;
+    goto LPUVcRecordRemoveTest;
+  end;
+  if (PUr.OKFlag!=0) then begin
+    if (long3>0) then begin
+      MessageBox(1544,"");
+    end;
+    res = 0;
+  end;    
+LPUVcRecordRemoveTest:;
+  PUVcRecordRemoveTest = res; 
+  RETURN;
+END;
+
+global
+function LongInt PUVcRecordReset(var record PUVc PUr,record PUVc PU2r,LongInt long3,LongInt long4)
+BEGIN
+  LongInt res;
+  
+  PUr.OKFlag = 0;
+  PUVcRecordReset = res; 
+  RETURN;
+END;
+
+procedure AddToStockMovRow(row StockMovVc StockMovrw,row PUVc PUrw)
+BEGIN  
+  StockMovrw.ArtCode = PUrw.ArtCode;
+  StockMovrw.Quant = PUrw.Quant;
+  StockMovrw.Spec = PUrw.Spec;
+  StockMovrw.SerialNr = PUrw.SerialNr;
+  StockMovrw.OldPrice = PUrw.CostPrice;
+  StockMovrw.ExtraSCost = blankval;
+  StockMovrw.NewPrice = PUrw.CostPrice;
+  StockMovrw.BasePrice = PUrw.UPrice;
+  StockMovrw.Coefficient = PUrw.Coefficient;
+  StockMovrw.UnitXval = PUrw.UnitXval;
+  StockMovrw.UnitYval = PUrw.UnitYval;
+  StockMovrw.UnitZval = PUrw.UnitZval;
+  StockMovrw.FrPosCode = PUrw.PosCode;
+  RETURN;
+END;
+
+updating procedure PUMakeStockMovement(record PUVc PUr)
+BEGIN
+  record StockMovVc StockMovr;
+  row StockMovVc StockMovrw;
+  row PUVc PUrw;
+  Integer i,rwcnt,smrwcnt;
+  record MainStockBlock MainRec;
+  string 20 toposcode,lastpalletitem;
+  record INVc INr;
+  record LocationVc LocRec;
+  record MainWHMBlock MainWHM;
+  Boolean storesmf;  
+  
+  BlockLoad(MainRec);  
+  BlockLoad(MainWHM);  
+  LocRec.Code = PUr.Location;
+  if (blank(LocRec.Code)) then begin 
+    LocRec.Code = MainRec.MainStock;
+  end;
+  if (ReadFirstMain(LocRec,1,true)) then begin end;
+  if (LocRec.RequirePos==0) then begin goto LPUMakeStockMovement; end;
+  if (PUr.OKFlag==0) then begin goto LPUMakeStockMovement; end;
+  if (MainWHM.DemandPosition==0) then begin goto LPUMakeStockMovement; end;
+  RecordNew(StockMovr);  
+  StockMovr.FrLocation = PUr.Location;
+  StockMovr.ToLocation = PUr.Location;
+  if (blank(PUr.Location)) then begin
+    StockMovr.FrLocation = MainRec.MainStock;
+    StockMovr.ToLocation = MainRec.MainStock;
+  end;
+  StockMovr.ToForkLiftQue = 0;
+  StockMovr.TransNr = PUr.SerNr;
+  StockMovr.FileName = "PUVc";
+  StockMovr.TransDate = CurrentDate;
+  StockMovr.SerNr = NextSerNr("StockMovVc",StockMovr.TransDate,-1,false,"");
+
+  rwcnt = MatRowCnt(PUr);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(PUr,i,PUrw);
+    if ((nonblank(PUrw.PosCode)) and (blank(PUrw.ToPosCode))) then begin
+      SetPositionStatus(PUrw.PosCode,1);
+    end;
+    if (blank(PUrw.PosCode)) then begin goto LSKIPROW; end;
+    if (blank(PUrw.ToPosCode)) then begin goto LSKIPROW; end;
+    storesmf = false;
+    ClearRow(StockMovr,StockMovrw,1);
+    AddToStockMovRow(StockMovrw,PUrw);
+    if (ReadFirstItem(StockMovrw.ArtCode,INr,true,true)) then begin end;
+    if (blank(INr.DefPalletItem)) and (INr.Code!=lastpalletitem) then begin
+      storesmf = true;
+      StockMovr.ToForkLiftQue = 100;//items without pallet don't goto automatic delivery que
+    end;
+    if (blank(toposcode)) then begin
+      toposcode = PUrw.ToPosCode;
+      if (blank(toposcode)) then begin
+        toposcode = FindFreePositionInLocArea(INr,INr.LocArea,StockMovrw.FrPosCode,"");
+      end;
+    end;
+    StockMovrw.ToPosCode = toposcode;
+    MatRowPut(StockMovr,smrwcnt,StockMovrw);
+    SetPositionStatus(toposcode,2);    
+    PUrw.BarCode = StockMovr.SerNr;    
+    //BS, if next PUrw doesn«t contain pallet item and the item has a pallet item
+    // we should create a new StockMovVc.
+    // or else labels will not be printed for 2nd/4th/6th item.
+    MatRowGet(PUr,i+1,PUrw);
+    if (PUrw.ArtCode!=INr.DefPalletItem) then begin
+      storesmf = true;
+    end;
+    MatRowGet(PUr,i,PUrw);
+    lastpalletitem = INr.DefPalletItem;
+    smrwcnt = smrwcnt + 1;
+    if ((Mod(smrwcnt,2)==0) or (storesmf)) then begin
+      if (MatRowCnt(StockMovr)>0) then begin
+        StockMovSumUp(StockMovr);    
+        if (RecordStore(StockMovr,false)) then begin
+        end;
+      end;
+      RecordNew(StockMovr);
+      StockMovr.FrLocation = PUr.Location;
+      StockMovr.ToLocation = PUr.Location;
+      if (blank(PUr.Location)) then begin
+        StockMovr.FrLocation = MainRec.MainStock;
+        StockMovr.ToLocation = MainRec.MainStock;
+      end;
+      StockMovr.ToForkLiftQue = 0;
+      StockMovr.TransNr = PUr.SerNr;
+      StockMovr.FileName = "PUVc";
+      StockMovr.TransDate = CurrentDate;
+      StockMovr.SerNr = NextSerNr("StockMovVc",StockMovr.TransDate,-1,false,"");
+      if (StockMovr.SerNr<=0) then begin goto LPUMakeStockMovement; end;
+
+      smrwcnt = 0;
+      toposcode = "";
+      lastpalletitem = "";
+    end;
+    MatRowPut(PUr,i,PUrw);
+LSKIPROW:;    
+  end;
+  if (MatRowCnt(StockMovr)>0) then begin
+    StockMovSumUp(StockMovr);    
+    if (RecordStore(StockMovr,false)) then begin
+    end;
+  end;
+LPUMakeStockMovement:;  
+  RETURN;
+END;
+
+global
+updating function LongInt PUVcRecordSave(var record PUVc PUr,record PUVc PU2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  val LocOKNr;
+
+  if (PUr.OKFlag!=0) then begin
+    LocOKNr = PUr.LocOKNr;
+    UpdateLocOKNr(PUr.Location,LocOKNr);
+    PUr.LocOKNr = LocOKNr;
+  end;
+  PUVcRecordSave = res;
+  RETURN;
+END;
+
+global
+updating procedure PurUpdateStock(record PUVc PUp)
+BEGIN
+  record MainStockBlock MainStockRec;
+  row PUVc PUrw;
+  Integer i,rwcnt;
+  val t,t2,q2;
+  string 255 location;
+  string 255 thelocation;
+  
+  if (PUp.Invalid!=0) then begin // not finnished
+    goto LPurUpdateStock;
+  end;
+  location = PUp.Location;
+  BlockLoad(MainStockRec);
+  if (blank(location)) then begin
+    location = MainStockRec.MainStock;
+  end;
+  rwcnt = MatRowCnt(PUp);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(PUp,i,PUrw);
+    if (blank(PUrw.Location)) then begin
+      thelocation = location;
+    end else begin
+      thelocation = PUrw.Location;
+    end;
+    switch (PUrw.ovst) begin
+      case 0:
+        t2 = PUrw.Quant;
+      case 1:
+        t2 = 0;        
+    end;
+    if (ShouldItemUpdateStock(PUrw.ArtCode)==false) then begin t2 = blankval; end;
+    if (MainStockRec.UnitConvCalc==0) then begin
+      q2 = t2*PUrw.Coefficient;
+    end else begin
+      q2 = t2/PUrw.Coefficient;
+    end;
+    UpdateInstock("PUVc",PUp.SerNr,PUrw.ArtCode,thelocation,PUp.TransDate,t2,t,t,t,t,q2,t,t,t);
+  end;
+LPurUpdateStock:;
+  RETURN;
+END;
+
+updating procedure SavePurchase(var record PUVc PUp,Boolean saverec)
+BEGIN
+  record PUVc PU2r;
+  
+  if (PUp.OKFlag!=0) then begin
+    PurUpdateStock(PUp);
+    PurUpdateCostPrice(PUp,false);  // this should never be called during import!!! 
+    PurUpdateSerialNr(PUp,false);//before ItemHist to get consigment stock right
+    PurUpdateItemHist(PUp);
+  end;
+  if (PUp.PONr!=-1) then begin
+    PU2r.SerNr = -1;
+    if (UpdatePOFromPU(PUp,PU2r,saverec)) then begin end;
+  end else begin
+    UpdatePOFromPURows(PUp,true,PU2r,false);
+//Check PU rows PONr 
+  end;
+  RETURN;
+END;
+
+updating procedure UpdatePurchase(var record PUVc PUp,record PUVc PU2p,Boolean saverec)
+BEGIN  
+  if (PUp.PONr!=-1) then begin
+    if (UpdatePOFromPU(PUp,PU2p,false)) then begin end;
+  end else begin    
+    UpdatePOFromPURows(PUp,true,PU2p,true);
+//Check PU rows PONr 
+  end;
+  RETURN;
+END;
+
+global
+updating function LongInt PUVcRecordSaveAfter(var record PUVc PUr,record PUVc PU2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+
+  SavePurchase(PUr,false);
+  if (PUr.OKFlag!=0) then begin
+    PUMakeStockMovement(PUr);
+    UpdateVarianceStatusPU(PUr);
+  end;
+  PUVcRecordSaveAfter = res;
+  RETURN;
+END;
+
+global
+updating function LongInt PUVcRecordUpdate(var record PUVc PUr,record PUVc PU2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  val LocOKNr;
+
+  if ((PUr.OKFlag!=0) and (PU2r.OKFlag==0)) then begin
+    LocOKNr = PUr.LocOKNr;
+    UpdateLocOKNr(PUr.Location,LocOKNr);
+    PUr.LocOKNr = LocOKNr;
+  end;
+  if ((PU2r.Invalid==0) and (PUr.Invalid!=0)) then begin
+    if (PU2r.OKFlag!=0) then begin
+      InvalidateTR(PUYc,PUr.SerNr);
+      InvalidatePU(PUr);
+    end;
+  end;  
+LPUVcRecordUpdate:;  
+  PUVcRecordUpdate = res;
+  RETURN;
+END;
+
+global
+updating function LongInt PUVcRecordUpdateAfter(var record PUVc PUr,record PUVc PU2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+
+  if ((PUr.OKFlag!=0) and (PU2r.OKFlag!=0)) then begin
+    // Comment-field has been changed 
+    PurUpdateOvst(PUr,PU2r);
+  end else begin
+    if ((PU2r.OKFlag==0) and (PUr.OKFlag!=0)) then begin
+      PurUpdateStock(PUr);
+      PurUpdateCostPrice(PUr,false);
+      PurUpdateSerialNr(PUr,false);//before ItemHist to get consigment stock right
+      PurUpdateItemHist(PUr);
+    end;
+  end;
+  UpdatePurchase(PUr,PU2r,false);
+  if ((PUr.OKFlag!=0) and (PU2r.OKFlag==0)) then begin
+    PUMakeStockMovement(PUr);
+    UpdateVarianceStatusPU(PUr);
+    UpdateStockResFromPU(PUr,PU2r);
+  end;
+  PUVcRecordUpdateAfter = res;
+  RETURN;
+END;
+
+updating procedure RemovePU(record PUVc PUr)
+BEGIN
+  Integer rwcnt,i;
+  row PUVc PUrw;
+  record POVc oldPOr;
+  record POVc POr;
+  row POVc POrw;
+  Integer porwcnt;
+  
+  if (PUr.PONr!=-1) then begin
+    POr.SerNr = PUr.PONr;
+    if (ReadFirstMain(POr,1,true)) then begin
+      RecordCopy(oldPOr,POr);
+      porwcnt = MatRowCnt(POr);
+      rwcnt = MatRowCnt(PUr);
+      for (i=0;i<rwcnt;i=i+1) begin
+        MatRowGet(PUr,i,PUrw);
+        if ((PUrw.OrdRow>=0) and (PUrw.OrdRow<porwcnt) and (PUrw.ovst==0)) then begin
+          MatRowGet(POr,PUrw.OrdRow,POrw);
+          POrw.Shipd1 = POrw.Shipd1 - PUrw.Quant;
+          if (POrw.Shipd1==0) then begin
+            POrw.Shipd1 = blankval;
+          end;
+          MatRowPut(POr,PUrw.OrdRow,POrw);
+        end;
+      end;
+      if (RecordUpdate(oldPOr,POr,true)==0) then begin
+      end;
+    end;    
+  end else begin
+    RemovePU_PORows(PUr);
+  end;
+  RETURN;
+END;
+
+global
+updating function LongInt PUVcRecordRemoveAfter(var record PUVc PUr,record PUVc PU2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+
+  RemovePU(PUr);
+  PUVcRecordRemoveAfter = res;
+  RETURN;
+END;
+
+global
+updating function LongInt PUVcRecordCheck(var record PUVc PUr,record PUVc PU2r,LongInt stat,LongInt check)
+BEGIN
+  LongInt res;
+  record POVc POr;
+  row POVc POrw;
+  record PUVc localPUr;
+  record INVc INr;
+  record LocationVc LocRec;
+  record CostAccBlock CAb;
+  record MainStockBlock MainStockRec;
+  record SRBlock SRRec;
+  row PUVc PUrw;
+  row PUVc PU2rw;
+  Integer rwcnt;
+  Integer i,j;
+  LongInt oldnr;
+  LongInt newnr;
+  Boolean transf,gentrans,transvariancef;
+  val t;
+  Integer insertmode,updatemode;
+  Integer errcode;
+  LongInt sernr;
+  record TRVc gTRp;
+  string 20 location,loc;
+  val w,h,d,m;
+  record INVc IN2r;
+  string 255 errstr,objstr;
+  record MainWHMBlock MainWHM;
+  record StockMovVc StockMovr;
+  string 20 lastpalletitem;
+  record PosVc Posr;
+  val prev;
+  Date bbd;
+  record CUVc VEr;
+
+  res = 0;
+  insertmode = 1;//Rs_insert
+  updatemode = 2;//Rs_update
+  transf = false;
+  if (PUr.OKFlag==1) then begin
+    if (stat==insertmode) then begin transf = true; end;
+    if (stat==updatemode) then begin
+      if (PU2r.OKFlag==0) then begin transf = true; end;
+    end;
+  end;
+   if (stat==updatemode) then begin
+    if (PUr.SerNr<=0) and (PU2r.OKFlag==0) then begin
+      PUr.SerNr = PU2r.SerNr;
+    end;
+  end;    
+  BlockLoad(SRRec);
+  BlockLoad(CAb);
+  BlockLoad(MainStockRec);
+  BlockLoad(MainWHM);  
+  oldnr = PUr.SerNr;
+  if (PUr.SerNr<=0) then begin
+    newnr = GetCurUserLastNr("PUVc");
+    if (newnr==-1) then begin
+      newnr = SRRec.LastPurNr;
+    end;
+    PUr.SerNr = NextSerNr("PUVc",PUr.TransDate,newnr,false,"");
+  end;
+  
+  if ((stat==insertmode) or (PUr.SerNr!=PU2r.SerNr)) then begin
+    localPUr.SerNr = PUr.SerNr;
+    if (ReadFirstMAin(localPUr,1,true)) then begin
+      RecordCheckError(1547,"",-1,"SerNr");      
+      res = -1;
+      goto L99PUVcRecordCheck;
+    end;
+  end;
+  if (SerNrTestPUVc(PUr.SerNr,PUr.TransDate,gentrans)==false) then begin
+    RecordCheckError(1557,"",-1,"SerNr");      
+    res = -1;
+    goto L99PUVcRecordCheck;
+  end;
+  if (Date2Test("PUVc",PUr.TransDate,"TransDate",-1)==false) then begin
+    res = -1;
+    goto L99PUVcRecordCheck;
+  end; 
+  if (transf) then begin
+    if (UserCanAction("PUOK",true)==false) then begin
+      RecordCheckError(1274,StringFromStringSet(3,"PUOK"),-1,"SerNr");      
+      res = -1;
+      goto L99PUVcRecordCheck;
+    end;
+  end;  
+  rwcnt = MatRowCnt(PUr);
+  if (blank(PUr.Location)) then begin
+    if (MainStockRec.requireLocation!=0) then begin
+      for (i=0;i<rwcnt;i=i+1) begin
+        MatRowGet(PUr,i,PUrw);
+        if (blank(PUrw.Location)) then begin
+          RecordCheckError(1058,PUr.Location,-1,"Location");      
+          res = -1;
+          goto L99PUVcRecordCheck;
+        end;
+      end;
+    end;
+  end;
+  loc = PUr.Location;
+  if (blank(loc)) then begin
+    loc = MainStockRec.MainStock;
+  end;  
+  if (nonblank(loc)) then begin
+    LocRec.Code = loc;
+    if (ReadFirstMain(LocRec,1,true)==false) then begin
+      RecordCheckError(1120,PUr.Location,-1,"Location");      
+      res = -1;
+      goto L99PUVcRecordCheck;
+    end;
+  end;
+  if (nonblank(PUr.VECode)) then begin     
+    VEr.Code = PUr.VECode;
+    if (ReadFirstMain(VEr,1,true)==false) then begin
+      RecordCheckError(1120,PUr.VECode,-1,"VECode");      
+      res = -1;
+      goto L99PUVcRecordCheck;
+    end;
+    if (VEr.blockedFlag!=0 or VEr.OnHoldFlag!=0) then begin
+      RecordCheckError(1265,PUr.VECode,-1,"VECode");      
+      res = -1;
+      goto L99PUVcRecordCheck;
+    end;
+  end;
+  if (nonblank(PUr.Objects)) then begin     
+    errcode = CheckObjs("",PUr.Objects,errstr);
+    if (errcode!=0) then begin
+      RecordCheckError(errcode,errstr,-1,"Objects");      
+      res = -1;
+      goto L99PUVcRecordCheck;
+    end;
+  end;  
+  errcode = CheckRates(PUr.CurncyCode,PUr.FrRate,PUr.ToRateB1,PUr.ToRateB2,PUr.BaseRate1,PUr.BaseRate2,errstr);
+  if (errcode!=0) then begin
+    RecordCheckError(errcode,"",-1,errstr);      
+    res = -1; 
+    goto L99PUVcRecordCheck;
+  end;          
+  if (MainWHM.DemandPosition!=0) then begin 
+    StockMovr.SerNr = NextSerNr("StockMovVc",CurrentDate,-1,false,"");
+    if (StockMovr.SerNr<=0) then begin 
+      RecordCheckError(2291,"",-1,"SerNr");      
+      res = -1;
+      goto L99PUVcRecordCheck;
+    end;
+  end;
+  if (transf) then begin
+    if (PUr.OKFlag==1) then begin
+      if (BA_GRNCostVarianceWarning(PUr,i)) then begin
+        if (UserCanAction("DisallowCostVariance",false)) then begin
+          RecordCheckError(1274,StringFromStringSet(3,"DisallowCostVariance"),i,"CostPrice");      
+          res = -1;
+          goto L99PUVcRecordCheck;
+        end;
+      end;
+    end;
+  end;
+  
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(PUr,i,PUrw);
+    location = loc;
+    if (nonblank(PUrw.Location)) then begin
+      LocRec.Code = PUrw.Location;
+      if (ReadFirstMain(LocRec,1,true)==false) then begin
+        RecordCheckError(1120,PUrw.Location,i,"Location");      
+        res = -1;
+        goto L99PUVcRecordCheck;
+      end;
+      location = PUrw.Location;
+      if (MainStockRec.Chronology==1) then begin//Chronology per Location
+        if (PUrw.Location!=loc) then begin
+          RecordCheckError(20857,"",i,"Location");      
+          res = -1;
+          goto L99PUVcRecordCheck;
+        end;
+      end;
+    end;
+  if (PUrw.stp==1) then begin
+    if (IsOffice(false)) then begin
+      if (PUrw.Quant<0) then begin
+        RecordCheckError(1574,"",i,"Quant");      
+        res = -1;
+        goto L99PUVcRecordCheck;
+      end;
+    end;
+    if (PUrw.PONr>0) then begin
+      errcode = GetPO(PUrw.PONr,POr,PUr.VECode);
+      switch (errcode) begin
+        case 1: 
+          RecordCheckError(1281,"",i,"PONr");      
+          res = -1;
+          goto L99PUVcRecordCheck;
+        case 2: 
+          RecordCheckError(1215,"",i,"PONr");      
+          res = -1;
+          goto L99PUVcRecordCheck;
+        case 3: 
+          RecordCheckError(1138,"",i,"PONr");      
+          res = -1;
+          goto L99PUVcRecordCheck;
+        case 4: 
+          RecordCheckError(1026,"",i,"PONr");      
+          res = -1;
+          goto L99PUVcRecordCheck;
+        case 5: 
+          RecordCheckError(1459,"",i,"PONr");      
+          res = -1;
+          goto L99PUVcRecordCheck;
+      end;
+      if (PUr.PONr>0) then begin
+        if (PUrw.PONr!=PUr.PONr) then begin
+          RecordCheckError(2010,"",-1,"PONr");      
+          res = -1;
+          goto L99PUVcRecordCheck;
+        end;
+      end;
+      if (PUrw.OrdRow<0) then begin
+        RecordCheckError(1058,"",i,"OrdRow");      
+        res = -1;
+        goto L99PUVcRecordCheck;
+      end;            
+    end;
+    if (PUrw.PONr>0) then begin
+      errcode = GetPO(PUrw.PONr,POr,PUr.VECode);
+	    if (POr.TransDate>PUr.TransDate) then begin
+	      RecordCheckError(20855,"",i,"PONr");      
+	      res = -1;
+	      goto L99PUVcRecordCheck;
+	    end;
+    end else begin
+      errcode = GetPO(PUr.PONr,POr,PUr.VECode);
+	    if (POr.TransDate>PUr.TransDate) then begin
+	      RecordCheckError(20855,"",-1,"PONr");      
+	      res = -1;
+	      goto L99PUVcRecordCheck;
+	    end;
+    end;
+    if (PUr.PONr>0) then begin
+      if (check!=0) then begin
+        if (PUrw.OrdRow<MatRowCnt(POr)) and (PUrw.OrdRow>=0) then begin
+        if (PUrw.ovst==0) and (PUr.Invalid==0) then begin
+          MatRowGet(POr,PUrw.OrdRow,POrw);
+          if (MainStockRec.dontAllowOverreceive==1) then begin
+            prev = blankval;
+            for (j=0;j<rwcnt;j=j+1) begin
+              if (j!=i) then begin
+                MatRowGet(PUr,j,PU2rw);
+                if (PU2rw.OrdRow==PUrw.OrdRow) then begin
+                  if (PU2rw.ovst==0) then begin
+                    prev = prev + PU2rw.Quant;
+                  end;
+                end;
+              end;
+            end;
+            prev = prev + PUrw.Quant;
+            if (((POrw.Quant - POrw.Shipd2)<prev) and (prev>0)) then begin
+              RecordCheckError(20055,"",i,"Quant");      
+              res = -1; 
+              goto L99PUVcRecordCheck;
+            end;
+          end;
+        end;
+        end;
+      end;  
+    end;  
+    if (blank(PUrw.ArtCode)) then begin
+      RecordCheckError(1130,"",i,"ArtCode");      
+      res = -1;
+      goto L99PUVcRecordCheck;
+    end;
+    if (ReadFirstItem(PUrw.ArtCode,INr,true,true)==false) then begin
+      RecordCheckError(1120," " & PUrw.ArtCode,i,"ArtCode");      
+      res = -1;
+      goto L99PUVcRecordCheck;
+    end;
+    if (PUrw.StockType==kStockTypeConsigment) then begin
+      if (INr.SerNrf<1) then begin
+        RecordCheckError(1953,"",i,"StockType");      
+        res = -1;
+        goto L99PUVcRecordCheck;
+      end;
+    end;
+    if ((GetVATLaw==27) or (GetVATLaw==25)) then begin//vatEstonian,vatPolish
+      if (INr.ItemType!=1) then begin
+        RecordCheckError(1301,"",i,"ArtCode");      
+        res = -1;
+        goto L99PUVcRecordCheck;
+      end;
+    end;
+    if (CheckAllowedSize(INr,PUrw.UnitXval,PUrw.UnitYval,PUrw.UnitZval)==false) then begin
+      RecordCheckError(1480,"",i,"UnitXval");      
+      res = -1;
+      goto L99PUVcRecordCheck;
+    end;
+    if (check!=0) then begin
+      objstr = PUr.Objects;
+      if (nonblank(objstr)) then begin
+        objstr = objstr & ",";
+      end;
+      objstr = objstr & PUrw.Objects;
+      errcode = CheckObjs(PUrw.CredAcc,objstr,errstr);
+      if (errcode!=0) then begin
+        RecordCheckError(errcode,errstr,i,"Objects");      
+        res = -1;
+        goto L99PUVcRecordCheck;
+      end;
+    end;
+    if (nonblank(PUrw.Objects)) then begin 
+      errcode = CheckObjs("",PUrw.Objects,errstr);
+      if (errcode!=0) then begin
+        RecordCheckError(errcode,errstr,i,"Objects");      
+        res = -1;
+        goto L99PUVcRecordCheck;
+      end;
+    end;
+    if (blank(PUrw.Quant)) then begin
+      RecordCheckError(1058,"",i,"Quant");      
+      res = -1;
+      goto L99PUVcRecordCheck;
+    end;
+    if (INr.ItemType==2) then begin
+      RecordCheckError(1826,"",i,"ArtCode");      
+      res = -1;
+      goto L99PUVcRecordCheck;
+    end;
+    if (LocRec.RequirePos!=0) then begin
+/*occupied is not important, height is important    
+      if (nonblank(PUrw.ToPosCode)) then begin
+        res = IsPositionFree(PUrw.ToPosCode);
+        if (res>0) then begin
+          RecordCheckError(res," " & PUrw.ToPosCode,i,"ToPosCode");      
+          res = -1;
+          goto L99PUVcRecordCheck;
+        end;
+      end;
+*/
+      w = 0;
+      h = 0;
+      d = 0;
+      m = PUrw.Quant/INr.QtyonPallet;
+      if (INr.PalletWidth!=0) then begin w = w + INr.PalletWidth*m; end;
+      if (INr.PalletHeight!=0) then begin h = h + INr.PalletHeight*m; end;
+      if (INr.PalletDepth!=0) then begin d = d + INr.PalletDepth*m; end;
+      for (j=0;j<i;j=j+1) begin
+        MatRowGet(PUr,j,PU2rw);
+        if (PUrw.PosCode==PU2rw.PosCode) then begin
+          if (ReadFirstItem(PU2rw.ArtCode,IN2r,true,true)) then begin
+            m = 0;
+            if (IN2r.QtyonPallet>0) then begin
+              m = PU2rw.Quant/IN2r.QtyonPallet;
+            end;                
+            if (IN2r.PalletWidth!=0) then begin
+              w = w + IN2r.PalletWidth*m;
+            end;
+            if (IN2r.PalletHeight!=0) then begin
+              h = h + IN2r.PalletHeight*m;
+            end;
+            if (IN2r.PalletDepth!=0) then begin
+              d = d + IN2r.PalletDepth*m;
+            end;
+          end;
+        end;
+/*only height matters
+        if (PUrw.ArtCode!=lastpalletitem) then begin
+          if (nonblank(PUrw.ToPosCode)) then begin
+            if (PUrw.ToPosCode==PU2rw.ToPosCode) then begin
+              RecordCheckError(1729,PUrw.ToPosCode,i,"ToPosCode");      
+              res = -1;
+              goto L99PUVcRecordCheck;
+            end;
+          end;
+        end;
+*/        
+      end;    
+      lastpalletitem = INr.DefPalletItem;
+      
+      errcode = CheckPosition(PUrw.PosCode,location,LocRec.RequirePos,w,h,d);
+      if (errcode!=0) then begin
+        RecordCheckError(errcode,PUrw.PosCode,i,"PosCode");      
+        res = -1;
+        goto L99PUVcRecordCheck;
+      end;
+
+      if (nonblank(PUrw.ToPosCode)) then begin
+        w = 0;
+        h = 0;
+        d = 0;
+        m = PUrw.Quant/INr.QtyonPallet;
+        if (INr.PalletWidth!=0) then begin w = w + INr.PalletWidth*m; end;
+        if (INr.PalletHeight!=0) then begin h = h + INr.PalletHeight*m; end;
+        if (INr.PalletDepth!=0) then begin d = d + INr.PalletDepth*m; end;
+        for (j=0;j<i;j=j+1) begin
+          MatRowGet(PUr,j,PU2rw);
+          if (PUrw.ToPosCode==PU2rw.ToPosCode) then begin
+            if (ReadFirstItem(PU2rw.ArtCode,IN2r,true,true)) then begin
+              m = 0;
+              if (IN2r.QtyonPallet>0) then begin
+                m = PU2rw.Quant/IN2r.QtyonPallet;
+              end;                
+              if (IN2r.PalletWidth!=0) then begin
+                w = w + IN2r.PalletWidth*m;
+              end;
+              if (IN2r.PalletHeight!=0) then begin
+                h = h + IN2r.PalletHeight*m;
+              end;
+              if (IN2r.PalletDepth!=0) then begin
+                d = d + IN2r.PalletDepth*m;
+              end;
+            end;
+          end;
+        end;    
+        errcode = CheckPosition(PUrw.ToPosCode,location,LocRec.RequirePos,w,h,d);
+        if (errcode!=0) then begin
+          RecordCheckError(errcode,PUrw.ToPosCode,i,"ToPosCode");      
+          res = -1;
+          goto L99PUVcRecordCheck;
+        end;
+      end;
+    end else begin
+      if (nonblank(PUrw.PosCode)) then begin
+        Posr.Code = PUrw.PosCode;
+        Posr.Location = location;
+        if (ReadFirstKey("Location",Posr,2,true)==false) then begin
+          RecordCheckError(1120,PUrw.PosCode,i,"PosCode");      
+          res = -1;
+          goto L99PUVcRecordCheck;
+        end;
+      end;
+      if (nonblank(PUrw.ToPosCode)) then begin
+        Posr.Code = PUrw.ToPosCode;
+        Posr.Location = location;
+        if (ReadFirstKey("Location",Posr,2,true)==false) then begin
+          RecordCheckError(1120,PUrw.ToPosCode,i,"ToPosCode");      
+          res = -1;
+          goto L99PUVcRecordCheck;
+        end;
+      end;
+    end;
+    if (nonblank(LocRec.Code)) then begin
+      if (LocRec.RequirePos!=0) then begin
+        if (blank(PUrw.PosCode)) then begin
+          RecordCheckError(1854,"",i,"PosCode");      
+          res = -1;
+          goto L99PUVcRecordCheck;
+        end;
+        if (PUrw.PosCode!=MainWHM.DefPUPosCode) then begin
+          res = IsPositionFree(PUrw.PosCode);
+          if (res>0) then begin
+            RecordCheckError(res," " & PUrw.PosCode,i,"PosCode");      
+            res = -1;
+            goto L99PUVcRecordCheck;
+          end;
+        end;
+      end;
+    end;
+    if (transf) then begin
+      if (((INr.SerNrf>0) and (INr.SerNrf<3)) and (MainStockRec.NoSerOnPU==0)) then begin
+        if (PUrw.Quant!=0) then begin
+          if (blank(PUrw.SerialNr)) then begin
+            RecordCheckError(1239,"",i,"SerialNr");      
+            res = -1;
+            goto L99PUVcRecordCheck;
+          end;
+        end;
+        if (Mid(PUrw.SerialNr,len(PUrw.SerialNr),1)==" ") then begin
+          RecordCheckError(1239,"",i,"SerialNr");      
+          res = -1;
+          goto L99PUVcRecordCheck;
+        end;
+        if (IsSerialNrCorrect(PUrw.SerialNr)==false) then begin
+          RecordCheckError(1209,PUrw.SerialNr,i,"SerialNr");      
+          res = -1; 
+          goto L99PUVcRecordCheck;
+        end;        
+        switch (INr.SerNrf) begin
+          case 1:  // serial nr. 
+            // is the serial number available at any location 
+            for (j=0;j<i;j=j+1) begin              
+              MatRowGet(PUr,j,PU2rw);
+              if (PUrw.Quant!=0) then begin
+                if ((PUrw.ArtCode==PU2rw.ArtCode) and
+                    (PUrw.SerialNr==PU2rw.SerialNr)) then begin
+                  RecordCheckError(1241,"",i,"SerialNr");      
+                  res = -1;
+                  goto L99PUVcRecordCheck;
+                end;
+              end;
+            end;
+            if (PUrw.Quant!=0) then begin
+              if (SerialNrAvail2(PUrw.ArtCode,PUrw.SerialNr,PUrw.Quant)==true) then begin
+                RecordCheckError(1241,"",i,"SerialNr");      
+                res = -1;
+                goto L99PUVcRecordCheck;
+              end;
+            end;
+            if (PUrw.Quant>1) then begin
+              RecordCheckError(1242,"",i,"Quant");      
+              res = -1;
+              goto L99PUVcRecordCheck;
+            end;
+            if (SerialNrOnThisPU(PUr,PUrw.ArtCode,PUrw.SerialNr)>1) then begin
+              RecordCheckError(1242,"",i,"Quant");      
+              res = -1;
+              goto L99PUVcRecordCheck;
+            end;
+          case 2:  ;// batch nr. 
+            for (j=0;j<i;j=j+1) begin              
+              MatRowGet(PUr,j,PU2rw);
+              if ((PUrw.ArtCode==PU2rw.ArtCode) and
+                  (PUrw.SerialNr==PU2rw.SerialNr)) then begin
+                  if (PUrw.CostPrice!=PU2rw.CostPrice) then begin
+                    RecordCheckError(20568,"",i,"SerialNr");      
+                    res = -1;
+                    goto L99PUVcRecordCheck;
+                  end;
+                  if (nonblank(PUrw.BestBefore)) or (nonblank(PU2rw.BestBefore)) then begin
+                    if (PUrw.BestBefore!=PU2rw.BestBefore) then begin
+			                RecordCheckError(20765,"",i,"SerialNr");      
+			                res = -1;
+			                goto L99PUVcRecordCheck;
+                    end;
+                  end;
+              end;
+            end;
+            if (FIFOPerSerialNr(INr,CAb)!=0) then begin//otherwise cost price on deliveries is completely wrong
+              if (SerialNrAvail2(PUrw.ArtCode,PUrw.SerialNr,1)==true) then begin
+                RecordCheckError(1241,"",i,"SerialNr");      
+                res = -1;
+                goto L99PUVcRecordCheck;
+              end;              
+            end;
+            FindBatchBestBeforeDate(PUrw.ArtCode,PUrw.SerialNr,bbd);
+            if (nonblankdate(bbd)) then begin
+              if (PUrw.BestBefore!=bbd)then begin
+                RecordCheckError(20765,"",i,"SerialNr");      
+                res = -1;
+                goto L99PUVcRecordCheck;
+              end;
+            end;
+        end;
+      end;
+    end;
+  end;
+  end;
+  if (DateWarned(PUr.TransDate,"PUVc")) then begin
+    MessageBox(1045,"");
+  end;   
+  
+    // Edit Start ---------------------------------------------- Edit Start
+	//Thursday, 8 September 2011 12:27:44
+	if (PUr.TransDate>Currentdate and PUr.OKFlag!=0) then begin 
+	  RecordCheckError(1142,"",-1,"TransDate");      
+    res = -1;
+    goto L99PUVcRecordCheck;
+	end;
+	// Edit End ---------------------------------------------- Edit End
+	
+  
+  if (transf) then begin
+    if (stat==updatemode) then begin
+      sernr = PU2r.SerNr;
+    end;
+    if (MainStockRec.Chronology!=0) then begin
+      if (ExistStockTrans(location,PUr.TransDate,errcode,"PUVc",sernr,MainStockRec.Chronology)==true) then begin
+        RecordCheckError(errcode,"",-1,"TransDate");      
+        res = -1;
+        goto L99PUVcRecordCheck;
+      end;
+    end;
+  
+    
+    if (CanOKStockRecord==false) then begin
+      RecordCheckError(1766,"",-1,"SerNr");      
+      res = -1; 
+      goto L99PUVcRecordCheck;
+    end;
+    if (IsStockSettingsOK==false) then begin
+      RecordCheckError(1767,"",-1,"SerNr");      
+      res = -1; 
+      goto L99PUVcRecordCheck;
+    end;
+  end;
+  if (transf) then begin
+    FillAmForVariancePU(PUr);
+  end;
+  if (gentrans==false) then begin transf = false; end;
+  if (transf) then begin
+    errcode = MakeTransFromPU(gTRp,PUr,LocRec,false);
+    if (errcode>0) then begin
+      RecordCheckError(errcode,"",-1,"SerNr");      
+      res = -1;
+      goto L99PUVcRecordCheck;
+    end;
+    if ((gTRp.Number>0) and (gTRp.IntYc==PUYc)) then begin
+      errstr = CheckTrans(gTRp,2,true);
+      if (nonblank(errstr)) then begin
+        RecordCheckError(1085,errstr,-1,"SerNr");      
+        res = -1;
+        goto L99PUVcRecordCheck;
+      end;
+      SaveTrans(gTRp);
+      AddTTrans_PUVc(gTRp,PUr);
+    end;    
+  end;  
+L99PUVcRecordCheck:;
+  if (res!=0) then begin PUr.SerNr = oldnr; end;
+  PUVcRecordCheck = res;
+  RETURN;
+END;
+  
+global
+updating function LongInt PUCheckIfSaveAllowed(var record PUVc PUr,record PUVc PU2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+
+  SetRecordCheckVc("PUVc");
+  res = PUVcRecordCheck(PUr,PU2r,stat,long4);  
+  PUCheckIfSaveAllowed = res;
+  RETURN;
+END;
+  
+procedure PUVcConvertB1ToB2(var record PUVc PUp,string curp,val frp,var val to1p,var val to2p,var val br1p,var val br2p)
+BEGIN
+  row PUVc PUrw;
+  Integer rwcnt,i;
+  val fr,to1,to2,br1,br2;
+  string 20 curncy;
+  Boolean base2inv;
+  Boolean treated;
+  Date curdate;
+  val t;
+  string 255 tstr;
+
+  curdate = CurrentDate;
+  curncy = curp;
+  GetFullCurncyRate(curncy,PUp.TransDate,fr,to1,to2,br1,br2);
+  if (curncy==curp) then begin base2inv = true; end;
+  SwapM4Val(br1p,br2p);
+  SwapM4Val(to1p,to2p);
+  rwcnt = MatRowCnt(PUp);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(PUp,i,PUrw);
+    B1ToB2StrVal(PUrw.Extra,br1p,br2p,tstr);
+    PUrw.Extra = tstr;
+    B1ToB2Val(PUrw.CostPrice,br1p,br2p,t);
+    PUrw.CostPrice = t;
+    B1ToB2Val(PUrw.Sum,br1p,br2p,t); //Sum always in base 1, isnt it
+    PUrw.Sum = t;
+    B1ToB2Val(PUrw.ShipCost,br1p,br2p,t);
+    PUrw.ShipCost = t;
+    B1ToB2Val(PUrw.RowCost1,br1p,br2p,t);
+    PUrw.RowCost1 = t;
+    B1ToB2Val(PUrw.RowCost2,br1p,br2p,t);
+    PUrw.RowCost2 = t;
+    B1ToB2Val(PUrw.RowCost3,br1p,br2p,t);
+    PUrw.RowCost3 = t;
+    B1ToB2Val(PUrw.RowCost4,br1p,br2p,t);
+    PUrw.RowCost4 = t;
+    B1ToB2Val(PUrw.RowCost5,br1p,br2p,t);
+    PUrw.RowCost5 = t;
+    B1ToB2StrVal(PUrw.CustomsCost,br1p,br2p,tstr);
+    PUrw.CustomsCost = tstr;
+    MatRowPut(PUp,i,PUrw);
+  end;
+  RETURN;
+END;
+
+/*global
+function LongInt PUVcRecordImport(var record PUVc PUr,record PUVc PU2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  record ConvMasterBlock cvm;
+  Boolean gToDualBase,gBase1ToBase2;
+  val fr,to1,to2,br1,br2,t;
+  string 10 curncy;
+
+  BlockLoad(cvm);
+  if (cvm.DualBaseCurrencyFlag!=0) then begin gToDualBase = true; end;
+  if (cvm.Base1ToBase2Flag!=0) then begin gBase1ToBase2 = true; end;
+  if (gToDualBase) then begin
+    curncy = PUr.CurncyCode;
+    fr = PUr.FrRate;
+    to1 = PUr.ToRateB1;
+    to2 = PUr.ToRateB2;
+    br1 = PUr.BaseRate1;
+    br2 = PUr.BaseRate2;
+    ConvertToDualBase(curncy,PUr.TransDate,fr,to1,to2,br1,br2,t,false);
+    PUr.CurncyCode = curncy;
+    PUr.FrRate = fr;
+    PUr.ToRateB1 = to1;
+    PUr.ToRateB2 = to2;
+    PUr.BaseRate1 = br1;
+    PUr.BaseRate2 = br2;
+  end;
+  if (gBase1ToBase2) then begin
+    to1 = PUr.ToRateB1;
+    to2 = PUr.ToRateB2;
+    br1 = PUr.BaseRate1;
+    br2 = PUr.BaseRate2;
+    PUVcConvertB1ToB2(PUr,PUr.CurncyCode,PUr.FrRate,to1,to2,br1,br2);
+    PUr.ToRateB1 = to1;
+    PUr.ToRateB2 = to2;
+    PUr.BaseRate1 = br1;
+    PUr.BaseRate2 = br2;
+    PUSumUp(PUr);
+  end;
+  if (PUr.NoTAXonVAT==-1) then begin
+    PUr.NoTAXonVAT = 0;
+  end;
+  PUVcRecordImport = res;
+  RETURN;
+END;
+*/
+global
+updating function LongInt PUVcRecordImportAfter(var record PUVc PUr,record PUVc PU2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+    
+  if (PUr.OKFlag!=0) then begin
+    PurUpdateSerialNr(PUr,true);
+    if (ImportingTextBackup==false and CanOKStockRecord==true) then begin
+      PurUpdateStock(PUr);
+      PurUpdateCostPrice(PUr,false);  // this should be called during import since records are from other systems
+      PurUpdateItemHist(PUr);
+    end;
+  end;
+  PUVcRecordImportAfter = res; 
+  RETURN;
+END;
+
+function
+Boolean InvalidPUOK(record PUVc PUp)
+BEGIN
+  Boolean res;
+  Boolean noinvalidf;
+  record ItemHistVc IHr;
+  row PUVc PUrw;
+  Integer i,rwcnt;
+  Integer primary;
+
+  noinvalidf = false;
+  res = true;
+  rwcnt = MatRowCnt(PUp);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(PUp,i,PUrw);
+    primary = ArtCodePrimaryCostModel(PUrw.ArtCode);  
+    switch (primary) begin
+      case 0:
+      case 9:
+      case 3:
+        IHr.FileName = "PUVc";
+        IHr.ArtCode = PUrw.ArtCode;
+        if (ReadFirstKey("FNArtCode",IHr,2,true)) begin
+          noinvalidf = true;
+        end;
+      otherwise
+        IHr.FileName = "PUVc";
+        IHr.TransNr = PUp.SerNr;
+        IHr.Row = i;
+        if (ReadFirstKey("FNTransNr",IHr,3,true)) begin
+          if (IHr.RemQty!=PUrw.Quant) then begin
+            noinvalidf = true;
+          end;
+        end else begin
+          noinvalidf = true;
+        end;
+    end;
+    if (noinvalidf) then begin
+      res = false;
+      goto LInvalidPUOK;
+    end;
+  end;
+LInvalidPUOK:;  
+  InvalidPUOK = res;
+  RETURN;
+END;
+
+global
+function LongInt PUVcRecordInvalidateTest(var record PUVc PUr,record PUVc PU2r,LongInt long3,LongInt long4)
+BEGIN
+  LongInt res; 
+
+  res = 0;
+  if (UserCanAction("PUInvalid",true)) then begin
+    if ((PUr.Invalid==0) and (PUr.OKFlag!=0)) then begin
+      if (InvalidPUOK(PUr)) then begin
+        PUr.Invalid = 1;     
+        res = 1;
+      end;
+    end;
+  end;  
+  PUVcRecordInvalidateTest = res; 
+  RETURN;
+END;
+
+/* not possible
+global
+function LongInt PUVcRecordTransDateOff(var record PUVc PUr,record PUVc PU2r,LongInt long3,LongInt long4)
+BEGIN
+  LongInt res;
+  
+  PUVcRecordTransDateOff = res; 
+  RETURN;
+END;
+*/

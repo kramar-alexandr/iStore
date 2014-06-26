@@ -1,0 +1,177 @@
+remote updating function Integer RecordAction_raPasteOrdInShip(var record SHVc,LongInt,var string);
+remote updating procedure SHFromORDsm();
+remote updating procedure IVFromORDsm();
+remote updating procedure SHFromORLsm();
+remote updating procedure IVFromORLsm();
+remote updating function Boolean BA_ORMinMarkupWarning(record ORVc,var Integer);
+external procedure CustMessages(string,string);
+
+
+global
+updating procedure SHFromORDsmME()
+BEGIN
+  record ORVc ORr;
+  record SHVc SHr,oldSHr,oldSH2r;
+  Integer wn,r,nwn,i;
+  Integer normalstate;
+  Boolean testf;
+  string 60 warning;
+  record TestBlock testr;
+
+
+  normalstate = 0;//Rs_normal
+  wn = CurWindow;
+  DeselectWindow(wn,false);
+  if (WindowState(wn)==normalstate) then begin
+    GetWindowRecord(wn,ORr);
+    if (ORr.Closed==0) then begin
+      if (UserCanAction("ORToSH",true)) then begin
+        testf = true;
+        if (ORr.OKFlag==0) then begin 
+          if (UserCanAction("NotOKORToSH",false)) then begin
+            MessageBox(20054,"");
+            testf = false;
+          end; 
+        end;
+        if (testf) then begin
+          if (BA_ORMinMarkupWarning(ORr,i)) then begin
+          end;
+        end;
+        if (testf) then begin
+          if (UserCanAction("DisallowSaleBelowGP",false)) then begin
+            testf = false;
+            MessageBox(1274,StringFromStringSet(3,"DisallowSaleBelowGP"));
+          end;
+        end;
+        if (testf) then begin  
+          r = RecordAction_raPasteOrdInShip(SHr,ORr.SerNr,warning);
+          if (r==0) then begin
+            if (MatRowCnt(SHr)!=0) then begin
+           
+         //*********************************************
+       
+         BlockLoad(Testr);
+         Testr.FL1=0;
+         BlockStore(Testr);
+            RecordCopy(oldSHr,SHr);
+            //RecordCopy(oldSH2r,SHr);
+            SHr.OKFlag = 1;
+            if (RecordUpdate(oldSHr,SHr,true)==0) then begin end;
+            
+            BlockLoad(Testr);
+    if (Testr.FL1==1) then begin
+ 
+             RecordCopy(oldSHr,SHr);
+             SHr.OKFlag = 0;
+             RecordUpdate(oldSHr,SHr,true);
+              nwn = OpenWindow("SHDClass",1,0,"","",SHr);
+                   
+            
+ end;
+   UpdateBrowses("ORVc");
+             CustMessages("SHVc",SHr.CustCode);
+ 
+         //*********************************************
+         
+               if (nonblank(warning)) then begin
+                MessageBox(0,warning);
+              end;
+            end else begin
+              Beep;
+            end;
+          end else begin
+            if (r==-1) then begin
+              Beep;
+            end else begin
+              MessageBox(r,"");
+            end;
+          end;
+        end;  
+      end else begin
+        Beep;
+      end;
+    end else begin
+      MessageBox(1274,StringFromStringSet(3,"ORToSH"));
+    end;
+  end else begin
+    Beep;
+  end;
+   if (Testr.FL1==0) then begin
+ IVFromORDsm;
+ end;
+  RETURN;
+END;
+
+
+global
+updating procedure SHFromORLsmME()
+BEGIN
+  record ORVc ORr;
+  record SHVc SHr,oldSHr;
+  Integer wn,nwn;
+  LongInt r;
+  string 60 warning;
+  Boolean testf;
+    record TestBlock testr;
+
+
+  wn = CurWindow;
+  if (ReadMarkedRecord(wn,ORr)) then begin
+    if (UserCanAction("ORToSH",true)) then begin
+      if (ORr.Closed==0) then begin
+        testf = true;
+        SHr.OrderNr = ORr.SerNr;
+        if (ORr.OKFlag==0) then begin 
+          if (UserCanAction("NotOKORToSH",false)) then begin
+            MessageBox(20054,"");
+            testf = false;
+          end;
+        end;
+        if (testf) then begin
+          r = RecordAction_raPasteOrdInShip(SHr,ORr.SerNr,warning);
+          if (r==0) then begin
+            if (MatRowCnt(SHr)!=0) then begin
+            //******************************************************************
+ BlockLoad(Testr);
+         Testr.FL1=0;
+         BlockStore(Testr);
+            RecordCopy(oldSHr,SHr);
+            //RecordCopy(oldSH2r,SHr);
+            SHr.OKFlag = 1;
+            if (RecordUpdate(oldSHr,SHr,true)==0) then begin end;
+            
+            BlockLoad(Testr);
+    if (Testr.FL1==1) then begin
+ 
+             RecordCopy(oldSHr,SHr);
+             SHr.OKFlag = 0;
+             RecordUpdate(oldSHr,SHr,true);
+              nwn = OpenWindow("SHDClass",1,0,"","",SHr);
+                   
+            
+ end;
+   UpdateBrowses("ORVc");
+             CustMessages("SHVc",SHr.CustCode);
+            //******************************************************************
+              if (nonblank(warning)) then begin
+                MessageBox(0,warning);
+              end;
+            end else begin
+              Beep;
+            end;
+          end else begin
+            if (r==-1) then begin
+              Beep;
+            end else begin
+              MessageBox(r,"");          
+            end;
+          end;
+        end;
+      end;  
+    end else begin
+      MessageBox(1274,StringFromStringSet(3,"ORToSH"));
+    end;
+  end;
+  IVFromORLsm;
+  RETURN;
+END;

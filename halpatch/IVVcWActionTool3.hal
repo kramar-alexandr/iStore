@@ -1,0 +1,943 @@
+external function Integer CLInVc_PasteTransNr(var record CLInVc,Integer);
+external procedure IVVc_CalculatePayDate(var record IVVc);
+external procedure IVVc_PastePriceList(var record IVVc);
+external function Boolean GetPD(var record PDVc);
+external procedure GetPriceList(string,var string,var Integer);
+external procedure SetSalesMan(var string,string);
+external function Boolean GetPM(string,var string,var string);
+external function Integer GetCreditedInvoiceType(record IVVc);
+external function Boolean CLInforIVExists(LongInt,string,var LongInt);
+external procedure IVSumup(var record IVVc,Boolean);
+external procedure IVVcRecordDuplicateDo(var record IVVc);
+external procedure GetFullCurncyRate (var string,Date,var val,var val,var val,var val,var val);
+external procedure IVVc_PastePayDeal(var record IVVc,string,string);
+external updating function LongInt IVVcRecordCheck(record IVVc,record IVVc,LongInt,LongInt);
+external function val MulRateToBase1(var string,val,val,val,val,val,val,Integer);
+external procedure FEIVSumup(record FEIVVc);
+external procedure FindSalesExVat(string,val,Integer,Integer,var val);
+external procedure CalcSum(val,val,val,val,var val,Integer);
+external procedure FindUserMailboxName(string,var string,var string);
+external function Boolean FindCustomerRelation(string,string,var record CUVc);
+external procedure GetPayDealText(string,string,var string);
+
+function val FEIVQuantFract(LongInt curfeivnr,LongInt ordernr,LongInt ivsernr,Integer rownr)
+BEGIN
+  record FEIVVc FEIVr;
+  row FEIVVc FEIVrw;
+  Boolean TrHs,testf;
+  val res;
+  Integer i,rwcnt;
+  
+  if (ivsernr==-1) then begin
+    goto LFEIVQuantFract;
+  end;
+  if (ordernr!=-1) then begin
+    goto LFEIVQuantFract;
+  end;
+  TrHs = true;
+  FEIVr.IVNr = ivsernr;
+  while (LoopKey("IVNr",FEIVr,1,TrHs)) begin
+    if (FEIVr.IVNr!=ivsernr) then begin
+      TrHs = false;
+    end;
+    if (TrHs) then begin
+      testf = true;
+      if (FEIVr.SerNr==curfeivnr) then begin
+        testf = false;
+      end;
+      if (testf) then begin
+        rwcnt = MatRowCnt(FEIVr);
+        for (i=0;i<rwcnt;i=i+1) begin
+          MatRowGet(FEIVr,i,FEIVrw);
+          if (FEIVrw.IVRow==rownr) then begin
+            res = res + FEIVrw.QuantFract;
+          end;
+        end;
+      end;
+    end;
+  end;
+LFEIVQuantFract:;  
+  FEIVQuantFract = res;
+  RETURN;
+END;
+
+function val FEIVQuantFractOrder(LongInt curfeivnr,LongInt ordernr,LongInt ivsernr,Integer ordrow)
+BEGIN
+  record ORVc ORr;
+  row ORVc ORrw;
+  record FEIVVc FEIVr;
+  row FEIVVc FEIVrw;
+  Boolean TrHs,testf;
+  val res;
+  Integer i,rwcnt;
+  
+  if (ordernr==-1) then begin
+    goto LFEIVQuantFractOrder;
+  end;
+  TrHs = true;
+  FEIVr.OrderNr = ordernr;
+  while (LoopKey("OrderNr",FEIVr,1,TrHs)) begin
+    if (FEIVr.OrderNr!=ordernr) then begin
+      TrHs = false;
+    end;
+    if (TrHs) then begin
+      testf = true;
+      if (FEIVr.PrepaymentNr==-1) then begin
+        testf = false;
+      end;
+      if (FEIVr.SerNr==curfeivnr) then begin
+//        testf = false;
+      end;
+      if (testf) then begin
+        rwcnt = MatRowCnt(FEIVr);
+        for (i=0;i<rwcnt;i=i+1) begin
+          MatRowGet(FEIVr,i,FEIVrw);
+          if (FEIVrw.OrdRow==ordrow) then begin
+            res = res + FEIVrw.QuantFract;
+          end;
+        end;
+      end;
+    end;
+  end;
+/*  
+  ORr.SerNr = ordernr;
+  if (ReadFirstMain(ORr,1,true)) then begin
+    if (ordrow<MatRowCnt(ORr)) then begin
+      MatRowGet(ORr,ordrow,ORrw);
+      if (ORrw.) 
+    end;
+  end;
+  StopAlert("rowquantfract " & rowquantfract);      
+*/  
+LFEIVQuantFractOrder:;    
+  FEIVQuantFractOrder = res;
+  RETURN;
+END;
+
+procedure PasteInvInFEIV(var record FEIVVc FEIVp,record IVVc IVp,Boolean rowqf)
+BEGIN
+  record IVVc orgIVr;
+  record FEIVVc lFEIVr;
+  row IVVc IVrw;
+  row FEIVVc FEIVrw;
+  record CUVc CUr;
+  record INVc INr;
+  Integer i,rwcnt,srw,oldsrw;
+  Boolean testf,infound;
+  record GeneralOptionBlock GenOptRec;
+  val s,rowsum,t,rowquantfract;
+  Boolean createfeivf;
+
+  lFEIVr.IVNr = IVp.SerNr;
+  if (ReadFirstKey("IVNr",lFEIVr,1,true)) then begin
+    goto LPasteInvInFEIV;
+  end;
+  if (IVp.InvType==3) then begin
+    orgIVr.SerNr = IVp.CredInv;
+    if (ReadFirstMain(orgIVr,1,true)) then begin
+    end;
+  end;
+  BlockLoad(GenOptRec);
+  FEIVp.TransDate = IVp.TransDate;
+  FEIVp.IVTransDate = IVp.TransDate;
+  FEIVp.CredInv = IVp.CredInv;
+  FEIVp.InvType = IVp.InvType;
+  FEIVp.IVNr = IVp.SerNr;
+  FEIVp.OrderNr = IVp.OrderNr;
+  if (FEIVp.OrderNr==-1) then begin
+    if (IVp.InvType==3) then begin
+      FEIVp.OrderNr = orgIVr.OrderNr;
+    end;
+  end;
+  FEIVp.PrepaymentNr = -1;
+  FEIVp.CustCode = IVp.CustCode;
+  FEIVp.Addr0 = IVp.Addr0;
+  FEIVp.Addr1 = IVp.Addr1;
+  FEIVp.Addr2 = IVp.Addr2;
+  FEIVp.Addr3 = IVp.Addr3;
+  FEIVp.InvAddr3 = IVp.InvAddr3;
+  FEIVp.InvAddr4 = IVp.InvAddr4;
+  FEIVp.PayDeal = IVp.PayDeal;
+  FEIVp.VATNr = IVp.VATNr;    
+  FEIVp.OrgCust = "";
+  FEIVp.ExportFlag = IVp.ExportFlag;
+  FEIVp.ClientContact = IVp.ClientContact;
+  FEIVp.OurContact = IVp.OurContact;
+  FEIVp.Objects = IVp.Objects;
+  FEIVp.SalesMan = IVp.SalesMan;
+  FEIVp.CurncyCode = IVp.CurncyCode;
+  FEIVp.LangCode = IVp.LangCode;
+  FEIVp.InvComment = IVp.InvComment;
+  FEIVp.Sorting = IVp.Sorting;
+  FEIVp.InclVAT = IVp.InclVAT;
+  FEIVp.NoTAXonVAT = IVp.NoTAXonVAT;
+  FEIVp.TotalwoTAX = IVp.TotalwoTAX;
+  FEIVp.FrRate = IVp.FrRate;
+  FEIVp.ToRateB1 = IVp.ToRateB1;
+  FEIVp.ToRateB2 = IVp.ToRateB2;
+  FEIVp.BaseRate1 = IVp.BaseRate1;
+  FEIVp.BaseRate2 = IVp.BaseRate2;
+  FEIVp.VATNr = IVp.VATNr;  
+  FEIVp.Phone = IVp.Phone;
+  FEIVp.Fax = IVp.Fax;
+  FEIVp.CredMark = IVp.CredMark;
+  CUr.Code = IVp.CustCode;
+  if (ReadFirstMain(CUr,1,true)) then begin end;
+  if (CUr.blockedFlag!=0) then begin goto LPasteInvInFEIV; end;
+  if (blank(FEIVp.VATNr)) then begin FEIVp.VATNr = CUr.VATNr; end;
+  if (IVp.InvType!=3) then begin
+    createfeivf = true;
+  end;
+  rwcnt = MatRowCnt(IVp);
+  oldsrw = MatRowCnt(FEIVp);
+  srw = oldsrw;
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(IVp,i,IVrw);
+    if (IVrw.stp==10) then begin
+      ClearRow(FEIVp,FEIVrw,10);
+      MatRowPut(FEIVp,srw,FEIVrw);
+      srw = srw + 1;      
+      goto LSKIPROW;
+    end;    
+    if (IVrw.stp==9) then begin
+      ClearRow(FEIVp,FEIVrw,9);
+      FEIVrw.Sum = IVrw.Sum;
+      MatRowPut(FEIVp,srw,FEIVrw);
+      srw = srw + 1;      
+      goto LSKIPROW;
+    end;
+    if (IVrw.stp==3) then begin
+      ClearRow(FEIVp,FEIVrw,3);
+      FEIVrw.OrdRow = IVrw.OrdRow;
+      MatRowPut(FEIVp,srw,FEIVrw);
+      srw = srw + 1;      
+      goto LSKIPROW;
+    end;
+    if (IVrw.stp==11) then begin
+      createfeivf = true;//we allow to create credit notes only for correction invoice, and we don't from credit notes
+      ClearRow(FEIVp,FEIVrw,11);
+      FEIVrw.stp = 11;
+      FEIVrw.IVRow = i;
+      FEIVrw.OrdRow = IVrw.OrdRow;
+      FEIVrw.ArtCode = IVrw.ArtCode;
+      FEIVrw.Quant = IVrw.Quant;
+      FEIVrw.QuantFract = IVrw.Quant;
+      FEIVrw.Spec = IVrw.Spec;
+      FEIVrw.Price = IVrw.Price;
+      FEIVrw.vRebate = IVrw.vRebate;
+      FEIVrw.SalesAcc = IVrw.SalesAcc;
+      FEIVrw.VATCode = IVrw.VATCode;
+      FEIVrw.Objects = IVrw.Objects;
+      FEIVrw.PriceFactor = IVrw.PriceFactor;
+      FEIVrw.Sum = IVrw.Sum;
+      MatRowPut(FEIVp,srw,FEIVrw);
+      srw = srw + 1;      
+      goto LSKIPROW;
+    end;
+    testf = true;    
+    if (IVrw.stp!=1) then begin
+      testf = false;    
+    end;
+    if (testf) then begin
+      ClearRow(FEIVp,FEIVrw,1);
+      FEIVrw.stp = 1;
+      FEIVrw.IVRow = i;
+      FEIVrw.OrdRow = IVrw.OrdRow;
+      FEIVrw.ArtCode = IVrw.ArtCode;
+      FEIVrw.Quant = IVrw.Quant;
+      rowquantfract = blankval;
+      if (rowqf) then begin
+        if (FEIVp.OrderNr==-1) then begin
+          rowquantfract = FEIVQuantFract(FEIVp.SerNr,FEIVp.OrderNr,IVp.SerNr,i);
+        end else begin
+          rowquantfract = FEIVQuantFractOrder(FEIVp.SerNr,FEIVp.OrderNr,IVp.SerNr,IVrw.OrdRow);
+        end;
+      end;
+      FEIVrw.QuantFract = IVrw.Quant - rowquantfract;
+      if (FEIVrw.QuantFract==0) then begin
+        FEIVrw.QuantFract = blankval;
+      end;
+      FEIVrw.Spec = IVrw.Spec;
+      FEIVrw.Price = IVrw.Price;
+      FEIVrw.vRebate = IVrw.vRebate;
+      FEIVrw.SalesAcc = IVrw.SalesAcc;
+      FEIVrw.VATCode = IVrw.VATCode;
+      FEIVrw.Objects = IVrw.Objects;
+      FEIVrw.PriceFactor = IVrw.PriceFactor;
+      CalcSum(FEIVrw.QuantFract,FEIVrw.Price,FEIVrw.PriceFactor,FEIVrw.vRebate,t,GenOptRec.UseDiscount);
+      FEIVrw.Sum = t;
+      if ((FEIVrw.Sum==0) and (FEIVrw.QuantFract==blankval) and (FEIVrw.Price==blankval)) then begin
+        FEIVrw.Sum = blankval;
+      end;
+      INr.Code = FEIVrw.ArtCode;
+      infound = ReadFirstMain(INr,1,true);
+      FEIVrw.BasePrice = IVrw.BasePrice;
+      if (nonblank(FEIVrw.ArtCode)) then begin
+        t = FEIVrw.QuantFract*FEIVrw.BasePrice;   // cost  
+        if (FEIVrw.PriceFactor!=0) then begin
+          t = t/FEIVrw.PriceFactor;
+        end;
+        s = MulRateToBase1(FEIVp.CurncyCode,FEIVrw.Sum,FEIVp.FrRate,FEIVp.ToRateB1,FEIVp.ToRateB2,FEIVp.BaseRate1,FEIVp.BaseRate2,DefaultCurRoundOff);// sales
+        FindSalesExVat(FEIVrw.VATCode,s,FEIVp.InclVAT,FEIVp.NoTAXonVAT,rowsum);
+//        FEIVrw.rowGP = rowsum - t;        // GP    
+      end else begin
+//        FEIVrw.rowGP = 0;
+        FEIVrw.BasePrice = 0;
+      end;
+//      FEIVrw.Coefficient = INr.UnitCoefficient;
+      FEIVrw.UnitCode = IVrw.UnitCode;
+      FEIVrw.UnitFactQuant = IVrw.UnitFactQuant;
+      FEIVrw.UnitFactPrice = IVrw.UnitFactPrice;
+      FEIVrw.UnitXval = IVrw.UnitXval;
+      FEIVrw.UnitYval = IVrw.UnitYval;
+      FEIVrw.UnitZval = IVrw.UnitZval;
+      MatRowPut(FEIVp,srw,FEIVrw);
+      srw = srw + 1;
+    end;
+LSKIPROW:;      
+  end;
+  FEIVp.Commision = IVp.Commision;
+  FEIVSumup(FEIVp);
+  if (createfeivf==false) then begin
+    RecordNew(FEIVp);
+  end;
+LPasteInvInFEIV:;  
+  RETURN;
+END;
+
+procedure CheckQuantFractIP(record FEIVVc FEIVp,Array val aqfract,Array string aartcode,var Integer acnt,LongInt PrepaymentNr)
+BEGIN
+  record FEIVVc lFEIVr;
+  row FEIVVc lFEIVrw;
+  row FEIVVc FEIVrw;
+  Integer li,lrwcnt;
+  Integer i,rwcnt,ai;
+  Boolean TrHs;
+  
+  TrHs = true;
+  lFEIVr.PrepaymentNr = PrepaymentNr;
+  while (LoopKey("PrepaymentNr",lFEIVr,1,TrHs)) begin
+    if (lFEIVr.PrepaymentNr!=PrepaymentNr) then begin
+      TrHs = false;
+    end;
+    if (TrHs) and (lFEIVr.SerNr!=FEIVp.SerNr) then begin
+      lrwcnt = MatRowCnt(lFEIVr);
+      rwcnt = MatRowCnt(FEIVp);
+      for (li=0;li<lrwcnt;li=li+1) begin
+        MatRowGet(lFEIVr,li,lFEIVrw);
+        for (i=0;i<rwcnt;i=i+1) begin
+          MatRowGet(FEIVp,i,FEIVrw);
+          if ((lFEIVrw.ArtCode==FEIVrw.ArtCode) and (lFEIVrw.Price==FEIVrw.Price) and (lFEIVrw.vRebate==FEIVrw.vRebate)) then begin
+            for (ai=0;ai<acnt;ai=ai+1) begin
+              if (lFEIVrw.ArtCode==aartcode[ai]) then begin
+                aqfract[ai] = aqfract[ai] + lFEIVrw.QuantFract;
+                goto LSKIPNEWROW;
+              end;
+            end;
+            aartcode[acnt] = lFEIVrw.ArtCode;
+            aqfract[acnt] =  lFEIVrw.QuantFract;
+            acnt = acnt + 1;
+LSKIPNEWROW:;
+//          StopAlert("1 - i " & i & " aqfract[i] " & aqfract[i]);
+          end;
+        end;
+      end;
+    end;
+  end;
+  RETURN;
+END;
+
+procedure CheckQuantFractIV(record FEIVVc FEIVp,Array val aqfract,Array string aartcode,var Integer acnt,LongInt ivnr)
+BEGIN
+  record FEIVVc lFEIVr;
+  row FEIVVc lFEIVrw;
+  row FEIVVc FEIVrw;
+  Integer li,lrwcnt;
+  Integer i,rwcnt,ai;
+  Boolean TrHs;
+  
+  TrHs = true;
+  lFEIVr.IVNr = ivnr;
+  while (LoopKey("IVNr",lFEIVr,1,TrHs)) begin
+    if (lFEIVr.IVNr!=ivnr) then begin
+      TrHs = false;
+    end;
+    if (TrHs) and (lFEIVr.SerNr!=FEIVp.SerNr) then begin
+      lrwcnt = MatRowCnt(lFEIVr);
+      rwcnt = MatRowCnt(FEIVp);
+      for (li=0;li<lrwcnt;li=li+1) begin
+        MatRowGet(lFEIVr,li,lFEIVrw);
+        for (i=0;i<rwcnt;i=i+1) begin
+          MatRowGet(FEIVp,i,FEIVrw);
+          if ((lFEIVrw.ArtCode==FEIVrw.ArtCode) and (lFEIVrw.Price==FEIVrw.Price) and (lFEIVrw.vRebate==FEIVrw.vRebate)) then begin
+            for (ai=0;ai<acnt;ai=ai+1) begin
+              if (lFEIVrw.ArtCode==aartcode[ai]) then begin
+                aqfract[ai] = aqfract[ai] + lFEIVrw.QuantFract;
+                goto LSKIPNEWROW;
+              end;
+            end;
+            aartcode[acnt] = lFEIVrw.ArtCode;
+            aqfract[acnt] =  lFEIVrw.QuantFract;
+            acnt = acnt + 1;
+LSKIPNEWROW:;
+//          StopAlert("1 - i " & i & " aqfract[i] " & aqfract[i]);
+          end;
+        end;
+      end;
+    end;
+  end;
+  RETURN;
+END;
+
+procedure ChangeQuantFract(record FEIVVc FEIVp,Array val aqfract,Array string aartcode,Integer acnt)
+BEGIN
+  Integer i,ai,rwcnt;
+  row FEIVVc FEIVrw;
+  val t;
+  record GeneralOptionBlock GenOptRec;
+
+  BlockLoad(GenOptRec);
+  rwcnt = MatRowCnt(FEIVp);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(FEIVp,i,FEIVrw);
+    for (ai=0;ai<acnt;ai=ai+1) begin
+//    stopAlert("item " & aartcode[ai] & " q " & aqfract[ai]);
+      if (FEIVrw.ArtCode==aartcode[ai]) then begin
+        FEIVrw.QuantFract = FEIVrw.QuantFract - Round(aqfract[ai],5);
+      end;
+    end;
+    if (FEIVrw.QuantFract<0) then begin
+      FEIVrw.QuantFract = 0;
+    end;
+    CalcSum(FEIVrw.QuantFract,FEIVrw.Price,FEIVrw.PriceFactor,FEIVrw.vRebate,t,GenOptRec.UseDiscount);
+    FEIVrw.Sum = t;
+    MatRowPut(FEIVp,i,FEIVrw);
+  end;
+  RETURN;
+END;
+
+function LongInt PasteInvInFEIVPrep(var record FEIVVc FEIVp,record IVVc IVp)
+BEGIN
+  LongInt res;
+  row IVVc IVrw;
+  Integer i,rwcnt;
+  Array val aqfract;
+  Array string 20 aartcode;
+  Integer acnt;
+  record FEIVVc lFEIVr;
+  
+  res = 0;
+  PasteInvInFEIV(FEIVp,IVp,false);
+  rwcnt = MatRowCnt(IVp);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(IVp,i,IVrw);
+    if ((IVrw.stp==6) and (IVrw.CUPNr!=-1)) then begin
+      lFEIVr.PrepaymentNr = IVrw.CUPNr;
+      if (ReadFirstKey("PrepaymentNr",lFEIVr,1,true)==false) then begin
+        RecordNew(FEIVp);
+        res = 2180;
+        goto LPasteInvInFEIVPrep;
+      end;
+      CheckQuantFractIP(FEIVp,aqfract,aartcode,acnt,IVrw.CUPNr);
+    end;
+  end;
+  CheckQuantFractIV(FEIVp,aqfract,aartcode,acnt,IVp.SerNr);
+  ChangeQuantFract(FEIVp,aqfract,aartcode,acnt);
+  FEIVSumup(FEIVp);
+LPasteInvInFEIVPrep:;
+  PasteInvInFEIVPrep = res;  
+  RETURN;
+END;
+
+global
+function LongInt PasteIVInFEIV(var record FEIVVc FEIVp,record IVVc IVr)
+BEGIN
+  LongInt res;
+  row IVVc IVrw;
+  Integer i,rwcnt;
+  Boolean prepf;
+  
+  res = 0;
+  RecordNew(FEIVp);
+  rwcnt = MatRowCnt(IVr);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(IVr,i,IVrw);
+    if ((IVrw.stp==6) and (IVrw.CUPNr!=-1)) then begin
+      prepf = true;
+      goto LSTOP;
+    end;
+  end;
+LSTOP:;  
+  if (prepf) then begin
+    res = PasteInvInFEIVPrep(FEIVp,IVr);
+  end else begin
+    PasteInvInFEIV(FEIVp,IVr,true);
+  end;
+  
+  if (FEIVp.Sum4==0) then begin
+    if (res==0) then begin
+      res = 1;
+    end;
+  end;
+  PasteIVInFEIV = res;
+  RETURN
+END; 
+
+global
+updating function LongInt IVCheckIfSaveAllowed(var record IVVc IVr,record IVVc IV2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+
+  SetRecordCheckVc("IVVc");
+  res = IVVcRecordCheck(IVr,IV2r,stat,long4);  
+  IVCheckIfSaveAllowed = res;
+  RETURN;
+END;
+
+global updating
+function Boolean CreateCreditNoteIV(record IVVc IVr,var record IVVc CreditIVr,string defreturnlocation)
+begin
+  boolean res;
+  boolean TrHs;
+  longint newnr;
+  record SRBlock SRRec;
+  record PDVc PDr;
+  val fr,to1,to2,br1,br2;
+  row IVVc IVrw;
+  Integer i,rwcnt;
+  record ModuleBlock Mb;
+	record SVOVc SVOr;
+	
+  BlockLoad(Mb);
+  RecordCopy(CreditIVr,IVr);
+  CreditIVr.PayDeal = "";
+  IVVcRecordDuplicateDo(CreditIVr);
+  CreditIVr.SerNr = -1;
+  CreditIVr.InvType = 3;
+  CreditIVr.CredMark = USetStr(1078);
+  CreditIVr.InvDate = CurrentDate;
+  CreditIVr.TransDate = CreditIVr.InvDate;
+  CreditIVr.PayDate = CreditIVr.InvDate;
+  CreditIVr.OKFlag = 0;
+  
+  //find the first Pay.Term with Credit Note type
+  TrHs = true;
+  while(LoopMain(PDr,1,TrHs)) begin
+    if ((PDr.PDType)==3) then begin //credit note
+      TrHs = false;
+      CreditIVr.PayDeal = PDr.Code;
+      IVVc_PastePayDeal(CreditIVr,"","");
+      res = true;
+    end;
+  end;  
+  CreditIVr.InstallmentInv = IVr.InstallmentInv;
+  CreditIVr.OrderNr = IVr.OrderNr;
+  CreditIVr.FrRate = IVr.FrRate;
+  CreditIVr.ToRateB1 = IVr.ToRateB1;
+  CreditIVr.ToRateB2 = IVr.ToRateB2;
+  CreditIVr.BaseRate1 = IVr.BaseRate1;
+  CreditIVr.BaseRate2 = IVr.BaseRate2;
+  CreditIVr.CredInv = IVr.SerNr;  
+  if (Mb.CredUpdStock!=0) then begin
+    if (nonblank(defreturnlocation)) then begin
+      CreditIVr.Location = defreturnlocation;
+    end;
+  end;
+  rwcnt = MatRowCnt(CreditIVr);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(CreditIVr,i,IVrw);
+    switch (IVrw.stp) begin
+      case 1:
+        if (IVrw.OrdRow>=0) then begin
+          IVrw.NotUpdStockFlag = 1;
+          MatRowPut(CreditIVr,i,IVrw);
+        end;
+        if (Mb.CredUpdStock!=0) then begin
+          if (nonblank(defreturnlocation)) then begin
+            MatRowGet(CreditIVr,i,IVrw);
+            if (nonblank(IVrw.Location)) then begin
+              IVrw.Location = defreturnlocation;
+              MatRowPut(CreditIVr,i,IVrw);
+            end;
+          end;
+        end;
+      case 6:
+	      MatRowDelete(CreditIVr,i);
+	      rwcnt = MatRowCnt(CreditIVr);
+      case kInvoiceRowTypeCashPayment:
+	      MatRowDelete(CreditIVr,i);
+	      rwcnt = MatRowCnt(CreditIVr);
+      case kInvoiceRowTypeCreditCardPayment:
+	      MatRowDelete(CreditIVr,i);
+	      rwcnt = MatRowCnt(CreditIVr);
+    end;
+  end;
+
+  IVSumup(CreditIVr,true);
+  if (MatRowCnt(CreditIVr)>0) then begin
+    MatRowGet(CreditIVr,0,IVrw);
+    IVrw.OrdRow = IVr.SerNr;
+    MatRowPut(CreditIVr,0,IVrw);
+  end else begin
+    ClearRow(CreditIVr,IVrw,3);
+    IVrw.OrdRow = IVr.SerNr;
+    MatRowInsert(CreditIVr,0,IVrw);
+  end;
+	
+LCreateCreditNoteIV:;  
+  CreateCreditNoteIV = res;
+  return;
+end;
+
+global
+updating function Integer CreateMailFromIVD(record IVVc IVr,var record MailVc Mailr,var string warning,Boolean additemstobodyf)
+begin
+  Integer res;
+  record LTxtVc LTxtr;
+  record CUVc CUr;
+  record CUVc ContactCUr;
+  row IVVc IVrw;
+  row MailVc MArw;
+  Integer i,rwcnt;
+  string 255 mailboxnr,tstr;
+  string 1 TAB;
+  record IVMailBlock IVMailr;
+  
+  res = 0;
+  if (ReadFirstMain(IVr,0,true)) then begin end;  
+  TAB = chr(9);
+  FindUserMailboxName(CurrentUser,mailboxnr,tstr);
+  if (blank(tstr)) then begin
+    res = 2289;
+    warning = CurrentUser;
+    goto LCreateMailFromIVD;
+  end;  
+  MArw.RowTyp = 1;
+  MArw.AddrCode = tstr;
+  MatRowPut(Mailr,0,MArw);
+  BlockLoad(IVMailr);
+  CUr.Code = IVr.CustCode;
+  if (ReadFirstMain(CUr,1,true)) then begin end;
+  MArw.RowTyp = 0;
+  MArw.AddrCode = CUr.eMail;
+  if (nonblank(IVr.ClientContact)) then begin
+    if (FindCustomerRelation(CUr.Code,IVr.ClientContact,ContactCUr)) then begin
+      if (nonblank(ContactCUr.eMail)) then begin
+        MArw.AddrCode = ContactCUr.eMail;
+      end;
+    end;
+  end;
+  if (blank(MArw.AddrCode)) then begin
+    res = 2289;
+    warning = CUr.Code;
+    goto LCreateMailFromIVD;
+  end;
+  MatRowPut(Mailr,1,MArw);
+  if (nonblank(IVMailr.Header)) then begin
+    Mailr.Header = IVMailr.Header & " ";
+  end;
+  Mailr.Header = Mailr.Header;
+  switch (IVr.InvType) begin
+    case 3:
+      Mailr.Header = Mailr.Header & USetStr(1805) & " ";
+    otherwise
+      Mailr.Header = Mailr.Header & USetStr(1803) & " ";
+  end;
+  Mailr.Header = Mailr.Header & IVr.SerNr;
+  LTxtr.Code = IVMailr.FirstTxt;
+  if (ReadFirstMain(LTxtr,1,true)) then begin
+    rwcnt = LineTextCnt(LTxtr);
+    for (i=0;i<rwcnt;i=i+1) begin
+      tstr = LineTextGet(LTxtr,i);
+      LineTextPut(Mailr,LineTextCnt(Mailr),tstr);
+    end;    
+    AddCRToText(Mailr);
+  end;
+  if (additemstobodyf) then begin
+	  rwcnt = MatRowCnt(IVr);
+	  for (i=0;i<rwcnt;i=i+1) begin
+	    MatRowGet(IVr,i,IVrw);
+      if (IVrw.stp==10) then begin 
+        goto LIVHIDDENLine;
+      end;
+	    tstr = IVrw.ArtCode & TAB;
+	    tstr = tstr & ValToString(IVrw.Quant,M4UVal,"",".",0) & TAB;
+	    tstr = tstr & Left(IVrw.Spec,60) & TAB;
+	    tstr = tstr & IVrw.Price & TAB;
+	    if (IVrw.vRebate!=0) then begin
+	      tstr = tstr & "-" & ValToString(IVrw.vRebate,M4UVal,"",".",0) & "%" &  TAB;
+	    end;
+	    tstr = tstr & IVrw.Sum & TAB;
+	    LineTextPut(Mailr,LineTextCnt(Mailr),tstr);
+	  end;
+	end;
+LIVHIDDENLine:;	
+  tstr = TAB & TAB & TAB & "=====";
+  LineTextPut(Mailr,LineTextCnt(Mailr),tstr);
+  tstr = TAB & TAB & TAB & USetStr(2685) & TAB & IVr.Sum1;
+  LineTextPut(Mailr,LineTextCnt(Mailr),tstr);
+  tstr = TAB & TAB & TAB & USetStr(2686) & TAB & IVr.Sum3;
+  LineTextPut(Mailr,LineTextCnt(Mailr),tstr);
+  tstr = TAB & TAB & TAB & USetStr(2687) & TAB & IVr.Sum4;
+  LineTextPut(Mailr,LineTextCnt(Mailr),tstr);
+  GetPayDealText(IVr.PayDeal,IVr.LangCode,tstr);
+  tstr = USetStr(3060) & " " & tstr;
+  LineTextPut(Mailr,LineTextCnt(Mailr),tstr);
+  LTxtr.Code = IVMailr.LastTxt;
+  if (ReadFirstMain(LTxtr,1,true)) then begin
+    rwcnt = LineTextCnt(LTxtr);
+    for (i=0;i<rwcnt;i=i+1) begin
+      tstr = LineTextGet(LTxtr,i);
+      LineTextPut(Mailr,LineTextCnt(Mailr),tstr);
+    end;    
+    AddCRToText(Mailr);
+  end;
+  Mailr.TransDate = CurrentDate;
+  Mailr.SerNr = NextSerNr("MailVc",Mailr.TransDate,-1,false,"");
+  if (RecordStore(Mailr,false)) then begin 
+    CreateRecordLink(Mailr,CurrentCompany,IVr,CurrentCompany);  
+    CreateRecordLink(IVr,CurrentCompany,Mailr,CurrentCompany);  
+  end;
+LCreateMailFromIVD:;  
+  CreateMailFromIVD = res;
+  return;
+end;
+
+global
+function Boolean DoCLInFromIVDRemote(record IVVc IVr,var record CLInVc CLInr)
+begin
+  LongInt clin;
+  record MainCLBlock MainCLRec;
+  string 255 tstr;
+  val frrate,to1,to2,br1,br2;
+  string 10 curncy;
+  Boolean res;
+  row CLInVc CLInrw;
+  Integer rwcnt,err;
+
+  res = true;
+  BlockLoad(MainCLRec);
+  if (MainCLRec.CashCollection!=0) then begin
+    if (IVr.InvType!=2) then begin
+      if (IVr.InvType==3) then begin
+        if (GetCreditedInvoiceType(IVr)!=2) then begin
+          res = true;
+          goto LDoCLInFromIVD;
+        end;
+      end else begin
+        res = true;
+        goto LDoCLInFromIVD;
+      end;
+    end;
+    if (CLInforIVExists(IVr.SerNr,"IVVc",clin)) then begin
+      res = true;
+      goto LDoCLInFromIVD;
+    end;
+  end;
+  RecordNew(CLinr);
+  CLInr.RefStr = USetStr(1150) & "." & IVr.SerNr;
+  CLInr.SerNr = -1;
+  CLInr.NetVal = IVr.Sum1;
+  CLInr.VATVal = IVr.Sum3;
+  CLInr.Total = IVr.Sum4-IVr.TAX1Sum;
+  CLInr.TAX1Sum = IVr.TAX1Sum;
+  if (IVr.InvType==3) then begin
+    CLInr.NetVal = -CLInr.NetVal;
+    CLInr.VATVal = -CLInr.VATVal;
+    CLInr.Total = -CLInr.Total;
+  end;   
+  CLInr.TransDate = CurrentDate;
+  CLInr.PayMode = IVr.PayDeal;
+  if (GetPM(CLInr.PayMode,tstr,tstr)==false) then begin
+    CLInr.PayMode = "";
+  end;  
+  if (blank(CLInr.PayMode)) then begin
+    CLInr.PayMode = MainCLRec.DefPM;
+  end;
+  CLInr.CorspCode = MainCLRec.DefCorspCode;
+  SetSalesMan(tstr,IVr.SalesMan);
+  CLInr.Person = tstr;  
+  CLInr.ARonTR = IVr.ARonTR;
+  CLInr.CUCode = IVr.CustCode;
+  CLInr.CUName = IVr.Addr0;
+  CLInr.Addr0 = IVr.Addr1;
+  CLInr.Addr1 = IVr.Addr2;
+  CLInr.Addr2 = IVr.Addr3;
+  CLInr.Addr3 = IVr.InvAddr3;
+  CLInr.Addr4 = IVr.InvAddr4;
+  CLInr.Comment = IVr.InvComment;
+  CLInr.CurncyCode = IVr.CurncyCode;
+//    CLInr.VATCode = IVr.VATCode;
+  curncy = CLInr.CurncyCode;
+  GetFullCurncyRate(curncy,CLInr.TransDate,frrate,to1,to2,br1,br2);
+  CLInr.CurncyCode = curncy;
+  CLInr.FrRate = frrate;
+  CLInr.ToRateB1 = to1; 
+  CLInr.ToRateB2 = to2;
+  CLInr.BaseRate1 = br1;
+  CLInr.BaseRate2 = br2;
+  if (MainCLRec.CashCollection==0) then begin
+    ClearRow(CLInr,CLInrw,1);
+    CLInrw.Type = 1;
+    CLInrw.TransNr = IVr.SerNr;
+    rwcnt = MatRowCnt(CLInr);
+    MatRowPut(CLInr,rwcnt,CLInrw);
+    err = CLInVc_PasteTransNr(CLInr,rwcnt);
+    if (err!=0) then begin
+      CLInr.FileName = "IVVc";
+      CLInr.FSerNr = IVr.SerNr;  
+    end;
+  end else begin
+    CLInr.FileName = "IVVc";
+    CLInr.FSerNr = IVr.SerNr;  
+  end;
+LDoCLInFromIVD:;
+  DoCLInFromIVDRemote = res;
+  return;
+end;
+
+global
+procedure PastePDInInv(var record IVVc IVp,string prevpaydeal)
+BEGIN
+  record PDVc prevPDr;
+  record PDVc PDr;
+  Integer i,mrwcnt;
+  LongInt restdays;
+  Date td;
+  Integer newInvType,pdtype;
+  LongInt sernr;
+  record ModuleBlock mt;
+  record AccBlock ARAccRec;
+  record CCatVc CCatr;
+  record CUVc CUr;
+
+  if (nonblank(prevpaydeal)) then begin
+    prevPDr.Code = prevpaydeal;
+    if (GetPD(prevPDr)) then begin
+    end;
+  end;
+  PDr.Code = IVp.PayDeal;
+  if (GetPD(PDr)) then begin
+    goto LSkipMainCL;
+  end;
+   IVp.PayDeal = "";
+   goto LPastePDInInv;
+
+LSkipMainCL:;
+    BlockLoad(ARAccRec);
+    IVp.PayDeal = PDr.Code;
+    IVp.pdays = PDr.pdays;
+    IVp.pdvrebt = PDr.pdvrebt;
+    IVp.pdvrebt2 = PDr.pdvrebt2;
+    IVp.pdrdays = PDr.pdrdays;
+    IVp.pdrdays2 = PDr.pdrdays2;
+    IVp.pdComment = "";
+    pdtype = PDr.PDType;
+    if ((blank(IVp.PriceList)) and (nonblank(PDr.PriceList))) then begin
+      IVp.PriceList = PDr.PriceList;
+      IVVc_PastePriceList(IVp);
+    end;  
+L88:;
+    newInvType = pdtype;
+    if (pdtype==5) then begin newInvType = 4; end; // 5 is a manual Interest Inv.
+    if (pdtype==4) then begin newInvType = 1; end;
+    if (pdtype==6) then begin newInvType = 1; end;
+    if (pdtype==0) then begin newInvType = 1; end;
+    if (IVp.InvType<4) or (prevPDr.PDType==5) then begin
+      IVp.InvType = newInvType;
+    end;  
+    if (IVp.InvType==3) then begin
+      BlockLoad(mt);
+      
+      IVp.CredMark = USetStr(1078);
+      IVp.UpdStockFlag = mt.CredUpdStock;
+    end else begin
+      IVp.CredMark = "";
+    end;
+    IVVc_CalculatePayDate(IVp);
+    
+    if (IVp.InvType==2) then begin
+      if (nonblank(PDr.pdCashAcc)) then begin
+        IVp.ARAcc = PDr.pdCashAcc;
+      end else begin
+        if (nonblank(ARAccRec.CashAcc)) then begin
+          IVp.ARAcc = ARAccRec.CashAcc;
+        end;
+      end;
+//    end else begin
+//      IVVc_CalculatePayDate(IVp);
+    end;  
+  if (IVp.InvType==2) then begin
+    if (nonblank(PDr.pdCashAcc)) then begin
+      IVp.ARAcc = PDr.pdCashAcc;
+    end;
+  end else begin
+    if (nonblank(prevpaydeal)) then begin
+      if (prevpaydeal!=IVp.PayDeal) then begin
+        CUr.Code = IVp.CustCode;
+        if (ReadFirstMain(CUr,1,true)) then begin end;
+        CCatr.Code = CUr.CustCat;
+        if (ReadFirstMain(CCatr,1,true)) then begin end;
+        IVp.ARAcc = CCatr.ARAcc;
+        if (blank(IVp.ARAcc)) then begin
+          IVp.ARAcc = ARAccRec.ARAcc;
+        end;    
+      end;
+    end;
+  end;
+LPastePDInInv:;
+  RETURN;
+END;
+
+global
+function Boolean PasteCustInInv(var record IVVc IVr)
+BEGIN
+  record CUVc CUr;
+  Boolean found;
+  
+  CUr.Code = IVr.CustCode;
+  found = ReadFirstMain(CUr,1,true);
+  if (found) then begin
+    IVr.Addr0 = CUr.Name;
+    IVr.Addr1 = CUr.InvAddr0;
+    IVr.Addr2 = CUr.InvAddr1;
+    IVr.Addr3 = CUr.InvAddr2;
+    IVr.InvAddr3 = CUr.InvAddr3;
+    IVr.InvAddr4 = CUr.InvAddr4;
+    IVr.ClientContact = CUr.Person;
+    IVr.CustCat = CUr.CustCat;
+    IVr.Objects = CUr.Objects;
+    IVr.LangCode = CUr.LangCode;
+    IVr.ShipDeal = CUr.ShipDeal;
+    IVr.ShipMode = CUr.ShipMode;
+    if (nonblank(CUr.VATCode)) then begin
+      IVr.CustVATCode = CUr.VATCode;
+    end;  
+    IVr.ShipAddr0 = CUr.Name;
+    IVr.ShipAddr1 = CUr.DelAddr0;
+    IVr.ShipAddr2 = CUr.DelAddr1;
+    IVr.ShipAddr3 = CUr.DelAddr2;
+    IVr.DelAddr3 = CUr.DelAddr3;
+    IVr.DelAddr4 = CUr.DelAddr4;
+    if (nonblank(CUr.CurncyCode)) then begin
+      IVr.CurncyCode = CUr.CurncyCode;
+    end;  
+    IVr.VATNr = CUr.VATNr;
+    IVr.PriceList = CUr.PLCode;
+    IVr.RebCode = CUr.RebCode;
+    IVr.Phone = CUr.Phone;
+    IVr.Fax = CUr.Fax;
+    IVr.Sorting = CUr.Sorting;
+    IVr.NoRemndrFlag = 0;
+    IVr.NoInterestFlag = 0;
+    GetPriceList(IVr.CustCat,IVr.PriceList,IVr.InclVAT);
+    IVr.ExportFlag = CUr.ExportFlag;
+    IVr.PayDeal = CUr.PayDeal;
+    IVr.FiscalFlag = CUr.FiscalFlag;
+    PastePDInInv(IVr,"");
+  end;
+  PasteCustInInv = found;
+  RETURN;
+END;
+
+

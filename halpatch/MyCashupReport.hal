@@ -1,0 +1,1435 @@
+external procedure CashSumup(record CashVc);
+external function LongInt DateDiff(Date,Date);
+external procedure TimeToSeconds(Time,var LongInt);
+external function Boolean IsSessionOpen(string,string,Date,Time);
+external procedure HT2Per(Date, Date , var string);
+external procedure InsertAtPos(Integer,string,string,LongInt,Date,Time,var array string,var array string,var array LongInt,var array Date,var array Time,var Integer);
+external procedure GetPayDealText(string,string,var string);
+external procedure FindTimeOfLastPOSBalance(var Date,var Time,string,string,var val);
+external procedure FillUpAllCashBal(Date,Date,Time,Time,string,string,var array string,var array string,var array LongInt,var array Date,var array Time,var Integer);
+external procedure FillUpAllPOSEvents(Date,Date,Time,Time,string,string,var array string,var array string,var array LongInt,var array Date,var array Time,var Integer);
+external procedure FillUpAllPOSBalance(Date,Date,Time,Time,string,string,var array string,var array string,var array LongInt,var array Date,var array Time,var Integer);
+external procedure FillUpAllCashEvents(Date,Date,Time,Time,string,string,var array string,var array string,var array LongInt,var array Date,var array Time,var Integer);
+external procedure FillUpAllIVCash(Date,Date,Time,Time,Date,string,string,string,var array string,var array val,var array val,var array val,var Integer,Integer,var array string,var array val,var array val,Integer,Boolean,var val,var val,var array string,var array val,Integer,var record SMVc);
+external procedure FillUpAllSLIV(Date,Date,Time,Time,Date,string,string,string,var array string,var array val,var array val,var array val,var Integer,Integer,var array string,var array val,var array val,Integer,Boolean,var val,var val,var array string,var array val,Integer,var record SMVc);
+external procedure FillUpAllRestAccCash(Integer,Date,Date,Time,Time,Date,string,string,string,var array string,var array val,var array val,var array val,var Integer,Integer,var array string,var array val,var array val,Integer,Boolean,var val,var val,var array string,var array val,Integer,var record SMVc);
+external procedure PrintSMRecord(record SMVc,Integer);
+external procedure MyMyPrintSMRecord(record SMVc,Integer,Val);
+external procedure PrintTRRecord(record TRVc,Integer);
+external procedure AddSMRow(record SMVc,Date,string,string,string,string,val,Boolean,Boolean,var val);
+external function Boolean GetPMRow(string,var row PMBlock);
+external function Boolean GetAccName(string,var string,Integer);
+external procedure AddEuroTrRow(record TRVc,string,string,string,string,val,val,val,Boolean,Boolean,var val,Boolean,string,string,string);
+external function Integer GetIntYc(Date);
+external procedure TRSumup(var record TRVc,var val);
+external function string 255 CheckTrans(var record TRVc,Integer,Boolean);
+external procedure SMSumup(var record SMVc);
+external updating procedure SaveTrans(record TRVc);
+external procedure GetFullCurncyRate(var string,Date,var val,var val,var val,var val,var val);
+external procedure DoTheCashupMy(Integer,Integer,Integer,Integer,Integer,Date,Date,Time,Time,string,string,string,Integer,Boolean,Boolean,var val,var val,var val,var array string,var array val,var array val,Integer,var val,var val,var array string,var array val,Integer,var record SMVc,var array string,var array val,var array val,var array val,var Integer,var record SMVc);
+
+
+
+
+
+
+global function val conv(date curdate)
+begin
+val frrate,to1,to2,br1,br2;
+String 5 curcode;
+record POSCurncyBlock PCb;
+
+blockLoad(PCb);
+//curcode="UAH";// Edit ************************** Wednesday, 13 April 2011 12:24:31
+curcode=PCb.CurncyCode;
+GetFullCurncyRate(curcode,curdate,frrate,to1,to2,br1,br2);
+//////StopAlert(to1/frrate);
+conv=frrate/to1;
+return;
+end;
+
+
+Global
+function Boolean BuildPOSTRFromSM(record SMVc SMr,var record TRVc TRr,var Integer pos,var LongInt lastno,var Boolean bookf,var record POSBalanceVc POSBalancer)
+begin
+  row SMVc SMrw;
+  row TRVc TRrw;
+  Integer rwcnt,i;
+  val s,totsum;
+  string 255 tstr;
+  Boolean debf;
+  Boolean res;
+  val temp,baserate1,baserate2;
+  string 10 curncy;
+  
+  res = false;
+  bookf = false;
+  RecordNew(TRr);
+  RecordNew(POSBalancer);
+  POSBalancer.SerNr = -1;
+  curncy = "";
+  GetFullCurncyRate(curncy,TRr.TransDate,temp,temp,temp,baserate1,baserate2);
+  rwcnt = MatRowCnt(SMr);
+  res = false;
+  for (i=pos;i<rwcnt;i=i+1) begin
+    MatRowGet(SMr,i,SMrw);
+    if (SMrw.AccNumber=="BALANCE") then begin
+      if (res) then begin
+        TRr.TransDate = SMrw.TransDate; // Exchange Rate Date
+        TRr.Comment = "POS Balance " & SMrw.Comment;
+        POSBalancer.SerNr = SMrw.Comment;
+        if (ReadFirstMain(POSBalancer,1,true)==false) then begin
+          POSBalancer.SerNr = -1;
+        end;
+        i = rwcnt;
+      end;
+    end;
+    res = true;
+  end;
+  res = false;
+  for (i=pos;i<rwcnt;i=i+1) begin
+    MatRowGet(SMr,i,SMrw);
+    if (SMrw.AccNumber=="BALANCE") then begin
+      if (res) then begin
+        TRr.IntYc = RestAccYc; // GetIntYc(TRr.TransDate);
+        TRr.Number = POSBalancer.SerNr; // NextSerNr("TRVc",TRr.TransDate,lastno,false,"");
+        if (TRr.Number<=lastno) then begin
+          TRr.Number = lastno + 1;
+        end;
+        lastno = TRr.Number;
+        if (CheckTrans(TRr,2,false)=="") then begin end;
+      end;
+      if (MatRowCnt(TRr)>0) then begin
+        bookf = true;
+      end;
+      res = true;
+      i = i + 1;
+      goto LBuildPOSTRFromSM;
+    end;
+    if (GetAccName(SMrw.AccNumber,tstr,60)==false) then begin end;
+    if (SMrw.DebVal!=0) then begin
+      s = SMrw.DebVal;
+      debf = true;
+    end else begin
+      s = SMrw.CredVal;
+      debf = false;      
+    end;
+    //s=round(s,2);
+    //StopAlert("SQW= " & s);
+    AddEuroTrRow(TRr,SMrw.AccNumber,SMrw.Objects,SMrw.VATCode,tstr,s,baserate1,baserate2,true,debf,totsum,false,"","","");
+    res = true;
+  end;
+LBuildPOSTRFromSM:;
+  pos = i;
+  BuildPOSTRFromSM = res;
+  return;
+end;
+
+Global
+procedure PreparePOSSM(var record SMVc SMr)
+begin
+  row SMVc SMrw;
+  Integer rwcnt,i,last;
+  Boolean res;
+  Integer cnt;
+  
+  SMr.TransDate = CurrentDate;
+  rwcnt = MatRowCnt(SMr);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(SMr,i,SMrw);
+    if (SMrw.AccNumber=="BALANCE") then begin
+      if (res) then begin
+        SMrw.AccNumber = "";
+        SMrw.Comment = "-------------- " & USetStr(12582) & " --------------";
+        SMrw.DebVal = BlankVal;
+        SMrw.CredVal = BlankVal;
+        MatRowPut(SMr,i,SMrw);
+        last = i;
+        res = false;
+      end else begin
+        MatRowDelete(SMr,i);
+        i = i - 1;
+      end;
+    end else begin
+      res = true;
+    end;
+  end;
+  if (last>0) then begin
+    while (last<MatRowCnt(SMr)) begin
+      MatRowDelete(SMr,MatRowCnt(SMr)-1);
+    end;
+  end;
+  return;
+end;
+
+Global
+procedure AddToTotIV(string ivcode,val ivval,val ivoutval,var array string aitcodetot,var array val aitsumtot,var array val aitstartbaltot,var array val aitvattot,var Integer aitcnttot,Boolean inperiod)
+begin
+  Integer i;
+  
+  for (i=0;i<aitcnttot;i=i+1) begin
+    if (aitcodetot[i]==ivcode) then begin
+      if (inperiod==false) then begin
+        aitstartbaltot[i] = aitstartbaltot[i] + (ivval - ivoutval);
+      end else begin
+        aitsumtot[i] = aitsumtot[i] + ivval;
+        aitvattot[i] = aitvattot[i] + ivoutval;
+      end;
+      goto LAddToTotIV;
+    end;
+  end;
+  aitcodetot[aitcnttot] = ivcode;
+  aitsumtot[aitcnttot] = 0;
+  aitstartbaltot[aitcnttot] = 0;
+  aitvattot[aitcnttot] = 0;
+  if (inperiod==false) then begin
+    aitstartbaltot[aitcnttot] = ivval - ivoutval;
+  end else begin
+    aitsumtot[aitcnttot] = ivval;
+    aitvattot[aitcnttot] = ivoutval;
+  end;
+  aitcnttot = aitcnttot + 1;
+LAddToTotIV:;  
+  return;
+end;
+
+Global
+procedure SetToTotIV(string ivcode,val ivval,val ivoutval,var array string aitcodetot,var array val aitsumtot,var array val aitstartbaltot,var array val aitvattot,var Integer aitcnttot,Boolean inperiod)
+begin
+  Integer i;
+  Boolean addedf;
+  
+  addedf = false;
+  for (i=0;i<aitcnttot;i=i+1) begin
+    if (aitcodetot[i]==ivcode) then begin
+      if (inperiod==false) then begin
+        aitstartbaltot[i] = ivval - ivoutval;
+        aitsumtot[i] = 0;
+        aitvattot[i] = 0;
+      end else begin
+        aitstartbaltot[i] = 0;
+        aitsumtot[i] = ivval;
+        aitvattot[i] = ivoutval;
+      end;
+      addedf = true;
+    end else begin
+      aitstartbaltot[i] = 0;
+      aitsumtot[i] = 0;
+      aitvattot[i] = 0;
+    end;
+  end;
+  if (addedf==false) then begin
+    aitcodetot[aitcnttot] = ivcode;
+    aitsumtot[aitcnttot] = 0;
+    aitstartbaltot[aitcnttot] = 0;
+    aitvattot[aitcnttot] = 0;
+    if (inperiod==false) then begin
+      aitstartbaltot[aitcnttot] = ivval - ivoutval;
+    end else begin
+      aitsumtot[aitcnttot] = ivval;
+      aitvattot[aitcnttot] = ivoutval;
+    end;
+  aitcnttot = aitcnttot + 1;
+  end;
+LAddToTotIV:;  
+  return;
+end;
+
+Global
+procedure PrintStartBalance(val bal,Date thedat,string machine,string drawer,var Date printedd,Boolean recprinter)
+begin
+
+  if (recprinter==false) then begin
+    StartFormat(15);
+    if (nonblankdate(printedd)) then begin
+      OutString(0,0,USetStr(12569),false);
+    end else begin
+      OutString(0,0,USetStr(12559),false);
+    end;
+    OutDate(2,0,thedat,false);
+//    OutString(3,0,USetStr(12541) & ": " & machine,false);
+//    OutString(4,0,USetStr(12542) & ": " & drawer,false);
+    OutVal(1,0,round(bal*conv(thedat),0),M4Val,true);
+    EndFormat;
+  end else begin
+  end;
+  printedd = thedat;
+  return;
+end;
+
+Global
+procedure PrintPOSBalance(Date dfr,Date dto,Time tfr,Time tto,array string acod,array LongInt aser,array Date adat,array Time atim,Integer pos,Integer detail,var val bal,var Date printedd,Boolean printf,Boolean recprinter,
+                          var array string aitcodetot,var array val aitsumtot,var array val aitstartbaltot,var array val aitvattot,var Integer aitcnttot,record SMVc SMr)
+begin
+  record POSBalanceVc POSBalancer;
+  record DefCashBlock DefCashRec;
+  Boolean locprintf,inperiod;
+  Integer i,rwcnt;
+  val smsum;
+Integer ri,ji;
+  record RestPMBlock REr;
+  record LocalMachineBlock LOCr;
+  row RestPMBlock RErw;
+
+  BlockLoad(DefCashRec);
+  BlockLoad(REr);
+  BlockLoad(LOCr);
+  ri=matrowcnt(REr);
+  for (ji=0;ji<ri;ji=ji+1) begin
+  MatRowGet(REr,ji,RErw);
+  if (RErw.MachineName == LOCr.LocalMachineCode) then begin
+   DefCashRec.DefCashPayMode = RErw.PMCode;
+  end;
+  end;
+  
+  locprintf = printf;
+  inperiod = true;
+  if ((dfr>adat[pos]) or (dto<adat[pos])) then begin
+    inperiod = false;
+  end;
+  if (nonblanktime(tfr)) then begin
+    if (dfr==adat[pos]) then begin
+      if (tfr>atim[pos]) then begin
+        inperiod = false;
+      end;
+    end;
+  end;
+  if (nonblanktime(tto)) then begin
+    if (dto==adat[pos]) then begin
+      if (tto<atim[pos]) then begin
+        inperiod = false;
+      end;
+    end;
+  end;
+  POSBalancer.SerNr = aser[pos];
+  if (ReadFirstMain(POSBalancer,1,true)) then begin
+    if (locprintf and inperiod) then begin
+      if ((printedd!=dfr) and (POSBalancer.TransDate!=dfr)) then begin
+        PrintStartBalance(bal,POSBalancer.TransDate,POSBalancer.MachineName,POSBalancer.Drawer,printedd,recprinter); // dfr
+      end;
+      if (recprinter==false) then begin
+//        Gray_Divider(0,1);
+        StartFormat(15);
+        OutStringID(0,"DblPOSBalance",USetStr(12563),false,POSBalancer.SerNr);
+        OutString(2,0,POSBalancer.TransDate,false); // left(POSBalancer.TransTime,5)
+//        OutString(5,0,"",false);
+        OutVal(1,0,round(POSBalancer.Bal*conv(POSBalancer.TransDate),0),M4Val,true);
+        EndFormat;
+        if (POSBalancer.Bal!=bal) then begin
+          StartFormat(15);
+          OutString(9,0,USetStr(12550),true);
+          OutVal(1,0,round((POSBalancer.Bal-bal)*conv(POSBalancer.TransDate),0),M4Val,true);
+          EndFormat;
+        end;
+//        Black_Divider(0,1);
+        StartFormat(15);
+        EndFormat;
+      end else begin
+      end;
+      printedd = POSBalancer.TransDate;
+    end;
+    bal = POSBalancer.Bal;
+    if (pos==1) then begin
+    //DefCashRec.DefCashPayMode
+      SetToTotIV(DefCashRec.DefCashPayMode,bal,0,aitcodetot,aitsumtot,aitstartbaltot,aitvattot,aitcnttot,false);
+    end;
+    if (POSBalancer.NLTransDone==0 or printf) then begin
+      AddSMRow(SMr,POSBalancer.TransDate,"BALANCE","","",POSBalancer.SerNr,1,false,true,smsum);
+    end else begin
+      rwcnt = MatRowCnt(SMr);
+      for (i=0;i<rwcnt;i=i+1) begin
+        MatRowDelete(SMr,0);
+      end;
+    end;
+  end;
+  return;
+end;
+
+Global
+procedure PrintPOSEvent(Date dfr,Date dto,Time tfr,Time tto,array string acod,array LongInt aser,array Date adat,array Time atim,Integer pos,Integer detail,val bal,var Date printedd,Boolean printf,Boolean recprinter)
+begin
+  record POSEventVc POSEventr;
+  Boolean locprintf;
+
+  locprintf = printf;
+  if ((dfr>adat[pos]) or (dto<adat[pos])) then begin
+    locprintf = false;
+  end;
+  if (nonblanktime(tfr)) then begin
+    if (dfr==adat[pos]) then begin
+      if (tfr>atim[pos]) then begin
+        locprintf = false;
+      end;
+    end;
+  end;
+  if (nonblanktime(tto)) then begin
+    if (dto==adat[pos]) then begin
+      if (tto<atim[pos]) then begin
+        locprintf = false;
+      end;
+    end;
+  end;
+  POSEventr.SerNr = aser[pos];
+  if (ReadFirstMain(POSEventr,1,true)) then begin
+    if (locprintf) then begin
+      if (printedd!=adat[pos]) then begin
+        PrintStartBalance(bal,POSEventr.TransDate,POSEventr.MachineName,POSEventr.Drawer,printedd,recprinter);
+      end;
+      if (recprinter==false) then begin
+        if (POSEventr.Event!=2) then begin
+          StartFormat(15);
+          EndFormat;
+          Black_Divider(0,1);
+        end else begin
+//          Gray_Divider(0,1);
+        end;
+        StartFormat(15);
+        if (POSEventr.Event!=2) then begin
+          OutStringID(0,"DblPOSEvent",USetStr(12543),false,POSEventr.SerNr);
+        end else begin
+          OutStringID(0,"DblPOSEvent",USetStr(12544),false,POSEventr.SerNr);
+        end;
+        OutString(2,0,left(POSEventr.TransTime,5),false);
+        OutString(5,0,"",false);
+        OutVal(1,0,round(bal*conv(POSEventr.TransDate),0),M4Val,true);
+        EndFormat;
+        if (POSEventr.Event==2) then begin
+          Black_Divider(0,1);
+          StartFormat(15);
+          EndFormat;
+        end else begin
+//          Gray_Divider(0,1);
+        end;
+      end else begin
+      end;
+    end;
+  end;
+  return;
+end;
+
+Global
+function val GetPMCodeBal(string pmcode,array string aitcodetot,array val aitsumtot,array val aitvattot,Integer aitcnttot)
+begin
+  val res;
+  Integer i;
+
+  res = 0;
+  for (i=0;i<aitcnttot;i=i+1) begin
+    if (pmcode==aitcodetot[i]) then begin
+      res = res + aitsumtot[i] - aitvattot[i];
+    end;
+  end;
+  GetPMCodeBal = res;
+end;
+
+Global
+procedure PrintCashierBal(Date dfr,Date dto,Time tfr,Time tto,array string acod,array LongInt aser,array Date adat,array Time atim,Integer pos,Integer detail,val bal,var Date printedd,Boolean printf,Boolean recprinter,array string aitcodetot,array val aitsumtot,array val aitvattot,Integer aitcnttot,var record SMVc CountSMr)
+begin
+  record CashierBalVc CashierBalr;
+  row CashierBalVc CashierBalrw;
+  row PMBlock PMrw;
+  row SMVc SMrw;
+  Integer rwcnt,i;
+  Boolean locprintf;
+  LongInt d1,t1;
+  Date the80s;
+  val shouldbe;
+  
+  RecordNew(CountSMr);
+  the80s.year = 1980;
+  the80s.month = 1;
+  the80s.day = 1;
+  locprintf = printf;
+  if ((dfr>adat[pos]) or (dto<adat[pos])) then begin
+    locprintf = false;
+  end;
+  if (nonblanktime(tfr)) then begin
+    if (dfr==adat[pos]) then begin
+      if (tfr>atim[pos]) then begin
+        locprintf = false;
+      end;
+    end;
+  end;
+  if (nonblanktime(tto)) then begin
+    if (dto==adat[pos]) then begin
+      if (tto<atim[pos]) then begin
+        locprintf = false;
+      end;
+    end;
+  end;
+  CashierBalr.UserCode = acod[pos];
+  CashierBalr.TransDate = adat[pos];
+  CashierBalr.TransTime = atim[pos];
+  if (ReadFirstMain(CashierBalr,2,true)) then begin // 3 is possible
+    if (locprintf) then begin
+      if (printedd!=adat[pos]) then begin
+        PrintStartBalance(bal,CashierBalr.TransDate,CashierBalr.MachineName,CashierBalr.Drawer,printedd,recprinter);
+      end;
+      if (recprinter==false) then begin
+        d1 = DateDiff(CashierBalr.TransDate,the80s);
+        TimeToSeconds(CashierBalr.TransTime,t1);
+        if (bal!=0) then begin
+          if (detail==0) then begin // Wierd I know, but we only have sum per payment mode in overview. Fix later....
+              StartFormat(15);
+              OutStringID(0,"DblCashierBal",USetStr(12549),false,CashierBalr.UserCode & "," & d1 & "," & t1);
+              OutString(170,0,USetStr(12536),true);
+              OutString(240,0,USetStr(12537),true);
+              OutString(310,0,USetStr(12550),true);
+              OutVal(1,0,round(bal*conv(CashierBalr.TransDate),0),M4Val,true);
+              EndFormat;
+            Gray_Divider(0,310);
+            rwcnt = MatRowCnt(CashierBalr);
+            for (i=0;i<rwcnt;i=i+1) begin
+              MatRowGet(CashierBalr,i,CashierBalrw);
+              if (GetPMRow(CashierBalrw.PMCode,PMrw)) then begin end;
+              shouldbe = GetPMCodeBal(CashierBalrw.PMCode,aitcodetot,aitsumtot,aitvattot,aitcnttot);
+              ////StopAlert("Sho1 " & shouldbe);
+              StartFormat(15);
+              OutString(20,0,CashierBalrw.PMCode,false);
+              OutString(50,0,PMrw.Comment,false);
+              OutVal(170,0,round(CashierBalrw.Amount*conv(CashierBalr.TransDate),0),M4Val,true);
+              OutVal(240,0,round(shouldbe*conv(CashierBalr.TransDate),0),M4Val,true);
+              OutVal(310,0,round((CashierBalrw.Amount-shouldbe)*conv(CashierBalr.TransDate),0),M4Val,true);
+              OutVal(1,0,round(bal*conv(CashierBalr.TransDate),0),M4Val,true);
+              EndFormat;
+              SMrw.Objects = CashierBalrw.PMCode;
+              SMrw.Comment = PMrw.Comment;
+              SMrw.DebVal = CashierBalrw.Amount;
+              SMrw.CredVal = shouldbe;
+////StopAlert("Sho2 " & shouldbe);
+              MatRowPut(CountSMr,MatRowCnt(CountSMr),SMrw);
+            end;
+            Gray_Divider(0,310);
+          end else begin // Code needed
+            StartFormat(15);
+            OutStringID(0,"DblCashierBal",USetStr(12549),false,CashierBalr.UserCode & "," & d1 & "," & t1);
+            OutString(2,0,left(CashierBalr.TransTime,5),false);
+            if (nonblank(CashierBalr.UserName)) then begin
+              OutString(5,0,CashierBalr.UserName,false);
+            end else begin
+              OutString(5,0,CashierBalr.UserCode,false);
+            end;
+            OutVal(1,0,round(CashierBalr.EndBal*conv(CashierBalr.TransDate),0),M4Val,true);
+            EndFormat;
+            StartFormat(15);
+            OutString(9,0,USetStr(12550),true);
+            OutVal(1,0,round((CashierBalr.EndBal-bal)*conv(CashierBalr.TransDate),0),M4Val,true);
+            EndFormat;
+          end;
+        end;
+      end;
+    end else begin
+      if (printf==false) then begin
+        rwcnt = MatRowCnt(CashierBalr);
+        for (i=0;i<rwcnt;i=i+1) begin
+          MatRowGet(CashierBalr,i,CashierBalrw);
+          if (GetPMRow(CashierBalrw.PMCode,PMrw)) then begin end;
+          shouldbe = GetPMCodeBal(CashierBalrw.PMCode,aitcodetot,aitsumtot,aitvattot,aitcnttot);
+          
+          SMrw.Objects = CashierBalrw.PMCode;
+          SMrw.Comment = PMrw.Comment;
+          SMrw.DebVal = CashierBalrw.Amount;
+          SMrw.CredVal = shouldbe;
+          //////StopAlert("Sho3 " & shouldbe);
+          MatRowPut(CountSMr,MatRowCnt(CountSMr),SMrw);
+        end;
+      end;
+    end;
+  end;
+  return;
+end;
+
+Global
+procedure PrintCashInOut(Date dfr,Date dto,Time tfr,Time tto,array string acod,array LongInt aser,array Date adat,array Time atim,Integer pos,
+                         Integer detail,var val bal,var val totin,var val totout,var Date printedd,Boolean printf,Boolean recprinter,
+                         var array string aitcodetot,var array val aitsumtot,var array val aitstartbaltot,var array val aitvattot,var Integer aitcnttot,record SMVc SMr)
+begin
+  record CashVc Cashr;
+  row CashVc Cashrw;
+  Integer rwcnt,i;
+  Boolean locprintf;
+  row SMVc SMrw;
+  Boolean dbflag,inperiod;
+  val smsum;
+  string 40 CredAcc;
+  row PMBlock PMrw;
+  string 255 tstr;
+  val ds,cs;
+
+  locprintf = printf;
+  inperiod = true;
+  if ((dfr>adat[pos]) or (dto<adat[pos])) then begin
+    inperiod = false;
+  end;
+  if (nonblanktime(tfr)) then begin
+    if (dfr==adat[pos]) then begin
+      if (tfr>atim[pos]) then begin
+        inperiod = false;
+      end;
+    end;
+  end;
+  if (nonblanktime(tto)) then begin
+    if (dto==adat[pos]) then begin
+      if (tto<atim[pos]) then begin
+        inperiod = false;
+      end;
+    end;
+  end;
+  Cashr.SerNr = aser[pos];
+  if (ReadFirstMain(Cashr,1,true)) then begin
+    if (locprintf and inperiod) then begin
+      if (printedd!=adat[pos]) then begin
+        PrintStartBalance(bal,Cashr.TransDate,Cashr.MachineName,Cashr.Drawer,printedd,recprinter);
+      end;
+    end;
+    rwcnt = MatRowCnt(Cashr);
+    for (i=0;i<rwcnt;i=i+1) begin
+      MatRowGet(Cashr,i,Cashrw);
+      switch (Cashr.Event) begin
+        case 0:
+          bal = bal - Cashrw.Amount;
+          if (inperiod) then begin
+            totout = totout + Cashrw.Amount;
+          end;
+          cs = Cashrw.Amount;
+          ds = 0;
+        case 1:
+          bal = bal + Cashrw.Amount;
+          if (inperiod) then begin
+            totin = totin + Cashrw.Amount;
+          end;
+          cs = 0;
+          ds = Cashrw.Amount;
+        case 2:
+          bal = bal - Cashrw.Amount;
+          if (inperiod) then begin
+            totout = totout + Cashrw.Amount;
+          end;
+          cs = Cashrw.Amount;
+          ds = 0;
+      end;
+      
+      AddToTotIV(Cashrw.PMCode,ds,cs,aitcodetot,aitsumtot,aitstartbaltot,aitvattot,aitcnttot,inperiod);
+      if (locprintf and inperiod) then begin
+        if (recprinter==false) then begin
+          if (GetPMRow(Cashrw.PMCode,PMrw)) then begin end;
+          StartFormat(15);
+          switch (Cashr.Event) begin
+            case 0:
+              OutStringID(0,"DblCash",USetStr(12555),false,Cashr.SerNr);
+              OutString(2,0,Cashrw.PMCode,false);
+              OutString(5,0,PMrw.Comment,false);
+              OutVal(9,0,round(Cashrw.Amount*conv(Cashr.TransDate),0),M4Val,true);
+              OutVal(1,0,round(bal*conv(Cashr.TransDate),0),M4Val,true);
+            case 1:
+              OutStringID(0,"DblCash",USetStr(12554),false,Cashr.SerNr);
+              OutString(2,0,Cashrw.PMCode,false);
+              OutString(5,0,PMrw.Comment,false);
+              OutVal(8,0,round(Cashrw.Amount*conv(Cashr.TransDate),0),M4Val,true);
+              OutVal(1,0,round(bal*conv(Cashr.TransDate),0),M4Val,true);
+            case 2:
+              OutStringID(0,"DblCash",USetStr(12538),false,Cashr.SerNr);
+              OutString(2,0,Cashrw.PMCode,false);
+              OutString(5,0,PMrw.Comment,false);
+              OutVal(9,0,round(Cashrw.Amount*conv(Cashr.TransDate),0),M4Val,true);
+              OutVal(1,0,round(bal*conv(Cashr.TransDate),0),M4Val,true);
+          end;
+          EndFormat;
+        end;
+      end;
+    end;
+    if ((Cashr.Event==0) or (Cashr.Event==2)) then begin
+      dbflag = true;
+    end else begin
+      dbflag = false;
+    end;
+    rwcnt = MatRowCnt(Cashr);
+    for (i=0;i<rwcnt;i=i+1) begin
+      MatRowGet(Cashr,i,Cashrw);
+      if (GetPMRow(Cashrw.PMCode,PMrw)) then begin end;
+      CredAcc = Cashr.CredAcc;
+      if (blank(CredAcc)) then begin
+        CredAcc = PMrw.BackOfficeAcc;
+      end;
+      if (nonblank(CredAcc)) then begin
+      //////StopAlert("z1 "&CredAcc);
+        AddSMRow(SMr,SMr.TransDate,CredAcc,"","",Cashr.Comment,Cashrw.Amount,false,dbflag,smsum);
+      end;
+      if (GetAccName(PMrw.AccNr,tstr,60)==false) then begin end;
+     // ////StopAlert("z2"&PMrw.AccNr);
+      AddSMRow(SMr,SMr.TransDate,PMrw.AccNr,PMrw.Objects,"",tstr,Cashrw.Amount,false,!dbflag,smsum);
+    end;
+  end;
+  return;
+end;
+
+Global
+procedure PrintIVArray(string ivtype,Date thedat,string machine,string drawer,string paymode,Date frdat,Time frtim,Date todat,Time totim,array string aivcode,array val aivval,array val aivoutval,array val atipsum,Integer aivcnt,
+                       var val bal,var val totin,var val totout,var Date printedd,Boolean inperiod,Boolean printf,Boolean recprinter,Integer detail,string dblclk,
+                       var array string aitcodetot,var array val aitsumtot,var array val aitstartbaltot,var array val aitvattot,var Integer aitcnttot)
+begin
+  Integer i;
+  string 200 pmcomment;
+  LongInt d1,d2,t1,t2;
+  Date the80s;
+  record CashierDefBlock CDb;
+  
+  BlockLoad(CDb);
+  the80s.year = 1980;
+  the80s.month = 1;
+  the80s.day = 1;
+  for (i=0;i<aivcnt;i=i+1) begin
+    if (printf and inperiod) then begin
+      if (printedd!=thedat) then begin
+        PrintStartBalance(bal,thedat,machine,drawer,printedd,recprinter);
+      end;
+    end;
+    bal = bal + aivval[i];
+    bal = bal - aivoutval[i];
+    if (inperiod) then begin
+      totin = totin + aivval[i];
+      totout = totout + aivoutval[i];
+    end;
+    if (inperiod and printf) then begin
+      if (recprinter==false) then begin
+        d1 = DateDiff(frdat,the80s);
+        d2 = DateDiff(todat,the80s);
+        TimeToSeconds(frtim,t1);
+        TimeToSeconds(totim,t2);
+        GetPayDealText(aivcode[i],"",pmcomment);
+        StartFormat(15);
+        if (detail!=0) then begin
+          OutString(0,0,ivtype,false);
+          OutString(2,dblclk,aivcode[i],false);
+          OutString(5,0,"",false);
+        end else begin
+          OutStringID(0,"DblPrintDetPOS",ivtype,false,"" & d1 & "," & d2 & "," & t1 & "," & t2 & "," & aivcode[i]);
+          OutString(2,0,aivcode[i],false);
+          OutString(5,0,pmcomment,false);
+        end;
+        OutVal(8,0,round(aivval[i]*conv(CurrentDate),0),M4Val,true);
+        OutVal(9,0,round(aivoutval[i]*conv(CurrentDate),0),M4Val,true);
+        OutVal(1,0,round(bal*conv(CurrentDate),0),M4Val,true);
+        EndFormat;
+      end else begin
+      end;
+    end;
+    AddToTotIV(aivcode[i],aivval[i],aivoutval[i],aitcodetot,aitsumtot,aitstartbaltot,aitvattot,aitcnttot,inperiod);
+  end;
+  if (CDb.InclTipInCashup) then begin
+    the80s.year = 1980;
+    the80s.month = 1;
+    the80s.day = 1;
+    for (i=0;i<aivcnt;i=i+1) begin
+      bal = bal + atipsum[i];
+      totin = totin + atipsum[i];
+      if (printf) then begin
+        if (recprinter==false) then begin
+          if (atipsum[i]>0) then begin
+            d1 = DateDiff(frdat,the80s);
+            d2 = DateDiff(todat,the80s);
+            TimeToSeconds(frtim,t1);
+            TimeToSeconds(totim,t2);
+            GetPayDealText(aivcode[i],"",pmcomment);
+            StartFormat(15);
+            OutString(0,0,"Tip",false);
+            OutString(2,0,aivcode[i],false);
+            if (detail!=0) then begin
+              OutString(5,0,"",false);
+            end else begin
+              OutString(5,0,pmcomment,false);
+            end;
+            OutVal(8,0,round(atipsum[i]*conv(CurrentDate),0),M4Val,true);
+            OutVal(9,0,0,M4Val,true);
+            OutVal(1,0,round(bal*conv(CurrentDate),0),M4Val,true);
+            EndFormat;
+          end;
+        end else begin
+        end;
+      end;
+      AddToTotIV(aivcode[i],atipsum[i],0,aitcodetot,aitsumtot,aitstartbaltot,aitvattot,aitcnttot,inperiod);
+    end;
+  end;
+  return;
+end;
+
+Global
+procedure PrintTotPayModes(array string aitcodetot,array val aitsumtot,array val aitstartbaltot,array val aitvattot,Integer aitcnttot,Boolean recprinter)
+begin
+  Integer i;
+  string 255 pmcomment;
+  val bal;
+  
+  StartFormat(15);
+  EndFormat;
+  StartFormat(15);
+  OutString(0,0,USetStr(12539),false);
+  OutString(5,0,USetStr(12547),false);
+  OutString(7,0,USetStr(12559),true);
+  OutString(8,0,USetStr(12554),true);
+  OutString(9,0,USetStr(12555),true);
+  OutString(1,0,USetStr(12560),true);
+  EndFormat;
+  bal = 0;
+  Gray_Divider(0,1);
+  for (i=0;i<aitcnttot;i=i+1) begin
+    bal = bal + aitstartbaltot[i] + aitsumtot[i] - aitvattot[i];
+    if (recprinter==false) then begin
+      GetPayDealText(aitcodetot[i],"",pmcomment);
+      StartFormat(15);
+      OutString(2,"",aitcodetot[i],false);
+      OutString(5,0,pmcomment,false);
+      OutVal(7,0,round(aitstartbaltot[i]*conv(CurrentDate),0),M4Val,true);
+      OutVal(8,0,round(aitsumtot[i]*conv(CurrentDate),0),M4Val,true);
+      OutVal(9,0,round(aitvattot[i]*conv(CurrentDate),0),M4Val,true);
+      OutVal(1,0,round((aitstartbaltot[i] + aitsumtot[i] - aitvattot[i])*conv(CurrentDate),0),M4Val,true);
+      EndFormat;
+    end;
+  end;
+  Gray_Divider(230,1);
+  StartFormat(15);
+  OutVal(1,0,round(bal*conv(CurrentDate),0),M4Val,true);
+  EndFormat;
+  Gray_Divider(0,1);
+  return;
+end;
+
+Global
+procedure ClearIVArray(var array string aivcode,var array val aivval,var array val aivoutval,var array val atipsum,var Integer aivcnt)
+begin
+  Integer i;
+  
+  for (i=0;i<aivcnt;i=i+1) begin
+    aivcode[i] = "";
+    aivval[i] = 0;
+    aivoutval[i] = 0;
+    atipsum[i] = 0;
+  end;
+  aivcnt = 0;
+  return;
+end;
+
+Global
+function Boolean FillAndPrintRestAccCash(Integer detail,Integer onrooms,Date sStartDate,Date sEndDate,Time sStartTime,Time sEndTime,string machine,string drawer,string paymode,Date frdat,Time frtim,Date todat,Time totim,var val bal,var val totin,var val totout,var Date printedd,Boolean printf,Boolean recprinter,
+                                  var array string aitcode,var array val aitsum,var array val aitvat,Integer aitcnt,var val totsum,var val totvat,var array string avatcode,var array val avatsum,Integer avatcnt,record SMVc SMr,
+                                  var array string aitcodetot,var array val aitsumtot,var array val aitstartbaltot,var array val aitvattot,var Integer aitcnttot)
+begin
+  array string 20 aivcode;
+  array val aivval;
+  array val aivoutval;
+  array val atipsum;
+  Integer aivcnt;
+  Boolean inperiod,addtoit;
+  Time bltim;
+  Time thetim;
+  Boolean res;
+
+  res = false;
+  if ((sStartDate>frdat) and (sStartDate<todat)) then begin // Used to be sStartDate<=todat
+    ClearIVArray(aivcode,aivval,aivoutval,atipsum,aivcnt);
+    inperiod = false;
+    addtoit = false;
+    if (nonblanktime(sStartTime)) then begin
+      thetim = sStartTime;
+    end else begin
+      thetim = frtim;
+    end;
+//    FillUpAllRestAccCash(onrooms,frdat,AddDay(sStartDate,-1),frtim,bltim,sEndDate,machine,drawer,paymode,aivcode,aivval,aivoutval,atipsum,aivcnt,detail,aitcode,aitsum,aitvat,aitcnt,addtoit,totsum,totvat,avatcode,avatsum,avatcnt,SMr); // Add up before period
+    FillUpAllRestAccCash(onrooms,frdat,sStartDate,frtim,thetim,sEndDate,machine,drawer,paymode,aivcode,aivval,aivoutval,atipsum,aivcnt,detail,aitcode,aitsum,aitvat,aitcnt,addtoit,totsum,totvat,avatcode,avatsum,avatcnt,SMr); // Add up before period
+    PrintIVArray(USetStr(12567),frdat,machine,drawer,paymode,frdat,frtim,todat,totim,aivcode,aivval,aivoutval,atipsum,aivcnt,bal,totin,totout,printedd,inperiod,printf,recprinter,detail,"DblRestAccVc",aitcodetot,aitsumtot,aitstartbaltot,aitvattot,aitcnttot);
+    ClearIVArray(aivcode,aivval,aivoutval,atipsum,aivcnt);
+    inperiod = true;
+    addtoit = true;
+//    FillUpAllRestAccCash(onrooms,sStartDate,todat,bltim,totim,sEndDate,machine,drawer,paymode,aivcode,aivval,aivoutval,atipsum,aivcnt,detail,aitcode,aitsum,aitvat,aitcnt,addtoit,totsum,totvat,avatcode,avatsum,avatcnt,SMr); // Add up and print inside period
+    FillUpAllRestAccCash(onrooms,sStartDate,todat,thetim,totim,sEndDate,machine,drawer,paymode,aivcode,aivval,aivoutval,atipsum,aivcnt,detail,aitcode,aitsum,aitvat,aitcnt,addtoit,totsum,totvat,avatcode,avatsum,avatcnt,SMr); // Add up and print inside period
+    PrintIVArray(USetStr(12567),sStartDate,machine,drawer,paymode,frdat,frtim,todat,totim,aivcode,aivval,aivoutval,atipsum,aivcnt,bal,totin,totout,printedd,inperiod,printf,recprinter,detail,"DblRestAccVc",aitcodetot,aitsumtot,aitstartbaltot,aitvattot,aitcnttot);
+  end else begin
+    ClearIVArray(aivcode,aivval,aivoutval,atipsum,aivcnt);
+    if (sStartDate>todat) then begin
+      inperiod = false; // This period before selection
+      addtoit = false;
+    end else begin
+      inperiod = true; // This period during selection
+      addtoit = true;
+    end;
+    FillUpAllRestAccCash(onrooms,frdat,todat,frtim,totim,sEndDate,machine,drawer,paymode,aivcode,aivval,aivoutval,atipsum,aivcnt,detail,aitcode,aitsum,aitvat,aitcnt,addtoit,totsum,totvat,avatcode,avatsum,avatcnt,SMr);
+    PrintIVArray(USetStr(12567),frdat,machine,drawer,paymode,frdat,frtim,todat,totim,aivcode,aivval,aivoutval,atipsum,aivcnt,bal,totin,totout,printedd,inperiod,printf,recprinter,detail,"DblRestAccVc",aitcodetot,aitsumtot,aitstartbaltot,aitvattot,aitcnttot);
+  end;
+  if (aivcnt>0) then begin
+    res = true;
+  end;
+  FillAndPrintRestAccCash = res;
+  return;
+end;
+
+Global
+function Boolean FillAndPrintIVCash(Integer detail,Date sStartDate,Date sEndDate,Time sStartTime,Time sEndTime,string machine,string drawer,string paymode,Date frdat,Time frtim,Date todat,Time totim,var val bal,var val totin,var val totout,var Date printedd,Boolean printf,Boolean recprinter,
+                                    var array string aitcode,var array val aitsum,var array val aitvat,Integer aitcnt,var val totsum,var val totvat,var array string avatcode,var array val avatsum,Integer avatcnt,record SMVc SMr,
+                                    var array string aitcodetot,var array val aitsumtot,var array val aitstartbaltot,var array val aitvattot,var Integer aitcnttot)
+begin
+  array string 20 aivcode;
+  array val aivval;
+  array val aivoutval;
+  array val atipsum;
+  Integer aivcnt;
+  Boolean inperiod,addtoit;
+  Time bltim;
+  Time thetim;
+  Boolean res;
+
+  res = false;
+  if ((sStartDate>frdat) and (sStartDate<todat)) then begin // Used to be sStartDate<=todat
+    ClearIVArray(aivcode,aivval,aivoutval,atipsum,aivcnt);
+    inperiod = false;
+    addtoit = false;
+    if (nonblanktime(sStartTime)) then begin
+      thetim = sStartTime;
+    end else begin
+      thetim = frtim;
+    end;
+//    FillUpAllIVCash(frdat,AddDay(sStartDate,-1),frtim,bltim,sEndDate,machine,drawer,paymode,aivcode,aivval,aivoutval,atipsum,aivcnt,detail,aitcode,aitsum,aitvat,aitcnt,addtoit,totsum,totvat,avatcode,avatsum,avatcnt,SMr); // Add up before period
+   ////StopAlert("F1");
+   FillUpAllIVCash(frdat,sStartDate,frtim,thetim,sEndDate,machine,drawer,paymode,aivcode,aivval,aivoutval,atipsum,aivcnt,detail,aitcode,aitsum,aitvat,aitcnt,addtoit,totsum,totvat,avatcode,avatsum,avatcnt,SMr); // Add up before period
+    PrintIVArray(USetStr(12566),frdat,machine,drawer,paymode,frdat,frtim,todat,totim,aivcode,aivval,aivoutval,atipsum,aivcnt,bal,totin,totout,printedd,inperiod,printf,recprinter,detail,"DblIVCash",aitcodetot,aitsumtot,aitstartbaltot,aitvattot,aitcnttot);
+    ClearIVArray(aivcode,aivval,aivoutval,atipsum,aivcnt);
+    inperiod = true;
+    addtoit = true;
+//    FillUpAllIVCash(sStartDate,todat,bltim,totim,sEndDate,machine,drawer,paymode,aivcode,aivval,aivoutval,atipsum,aivcnt,detail,aitcode,aitsum,aitvat,aitcnt,addtoit,totsum,totvat,avatcode,avatsum,avatcnt,SMr); // Add up and print inside period
+   ////StopAlert("F2");
+   FillUpAllIVCash(sStartDate,todat,thetim,totim,sEndDate,machine,drawer,paymode,aivcode,aivval,aivoutval,atipsum,aivcnt,detail,aitcode,aitsum,aitvat,aitcnt,addtoit,totsum,totvat,avatcode,avatsum,avatcnt,SMr); // Add up and print inside period
+    PrintIVArray(USetStr(12566),sStartDate,machine,drawer,paymode,frdat,frtim,todat,totim,aivcode,aivval,aivoutval,atipsum,aivcnt,bal,totin,totout,printedd,inperiod,printf,recprinter,detail,"DblIVCash",aitcodetot,aitsumtot,aitstartbaltot,aitvattot,aitcnttot);
+  end else begin
+    ClearIVArray(aivcode,aivval,aivoutval,atipsum,aivcnt);
+    if (sStartDate>todat) then begin
+      inperiod = false; // This period before selection
+      addtoit = false;
+    end else begin
+      inperiod = true; // This period during selection
+      addtoit = true;
+    end;
+    ////StopAlert("F3");
+    FillUpAllIVCash(frdat,todat,frtim,totim,sEndDate,machine,drawer,paymode,aivcode,aivval,aivoutval,atipsum,aivcnt,detail,aitcode,aitsum,aitvat,aitcnt,addtoit,totsum,totvat,avatcode,avatsum,avatcnt,SMr);
+    PrintIVArray(USetStr(12566),frdat,machine,drawer,paymode,frdat,frtim,todat,totim,aivcode,aivval,aivoutval,atipsum,aivcnt,bal,totin,totout,printedd,inperiod,printf,recprinter,detail,"DblIVCash",aitcodetot,aitsumtot,aitstartbaltot,aitvattot,aitcnttot);
+  end;
+  if (aivcnt>0) then begin
+    res = true;
+  end;
+  FillAndPrintIVCash = res;
+  return;
+end;
+
+Global
+function Boolean FillAndPrintSLIV(Integer detail,Date sStartDate,Date sEndDate,Time sStartTime,Time sEndTime,string machine,string drawer,string paymode,Date frdat,Time frtim,Date todat,Time totim,var val bal,var val totin,var val totout,var Date printedd,Boolean printf,Boolean recprinter,
+                                  var array string aitcode,var array val aitsum,var array val aitvat,Integer aitcnt,var val totsum,var val totvat,var array string avatcode,var array val avatsum,Integer avatcnt,record SMVc SMr,
+                                  var array string aitcodetot,var array val aitsumtot,var array val aitstartbaltot,var array val aitvattot,var Integer aitcnttot)
+begin
+  array string 20 aivcode;
+  array val aivval;
+  array val aivoutval;
+  array val atipsum;
+  Integer aivcnt;
+  Boolean inperiod,addtoit;
+  Time bltim;
+  Time thetim;
+  Boolean res;
+
+  res = false;
+  if ((sStartDate>frdat) and (sStartDate<todat)) then begin // Used to be sStartDate<=todat
+    ClearIVArray(aivcode,aivval,aivoutval,atipsum,aivcnt);
+    inperiod = false;
+    addtoit = false;
+    if (nonblanktime(sStartTime)) then begin
+      thetim = sStartTime;
+    end else begin
+      thetim = frtim;
+    end;
+//    FillUpAllSLIV(frdat,AddDay(sStartDate,-1),frtim,bltim,sEndDate,machine,drawer,paymode,aivcode,aivval,aivoutval,atipsum,aivcnt,detail,aitcode,aitsum,aitvat,aitcnt,addtoit,totsum,totvat,avatcode,avatsum,avatcnt,SMr); // Add up before period
+    FillUpAllSLIV(frdat,sStartDate,frtim,thetim,sEndDate,machine,drawer,paymode,aivcode,aivval,aivoutval,atipsum,aivcnt,detail,aitcode,aitsum,aitvat,aitcnt,addtoit,totsum,totvat,avatcode,avatsum,avatcnt,SMr); // Add up before period
+    PrintIVArray(USetStr(12568),frdat,machine,drawer,paymode,frdat,frtim,todat,totim,aivcode,aivval,aivoutval,atipsum,aivcnt,bal,totin,totout,printedd,inperiod,printf,recprinter,detail,"DblIVVc",aitcodetot,aitsumtot,aitstartbaltot,aitvattot,aitcnttot);
+    ClearIVArray(aivcode,aivval,aivoutval,atipsum,aivcnt);
+    inperiod = true;
+    addtoit = true;
+//    FillUpAllSLIV(sStartDate,todat,bltim,totim,sEndDate,machine,drawer,paymode,aivcode,aivval,aivoutval,atipsum,aivcnt,detail,aitcode,aitsum,aitvat,aitcnt,addtoit,totsum,totvat,avatcode,avatsum,avatcnt,SMr); // Add up and print inside period
+    FillUpAllSLIV(sStartDate,todat,thetim,totim,sEndDate,machine,drawer,paymode,aivcode,aivval,aivoutval,atipsum,aivcnt,detail,aitcode,aitsum,aitvat,aitcnt,addtoit,totsum,totvat,avatcode,avatsum,avatcnt,SMr); // Add up and print inside period
+    PrintIVArray(USetStr(12568),sStartDate,machine,drawer,paymode,frdat,frtim,todat,totim,aivcode,aivval,aivoutval,atipsum,aivcnt,bal,totin,totout,printedd,inperiod,printf,recprinter,detail,"DblIVVc",aitcodetot,aitsumtot,aitstartbaltot,aitvattot,aitcnttot);
+  end else begin
+    ClearIVArray(aivcode,aivval,aivoutval,atipsum,aivcnt);
+    if (sStartDate>todat) then begin
+      inperiod = false; // This period before selection
+      addtoit = false;
+    end else begin
+      inperiod = true; // This period during selection
+      addtoit = true;
+    end;
+    FillUpAllSLIV(frdat,todat,frtim,totim,sEndDate,machine,drawer,paymode,aivcode,aivval,aivoutval,atipsum,aivcnt,detail,aitcode,aitsum,aitvat,aitcnt,addtoit,totsum,totvat,avatcode,avatsum,avatcnt,SMr);
+    PrintIVArray(USetStr(12568),frdat,machine,drawer,paymode,frdat,frtim,todat,totim,aivcode,aivval,aivoutval,atipsum,aivcnt,bal,totin,totout,printedd,inperiod,printf,recprinter,detail,"DblIVVc",aitcodetot,aitsumtot,aitstartbaltot,aitvattot,aitcnttot);
+  end;
+  if (aivcnt>0) then begin
+    res = true;
+  end;
+  FillAndPrintSLIV = res;
+  return;
+end;
+
+global
+procedure DoTheCashup(Integer detail,Integer barinv,Integer posinv,Integer slinv,Integer onrooms,Date sStartDate,Date sEndDate,Time stfr,Time stto,string machine,string drawer,string pmcode,Integer typ,Boolean printf,Boolean recprinter,
+                      var val bal,var val totin,var val totout,var array string aitcode,var array val aitsum,var array val aitvat,Integer aitcnt,var val totsum,var val totvat,var array string avatcode,var array val avatsum,Integer avatcnt,var record SMVc SMr,
+                      var array string aitcodetot,var array val aitsumtot,var array val aitstartbaltot,var array val aitvattot,var Integer aitcnttot,var record SMVc CountSMr)
+begin
+  array string 20 avcn;
+  array string 20 acod;
+  array Date adat;
+  array Time atim;
+  array LongInt aser;
+  Date printedd;
+  Integer acnt,i;
+  Date dfr,dto,bldat;
+  Time tfr,tto,bltim;
+
+//////StopAlert("chupacabra");
+  RecordNew(SMr);
+  SMr.TransDate = bldat;
+  acnt = 0;
+  bal = 0;
+  totin = 0;
+  totout = 0;
+  dfr = sStartDate;
+  dto = sEndDate;
+  tfr = stfr;
+  tto = stto;
+
+// Fill up arrays, if pmcode is filled nothing is filled up, then we are only interested in actual entries
+  FindTimeOfLastPOSBalance(dfr,tfr,machine,drawer,bal);
+  if (blank(pmcode)) then begin
+    FillUpAllCashEvents(dfr,dto,tfr,tto,machine,drawer,avcn,acod,aser,adat,atim,acnt);
+    FillUpAllCashBal   (dfr,dto,tfr,tto,machine,drawer,avcn,acod,aser,adat,atim,acnt);
+    FillUpAllPOSEvents (dfr,dto,tfr,tto,machine,drawer,avcn,acod,aser,adat,atim,acnt);
+    FillUpAllPOSBalance(dfr,dto,tfr,tto,machine,drawer,avcn,acod,aser,adat,atim,acnt);
+  end;
+
+// I need one empty first and one last, due to some comparisons beeing made in the code
+  InsertAtPos(0,"BlankLine","",-1,dfr,tfr,avcn,acod,aser,adat,atim,acnt);
+  InsertAtPos(acnt,"BlankLine","",-1,sEndDate,tto,avcn,acod,aser,adat,atim,acnt);
+  dfr = sStartDate;
+  dto = sEndDate;
+  tfr = stfr;
+  tto = stto;
+//StopAlert("Begin");
+// Loops through arrays and print or calculate
+  for (i=0;i<acnt-1;i=i+1) begin
+      //////StopAlert("avcn[i] "&avcn[i]);
+    switch (avcn[i]) begin
+
+      case "POSBalanceVc":
+        PrintPOSBalance(dfr,dto,tfr,tto,acod,aser,adat,atim,i,0,bal,printedd,printf,recprinter,aitcodetot,aitsumtot,aitstartbaltot,aitvattot,aitcnttot,SMr);
+        RecordNew(CountSMr);
+      case "POSEventVc":
+        PrintPOSEvent  (dfr,dto,tfr,tto,acod,aser,adat,atim,i,0,bal,printedd,printf,recprinter);
+      case "CashierBalVc":
+        PrintCashierBal(dfr,dto,tfr,tto,acod,aser,adat,atim,i,0,bal,printedd,printf,recprinter,aitcodetot,aitsumtot,aitvattot,aitcnttot,CountSMr);
+      case "CashVc":
+        PrintCashInOut (dfr,dto,tfr,tto,acod,aser,adat,atim,i,0,bal,totin,totout,printedd,printf,recprinter,aitcodetot,aitsumtot,aitstartbaltot,aitvattot,aitcnttot,SMr);
+        RecordNew(CountSMr);
+      case "BlankLine":
+    end;
+
+// Between each time frame, find invoices that can be printed between this and next position
+    if (barinv) then begin
+      if (FillAndPrintRestAccCash(detail,onrooms,dfr,dto,tfr,tto,machine,drawer,pmcode,adat[i],atim[i],adat[i+1],atim[i+1],bal,totin,totout,printedd,printf,recprinter,aitcode,aitsum,aitvat,aitcnt,totsum,totvat,avatcode,avatsum,avatcnt,SMr,aitcodetot,aitsumtot,aitstartbaltot,aitvattot,aitcnttot)) then begin
+        RecordNew(CountSMr);
+      end;
+    end;
+    if (posinv) then begin
+  ////StopAlert("uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu");
+      if (FillAndPrintIVCash(detail,dfr,dto,tfr,tto,machine,drawer,pmcode,adat[i],atim[i],adat[i+1],atim[i+1],bal,totin,totout,printedd,printf,recprinter,aitcode,aitsum,aitvat,aitcnt,totsum,totvat,avatcode,avatsum,avatcnt,SMr,aitcodetot,aitsumtot,aitstartbaltot,aitvattot,aitcnttot)) then begin
+          //StopAlert(bal & totin & totout & totsum);
+        RecordNew(CountSMr);
+      end;
+    end;
+    if (slinv) then begin
+      if (FillAndPrintSLIV(detail,dfr,dto,tfr,tto,machine,drawer,pmcode,adat[i],atim[i],adat[i+1],atim[i+1],bal,totin,totout,printedd,printf,recprinter,aitcode,aitsum,aitvat,aitcnt,totsum,totvat,avatcode,avatsum,avatcnt,SMr,aitcodetot,aitsumtot,aitstartbaltot,aitvattot,aitcnttot)) then begin
+        RecordNew(CountSMr);
+      end;
+    end;
+  end;
+  return;
+end;
+
+procedure CashupRnRun(record RcVc RepSpec,Boolean recprinter)
+begin
+  val bal,totin,totout;
+  Integer rw;
+  string 255 tstr;
+  array string 20 aitcode;
+  array string 200 aitname;
+  array val aitsum;
+  array val aitvat;
+  array string 20 avatcode;
+  array string 200 avatname;
+  array val avatsum;
+  val totsum,totvat;
+  Integer i,aitcnt,avatcnt;
+  record ITVc ITr;
+  record VATCodeBlock VATCodeBlockr;
+  row VATCodeBlock VATCodeBlockrw;
+  record SMVc SMr;
+  record TRVc TRr;
+  record POSBalanceVc POSBalancer;
+  record SMVc CountSMr;
+  LongInt serno;
+  Boolean bookf,onebook;
+  array string 20 aitcodetot;
+  array val aitsumtot,aitstartbaltot,aitvattot;
+  Integer aitcnttot;
+  
+  totsum = 0;
+  totvat = 0;
+  if (recprinter==false) then begin
+    StartReportJob(USetStr(12540));
+    rw = 1;
+    HT2Per(RepSpec.sStartDate,RepSpec.sEndDate,tstr);
+    Header(rw,tstr,1);
+    rw = rw + 1;
+    if (RepSpec.long1>0) then begin
+      Header(rw,USetStr(12573) & " " & RepSpec.long1,0);
+    end;
+    if (nonblanktime(RepSpec.sStartTime)) then begin
+      Header(rw,"" & Left(RepSpec.sStartTime,5) & " - " & Left(RepSpec.sEndTime,5),1);
+      rw = rw + 1;
+      if (nonblanktime(RepSpec.sEndTime)) then begin
+        Header(rw,USetStr(12574) & " " & Left(RepSpec.sEndTime,5),0);
+      end;
+    end;
+    Header(rw,USetStr(12541) & ": " & RepSpec.f1,1);
+    rw = rw + 1;
+    Header(rw,USetStr(12542) & ": " & RepSpec.f4,1);
+    rw = rw + 1;
+    if (nonblank(RepSpec.f5)) then begin
+      Header(rw,"Paymentmode" & ": " & RepSpec.f5,1);
+      rw = rw + 1;
+    end;
+    EndHeader;
+    SetRepCol(2,80);
+    SetRepCol(5,125);
+    SetRepCol(3,160);
+    SetRepCol(4,240);
+    SetRepCol(7,270);
+    SetRepCol(8,340);
+    SetRepCol(9,410);
+    StartFormat(15);
+    OutString(0,0,USetStr(12546),false);
+    OutString(2,0,USetStr(12562),false);
+    OutString(5,0,USetStr(12561),false);
+    OutString(8,0,USetStr(12554),true);
+    OutString(9,0,USetStr(12555),true);
+    OutString(1,0,USetStr(12560),true);
+    EndFormat;
+    Gray_Divider(0,1);
+  end else begin
+  end;
+
+  aitcnt = 0;
+  while(LoopMain(ITr,1,true)) begin
+    aitcode[aitcnt] = ITr.Code;    
+    aitname[aitcnt] = ITr.Comment;
+    aitcnt = aitcnt + 1;
+  end;
+  BlockLoad(VATCodeBlockr);
+  avatcnt = MatRowCnt(VATCodeBlockr);
+  for(i=0; i<avatcnt; i=i+1) begin
+    MatRowGet(VATCodeBlockr,i,VATCodeBlockrw);
+    avatcode[i] = VATCodeBlockrw.VATCode;
+    avatname[i] = VATCodeBlockrw.Comment;
+  end;
+  //StopAlert("Beg3");
+  DoTheCashup(RepSpec.ArtMode,RepSpec.flags[1],RepSpec.flags[2],RepSpec.flags[3],RepSpec.flags[4],RepSpec.sStartDate,RepSpec.sEndDate,RepSpec.sStartTime,RepSpec.sEndTime,
+              RepSpec.f1,RepSpec.f4,RepSpec.f5,0,true,recprinter,bal,totin,totout,aitcode,aitsum,aitvat,aitcnt,totsum,totvat,avatcode,avatsum,avatcnt,SMr,
+              aitcodetot,aitsumtot,aitstartbaltot,aitvattot,aitcnttot,CountSMr);
+  if (recprinter==false) then begin
+    Black_Divider(0,1);
+    StartFormat(15);
+    OutString(0,0,USetStr(12552),false);
+    OutVal(8,0,round(totin*conv(CurrentDate),0),M4Val,true);
+    OutVal(9,0,round(totout*conv(CurrentDate),0),M4Val,true);
+    if (RepSpec.ArtMode==0) then begin
+      OutStringID(1,"DblCreatePOSBal",round(bal*conv(CurrentDate),0),true,RepSpec.f1 & ":" & RepSpec.f4);
+    end else begin
+      OutString(1,0,round(bal*conv(CurrentDate),0),true);
+    end;
+    EndFormat;
+    if (blank(RepSpec.f5)) then begin
+      StartFormat(15);
+      if (IsSessionOpen(RepSpec.f1,RepSpec.f4,CurrentDate,CurrentTime)==false) then begin
+        OutStringID(0,"DblOpenSess",USetStr(12565),false,RepSpec.f1 & ":" & RepSpec.f4);
+      end else begin
+        OutStringID(0,"DblCloseSess",USetStr(12564),false,RepSpec.f1 & ":" & RepSpec.f4);
+      end;
+      EndFormat;
+    end;
+    if (RepSpec.flags[29]==0) then begin  
+    StartFormat(15);
+    EndFormat;
+    StartFormat(15);
+    OutString(0,0,USetStr(9776),false);
+    OutString(70,0,USetStr(9778),false);
+    OutString(350,0,USetStr(12570),true);
+    OutString(1,0,USetStr(12571),true);
+    EndFormat;
+    Gray_Divider(0,1);
+    for(i=0;i<aitcnt;i=i+1) begin
+      if(aitsum[i] <> 0) then begin
+        StartFormat(15);
+        OutString(0,0,aitcode[i],false);
+        OutString(70,0,aitname[i],false);      
+        OutVal(350,0,round(aitsum[i]*conv(CurrentDate),0),M4Val,true);
+        OutVal(1,0,round(aitvat[i]*conv(CurrentDate),0),M4Val,true); 
+        EndFormat;
+      end;
+    end;
+    Gray_Divider(0,1);
+    StartFormat(15);
+    OutString(0,0,USetStr(12551),false);
+    OutString(70,0,"",false);      
+    OutVal(350,0,round(totsum*conv(CurrentDate),0),M4Val,true);
+    OutVal(1,0,round(totvat*conv(CurrentDate),0),M4Val,true); 
+    EndFormat;          
+    StartFormat(15);
+    EndFormat;
+    StartFormat(15);
+    OutString(0,0,USetStr(12570),false);
+    OutVal(200,0,round(totsum*conv(CurrentDate),0),M4Val,true);  
+    EndFormat;
+    for(i=0; i<avatcnt; i=i+1) begin
+      if(avatsum[i] > 0) then begin
+        StartFormat(15);
+        OutString(0,0,USetStr(12551) & " " & avatname[i],false);
+        OutVal(200,0,round(avatsum[i]*conv(CurrentDate),0),M4Val,true);  
+        EndFormat;
+      end;
+    end;
+    StartFormat(15);
+    OutString(0,0,USetStr(12572),false);
+    OutVal(200,0,round(totvat*conv(CurrentDate),0),M4Val,true);  
+    EndFormat;
+    i = 0;
+    serno = -1;
+    if (RepSpec.flags[5]!=0) then begin
+      PreparePOSSM(SMr);
+      SMSumup(SMr);
+      if (MatRowCnt(SMr)>0) then begin
+        StartFormat(15);
+        EndFormat;
+        StartFormat(15);
+        OutString(0,0,USetStr(12580),false);
+        EndFormat;
+        Black_Divider(0,1);
+        MyMyPrintSMRecord(SMr,0,conv(CurrentDate));
+        onebook = true;
+      end;
+    end;
+    end;
+    
+/*
+StartFormat(15);
+OutString(0,0,"XXXXXXXXXXXXXXXXXXXXXXXXXXX",false);
+EndFormat;
+PrintSMRecord(CountSMr,0);
+StartFormat(15);
+OutString(0,0,"XXXXXXXXXXXXXXXXXXXXXXXXXXX",false);
+EndFormat;
+*/
+/*
+    if (RepSpec.flags[6]!=0) then begin
+      onebook = false;
+      while (BuildPOSTRFromSM(SMr,TRr,i,serno,bookf,POSBalancer)) begin
+        if (bookf) then begin
+          StartFormat(15);
+          EndFormat;
+          StartFormat(15);
+          OutString(0,0,USetStr(12581),false);
+          EndFormat;
+          Black_Divider(0,1);
+          PrintTRRecord(TRr,0);
+          onebook = true;
+        end;
+      end;
+    end;
+*/
+    if (RepSpec.ArtMode==0) then begin
+      PrintTotPayModes(aitcodetot,aitsumtot,aitstartbaltot,aitvattot,aitcnttot,recprinter);
+    end;
+    if (onebook==false) then begin
+      StartFormat(15);
+      EndFormat;
+      StartFormat(15);
+      OutString(0,0,USetStr(12583),false);
+      EndFormat;
+    end;
+    EndJob;
+  end else begin
+  end;
+  return;
+end;
+
+global
+procedure CashupRn(record RcVc RepSpec)
+BEGIN
+  CashupRnRun(RepSpec,false);
+  RETURN;
+END;
+
+global
+procedure CashupPOSRn(record RcVc RepSpec)
+BEGIN
+  CashupRnRun(RepSpec,true);
+  RETURN;
+END;
+
+function Boolean MakePOSTRFromSM(record SMVc SMr,var record TRVc TRr,var record POSBalanceVc POSBalancer)
+begin
+  row SMVc SMrw;
+  row TRVc TRrw;
+  Integer rwcnt,i;
+  val s,totsum;
+  string 255 tstr;
+  Boolean debf;
+  Boolean res;
+  val temp,baserate1,baserate2;
+  string 10 curncy;
+  Boolean bookf;
+  
+  res = false;
+  RecordNew(TRr);
+  curncy = "";
+  GetFullCurncyRate(curncy,TRr.TransDate,temp,temp,temp,baserate1,baserate2);
+  rwcnt = MatRowCnt(SMr);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(SMr,i,SMrw);
+    if (SMrw.AccNumber=="BALANCE") then begin
+      TRr.TransDate = SMrw.TransDate; // Exchange Rate Date
+      TRr.Comment = "POS Balance " & SMrw.Comment;
+      if (POSBalancer.SerNr==StringToLongInt(SMrw.Comment)) then begin
+        bookf = true;
+      end;
+    end;
+  end;
+  res = false;
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(SMr,i,SMrw);
+    if (SMrw.AccNumber=="BALANCE") then begin
+      if (POSBalancer.SerNr!=StringToLongInt(SMrw.Comment)) then begin //##
+      end;
+    end else begin
+      if (GetAccName(SMrw.AccNumber,tstr,60)==false) then begin end;
+      if (SMrw.DebVal!=0) then begin
+        s = SMrw.DebVal;
+        debf = true;
+      end else begin
+        s = SMrw.CredVal;
+        debf = false;      
+      end;
+     
+      AddEuroTrRow(TRr,SMrw.AccNumber,SMrw.Objects,SMrw.VATCode,tstr,s,baserate1,baserate2,true,debf,totsum,false,"","","");
+      res = true;
+    end;
+  end;
+LMakePOSTRFromSM:;
+  MakePOSTRFromSM = res;
+  return;
+end;
+
+global
+function Integer MakeTransFromPOSBalance(var record TRVc gTRp,record POSBalanceVc POSBalancer,Boolean rpt)
+begin
+  val res,totin,totout;
+  array string 20 aitcode;
+  array val aitsum;
+  array val aitvat;
+  array string 20 avatcode;
+  array val avatsum;
+  val totsum,totvat,avatcnt;
+  Integer aitcnt;
+  record SMVc SMr;
+  array string 20 aitcodetot;
+  array val aitsumtot,aitstartbaltot,aitvattot;
+  Integer aitcnttot;
+  record VATCodeBlock VATCodeBlockr;
+  row VATCodeBlock VATCodeBlockrw;
+  record ITVc ITr;
+  record SMVc CountSMr;
+  row SMVc SMrw;
+  Integer i;
+  val bal;
+  Date d;
+  Time t;
+  integer mtrw;
+  row TRVc TRRW;
+  val frrate,to1,to2,br1,br2;
+String 5 curcode;
+record POSCurncyBlock PCb;// Edit ************************** Wednesday, 13 April 2011 12:26:03
+
+  totsum = 0;
+  totvat = 0;
+  aitcnt = 0;
+  res = 1085;
+  d = POSBalancer.TransDate;
+  t = AddMinutes(POSBalancer.TransTime,-1);
+  FindTimeOfLastPOSBalance(d,t,POSBalancer.MachineName,POSBalancer.Drawer,bal);
+/*
+  while(LoopMain(ITr,1,true)) begin
+    aitcode[aitcnt] = ITr.Code;    
+    aitcnt = aitcnt + 1;
+  end;
+  BlockLoad(VATCodeBlockr);
+  avatcnt = MatRowCnt(VATCodeBlockr);
+  for(i=0; i<avatcnt; i=i+1) begin
+    MatRowGet(VATCodeBlockr,i,VATCodeBlockrw);
+    avatcode[i] = VATCodeBlockrw.VATCode;
+  end;
+*/
+/**/
+//StopAlert("Beg4");
+  DoTheCashup(0,1,1,1,0,d,POSBalancer.TransDate,t,POSBalancer.TransTime,POSBalancer.MachineName,POSBalancer.Drawer,"",0,false,false,res,totin,totout,aitcode,aitsum,aitvat,aitcnt,totsum,totvat,avatcode,avatsum,avatcnt,SMr,aitcodetot,aitsumtot,aitstartbaltot,aitvattot,aitcnttot,CountSMr);
+  //StopAlert("totsum " & totsum);
+  
+
+  
+  if (rpt==false) then begin
+    if (MakePOSTRFromSM(SMr,gTRp,POSBalancer)) then begin
+      gTRp.IntYc = RestAccYc;
+      gTRp.Number = POSBalancer.SerNr;
+      if (CheckTrans(gTRp,2,false)=="") then begin end;
+      if (MatRowCnt(gTRp)>0) then begin
+        res = 0;
+      end;
+    end;
+  end;
+  
+    blockLoad(PCb);// Edit ************************** Wednesday, 13 April 2011 12:25:34
+  curcode=PCb.CurncyCode;
+  //curcode="UAH";// Edit ************************** Wednesday, 13 April 2011 12:25:35
+   GetFullCurncyRate(curcode,gTRp.TransDate,frrate,to1,to2,br1,br2);
+
+    mtrw=MatRowCnt(gTRp);
+  for (i=0;i<mtrw;i=i+1)
+  begin
+  Matrowget(gTRp,i,TRRW);
+  TRrw.Curncy=curcode;
+  TRRW.CurDebVal=blankval;
+  TRRW.CurCredVal=blankval;
+  
+  if (nonblank(TRRW.DebVal)) then begin
+  TRRW.CurDebVal = Round((TRRW.DebVal*frrate/to1),0);
+  end;
+    if (nonblank(TRRW.CredVal)) then begin
+  TRRW.CurCredVal = Round((TRRW.CredVal*frrate/to1),0);
+  end;
+  MatRowPut(gTRp,i,TRRW);
+  end;
+  
+ // stopalert(matrowcnt(gTRp));
+  
+  MakeTransFromPOSBalance = 0;
+  return;
+end;
+

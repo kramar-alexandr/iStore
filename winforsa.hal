@@ -1,0 +1,93 @@
+event DefineWindows
+begin
+ Real h,h1,h2,h3,h4,h5,h6,h7,hs,hm,v,v3,l,vs,vm,f,t,x,v2;
+  integer flagtr;
+  string 255 label;
+    
+	SetLangMode(LangUkrainian,"UKR",0);
+  
+  WindowBegin("OPPVc Register",OPPDClass,CGview,-);
+  SetWRect(20,80,620,420);
+  Sizeable(-1,-1,0,0);
+  UseView(OPPVc);
+  EditField(75,vm=(v=6), 95,"Номер",Normal,SerNr,false,0);
+  EditField(75,v+=20,95, "Дата сплати",Normal,PayDate,false,0);
+  EditField(75,v+=20,95, "Пост.",Normal,VECode,false,0);
+  EditField(75,v+=20,95, "Сума",Normal,PPVal,false,0);
+  EditField(75,v+=20,95, "Зарезерв.",Normal,BookRVal,false,0);
+  EndWindow;
+  
+  
+  WindowBegin("OPPVc Registers",OPPLClass,CGmlist,-);
+  SpawnClass(OPPDClass);
+  SetWRect(20,80,650,355);
+  Sizeable(-1,-1,0,0);
+  UseView(OPPVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,1,"Номер",SerNr,false,SerNr);
+  RlColKey(90,90,"№ рахунка",OrderNr,false,OrderNr);
+  RlColKey(180,180,"Дата сплати",PayDate,false,PayDate);
+  RlColKey(250,250,"Пост.",VECode,false,VECode);
+  RlColKey(310,310,"Найменування",VEName,false,VEName);
+  RlCol(-210,-210, "ПДВ",VATVal,true);
+  RlCol(-150,-150, "Сума",PPVal,true);
+  RlCol(-90,-90, "Зарезерв.",BookRVal,true);
+  RlCol(-30,-30, "Валюта",CurncyCode,false);
+  SearchField("Пошук");
+  EndWindow;
+  
+  WindowBegin("APPayHistVc Register",APPayHistDClass,CGview,-);
+  SetWRect(20,80,620,420);
+  Sizeable(-1,-1,0,0);
+  UseView(APPayHistVc);
+  EditField(75,vm=(v=6), 95,"Номер",Normal,VEPNr,false,0);
+  EditField(75,v+=20,95, "FileName",Normal,FileName,false,0);
+  EditField(75,v+=20,95, "SerNr",Normal,SerNr,false,0);
+  EditField(75,v+=20,95, "VECode",Normal,VECode,false,0);
+  EditField(75,v+=20,95, "Val",Normal,Val,false,0);
+  EditField(75,v+=20,95, "BookVal",Normal,BookVal,false,0);
+  EndWindow;
+  
+  
+  WindowBegin("APPayHistVc Registers",APPayHistLClass,CGmlist,-);
+  SpawnClass(APPayHistDClass);
+  SetWRect(20,80,650,355);
+  Sizeable(-1,-1,0,0);
+  UseView(APPayHistVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,1,"Номер",VEPNr,false,MainKey);
+  RlColKey(90,90,"VECode",VECode,false,VECode);
+  RlColKey(180,180,"OrderNr",OrderNr,false,OrderNr);
+  RlColKey(250,250,"TransDate",TransDate,false,TransDate);
+  RlCol(-210,-210, "Val",Val,true);
+  RlCol(-150,-150, "BookVal",BookVal,true);
+  SearchField("Пошук");
+  EndWindow;
+  
+  v=20;
+  
+  WindowBegin("SerBal Register",SerBalDClass,CGview,-);
+  SetWRect(20,80,620,420);
+  Sizeable(-1,-1,0,0);
+  UseView(SerBalVc);
+  EditField(75,v, 95,"Item",Normal,Item,false,0);
+  EditField(75,v+=20,95, "Location",Normal,Location,false,0);
+  EditField(75,v+=20,95, "Serial",Normal,Serial,false,0);
+  EditField(75,v+=20,95, "Quant",Normal,Quant,false,0);
+  EndWindow;
+  
+  WindowBegin("SerBalVc",SerBalLClass,CGmlist,-);
+  SpawnClass(SerBalDClass);
+  SetWRect(64,80,650,398);
+  Sizeable(-1,-1,0,0);
+  UseView(SerBalVc);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,2,"Item",Item,false,MainKey);
+  RlCol(100,100, "Location",Location,false);
+  RlColKey(200,200, "Serial",Serial,false,Serial);
+  RlCol(300,300, "Quant",Quant,false);
+  SearchField("Search");
+  EndWindow;
+  
+  return;
+end;

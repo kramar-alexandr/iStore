@@ -1,0 +1,365 @@
+external function string 255 GetCustomerOnAccountAC(string);
+external procedure GetCustName(String,var String);
+external procedure AddCurTotalsRow(string,val,val,val,var record SMVc);
+external procedure PrintCurTotalsRow(record SMVc,Integer,Integer,Integer,Integer);
+external procedure HT2Per(Date, Date , var string);
+external procedure HTCustClass(string,var string);
+external procedure HTCustClassType(string,var string);
+external function Boolean SetInSet2(string,string);
+external procedure ClassTypef(string,string,var Boolean);
+external procedure HTCusts(string, string, var string);
+
+
+procedure PrepLine(LongInt lastprep,string lastcurr,string lastcu,Integer itype,var string lastprintcu,var val custend,val prepstart)
+begin
+record ARPayHistVc ARPr;
+
+  string 255 tstr,custname;
+  
+  tstr = lastprep;
+  tstr = tstr & " (" & lastcurr & ")";
+  if (itype<>1) then begin
+    StartFormat(15);
+    OutString(0,0,tstr,false);
+   
+   // Edit Start ---------------------------------------------- Edit Start
+	//Thursday, 11 November 2010 16:59:42
+    ARPr.CUPNr = lastprep;
+    //ARPr.FileName = "CLInVc";
+    ReadFirstMain(ARPr,1,true);
+    OutString(50,0,ARPr.TransDate,false);
+	// Edit End ---------------------------------------------- Edit End
+	
+    GetCustName(lastcu,custname);
+    OutString(2,0,lastcu,false);
+    OutString(3,0,custname,false);
+    EndFormat;
+    Gray_Divider(0,1);
+    StartFormat(15);
+    OutString(0,0,USetStr(7814),false); 
+    OutString(2,0,USetStr(7817),false);
+    OutString(3,0,USetStr(7816),false);
+    OutString(6,0,USetStr(7819),true);
+    OutString(1,0,USetStr(7828),true);
+    EndFormat;
+    Gray_Divider(0,1);
+    StartFormat(15);
+    OutString(2,0,USetStr(7827),false);
+    OutVal(1,0,prepstart,M4Val,true);  
+    EndFormat;
+  end else begin
+    if (lastcu<>lastprintcu) then begin 
+      if nonblank(lastprintcu) then begin
+        Gray_Divider(0,1);
+        StartFormat(15);
+        OutString(2,0,USetStr(7815) & " " & USetStr(7828),false);
+        OutVal(1,0,custend,M4Val,true);
+        EndFormat;
+        custend = 0;
+        StartFormat(15);
+        EndFormat;
+      end;
+      StartFormat(15);
+      OutString(0,0,USetStr(7815),false);
+      GetCustName(lastcu,custname);
+      OutString(2,0,lastcu,false);
+      OutString(3,0,custname,false);
+      lastprintcu = lastcu;
+      EndFormat;
+      Gray_Divider(0,1);
+      StartFormat(15);
+      OutString(0,0,USetStr(7814),false); 
+      OutString(2,0,USetStr(7817),false);
+      OutString(3,0,USetStr(7816),false);
+      OutString(6,0,USetStr(7819),true);
+      OutString(1,0,USetStr(7828),true);
+      EndFormat;
+      Gray_Divider(0,1);
+    end;
+    StartFormat(15);
+    OutString(0,0,tstr,false);
+    OutString(2,0,USetStr(7827),false);
+    OutVal(1,0,prepstart,M4Val,true);  
+    EndFormat;
+  end;  
+  return;
+end;    
+            
+global
+procedure PerPayHisSLRn(record RcVc RepSpec)
+begin
+  record ARPayHistVc ARPayHistr;
+  record SMVc CurTotalsr;
+  record CUVc CUr;
+  Boolean TrHs;
+  val tt,t,custfwdbal,bccustbal;
+  LongInt lastprep;
+  string 20 lastcu,lastbalcu;
+  Integer keys;
+  string 60 custname;
+  Integer sign;
+  val fwdbal;
+  Boolean testf;
+  string 30 dblstr;
+  Integer rw;
+  string 20 mykey;
+  string 250 tstr;
+  Boolean printf;
+  LongInt lastbalprep;
+  string 5 lastcurr,lastbalcurr;
+  val bcfwdbal,bcprepstart,bcprepend;
+  val prepstart,prepend;
+  Boolean printstart;
+  Boolean printcust;
+  string 20 lastprintcu;
+  val custstart,custend;
+  
+  StartReportJob(USetStr(7810));
+  rw = 1;
+
+  HT2Per(RepSpec.sStartDate,RepSpec.sEndDate,tstr);
+  Header(rw,tstr,1);
+  rw = rw + 1;
+  
+  tstr = USetStr(7823);
+  if (RepSpec.flags[1]==1) then begin
+    tstr = tstr & USetStr(7815);
+  end else begin
+    tstr = tstr & USetStr(7812);
+  end;
+  Header(rw,tstr,0);
+
+  HTCusts(RepSpec.f1,RepSpec.f1,tstr);
+  Header(rw,tstr,1);
+  rw = rw + 1;
+  
+  HTCustClass(RepSpec.f4,tstr);
+  if (nonblank(tstr)) then begin
+    Header(rw,tstr,1);
+    rw = rw + 1;
+  end; 
+  
+  HTCustClassType(RepSpec.f5,tstr);
+  if (nonblank(tstr)) then begin
+    Header(rw,tstr,1);
+    rw = rw + 1;
+  end; 
+  
+  if (RepSpec.long1<>-1) then begin
+    tstr = RepSpec.long1;
+    tstr = USetStr(7812) & " " & tstr;
+    Header(rw,tstr,1);
+    rw = rw + 1;
+  end;
+  EndHeader;
+     
+  SetRepCol(2,120);
+  SetRepCol(3,200);
+  SetRepCol(4,270);
+  SetRepCol(5,345);
+  SetRepCol(6,400);
+ 
+  keys =1;
+  if (RepSpec.flags[1]==0) then begin
+    mykey = "CUPNrTransDate";
+    if (RepSpec.long1<>-1) then begin
+      ARPayHistr.CUPNr = RepSpec.long1;
+    end;  
+  end;
+  if (RepSpec.flags[1]==1) then begin
+    mykey = "CUPNrCustCode";
+    if nonblank(RepSpec.f1) then begin
+      ARPayHistr.CustCode = RepSpec.f1;
+    end;  
+  end;
+  lastprep = -1;
+  TrHs = true;
+  ResetLoop(ARPayHistr);
+  printstart = true;
+  while (LoopKey(mykey,ARPayHistr,keys,TrHs)) begin
+    testf = true;
+    if ((RepSpec.f1<>ARPayHistr.CustCode) and (nonblank(RepSpec.f1))) then begin
+      testf = false;
+      if (RepSpec.flags[1]==1) then begin
+        TrHs = false;
+      end;
+    end;
+    if (RepSpec.long1<>-1) then begin
+      if (RepSpec.long1<>ARPayHistr.CUPNr) then begin
+        testf = false;
+        if (RepSpec.flags[1]==0) then begin
+          TrHs = false;
+        end;  
+      end;  
+    end;
+    if (ARPayHistr.CUPNr==-1) then begin
+      testf = false;
+    end;
+    if ((RepSpec.f3<>ARPayHistr.CurncyCode) and (nonblank(RepSpec.f3))) then begin
+      testf = false;
+    end;
+    if (testf) then begin
+      if (lastcu<>ARPayHistr.CustCode) then begin
+        CUr.Code = ARPayHistr.CustCode;
+        if ReadFirstMain(CUr,1,true) then begin 
+        end;
+        if (nonblank(RepSpec.f4)) then begin
+          if (SetInSet2(RepSpec.f4,CUr.Classification)==false) then begin
+            testf = false;
+          end;
+          if (nonblank(RepSpec.f5)) then begin
+            if (testf==true) then begin
+              testf = false;
+              ClassTypef(RepSpec.f5,CUr.Classification,testf);
+            end;
+          end;
+        end;
+      end;  
+    end;
+    if (testf) then begin
+      if (ARPayHistr.TransDate>RepSpec.sEndDate) then begin
+        testf = false;
+      end;  
+    end; 
+    if (nonblank(RepSpec.FirstAcc)) then begin
+      if (testf) then begin
+        if (GetCustomerOnAccountAC(ARPayHistr.CustCode)!=RepSpec.FirstAcc) then begin
+          testf = false;
+        end;
+      end;
+    end;
+    if (testf) then begin
+      if (ARPayHistr.CUPNr<>lastprep) and (lastprep<>-1)then begin
+        if printstart then begin
+          if (prepstart<>0) then begin
+            PrepLine(lastprep,lastcurr,lastcu,RepSpec.flags[1],lastprintcu,custend,prepstart);
+            Black_Divider(5,1);
+            StartFormat(15);
+            OutString(2,0,USetStr(7828),false);
+            OutVal(1,0,prepstart,M4Val,true);  
+            EndFormat;
+            StartFormat(15);
+            EndFormat;
+            custend = custend + bcprepstart;
+          end;
+        end else begin  
+          Black_Divider(5,1);
+          StartFormat(15);
+          OutString(2,0,USetStr(7828),false);
+          OutVal(1,0,fwdbal,M4Val,true);  
+          EndFormat;
+          StartFormat(15);
+          EndFormat;
+          custend = custend + bcfwdbal;
+        end;
+        prepstart = 0;
+        prepend = 0;
+        fwdbal = 0;
+        bcfwdbal = 0;
+        bcprepstart = 0;
+        bcprepend = 0;
+        printstart = true;
+      end;
+      lastprep=ARPayHistr.CUPNr;
+      lastcu = ARPayHistr.CustCode;
+      lastcurr = ARPayHistr.CurncyCode;
+      if ((ARPayHistr.FileName=="IVVc") or (ARPayHistr.FileName=="CLOutVc")) then begin
+        sign = -1;
+      end else begin
+        sign = 1;
+      end;  
+      if (ARPayHistr.TransDate<RepSpec.sStartDate) then begin
+        if (RepSpec.flags[4]==1) then begin
+          t = sign * ARPayHistr.BookVal;
+        end else begin
+          t = sign * ARPayHistr.Val;
+        end;
+        AddCurTotalsRow(ARPayHistr.CurncyCode,sign*ARPayHistr.Val,-1,-1,CurTotalsr);   
+        tt = tt + sign*ARPayHistr.Val; 
+        prepstart = prepstart + t;
+        custstart= custstart + t;
+        bcprepstart = bcprepstart + sign * ARPayHistr.BookVal;
+      end;
+      if (DateInRange(ARPayHistr.TransDate,RepSpec.sStartDate,RepSpec.sEndDate)==true) then begin
+        if (RepSpec.flags[4]==1) then begin
+          t = sign * ARPayHistr.BookVal;
+        end else begin
+          t = sign * ARPayHistr.Val;
+        end;
+        AddCurTotalsRow(ARPayHistr.CurncyCode,sign*ARPayHistr.Val,-1,-1,CurTotalsr);   
+        tt = tt + sign*ARPayHistr.BookVal;
+        if printstart then begin
+          PrepLine(ARPayHistr.CUPNr,ARPayHistr.CurncyCode,ARPayHistr.CustCode,RepSpec.flags[1],lastprintcu,custend,prepstart);
+          printstart = false;
+        end;
+        prepend = prepend + t;
+        bcprepend = bcprepend + sign * ARPayHistr.BookVal;
+        fwdbal = prepstart + prepend;
+        bcfwdbal = bcprepstart + bcprepend;
+        switch (ARPayHistr.FileName) begin
+          case "IPVc":
+            dblstr = "DblIPVc";
+            tstr = USetStr(1818);
+          case "CLInVc": 
+            dblstr = "DblCLInVc";
+            tstr = USetStr(1833);
+          case "CLOutVc": 
+            dblstr = "DblCLOutVc";
+            tstr = USetStr(1834);
+          case "IVVc": 
+            dblstr = "DblIVVc";
+            tstr = USetStr(1808);
+          otherwise 
+            dblstr = "";
+        end;
+        StartFormat(15); 
+        OutDate(0,0,ARPayHistr.TransDate,false);
+        OutString(2,0,tstr,false);
+        OutString(3,dblstr,ARPayHistr.SerNr,false);
+        OutVal(6,0,t,M4Val,true); 
+        OutVal(1,0,fwdbal,M4Val,true);  
+        EndFormat;
+      end;                     
+    end;
+  end;  
+  if (printstart) then begin
+    if prepstart<>0 then begin
+      PrepLine(lastprep,lastcurr,lastcu,RepSpec.flags[1],lastprintcu,custend,prepstart);
+      OutString(2,0,USetStr(7828),false);
+      OutVal(1,0,prepstart,M4Val,true);  
+      EndFormat;
+      StartFormat(15);
+      EndFormat;
+      custend = custend + bcprepstart;
+    end;
+  end else begin  
+    Black_Divider(5,1);
+    StartFormat(15);
+    OutString(2,0,USetStr(7828),false);
+    OutVal(1,0,fwdbal,M4Val,true);  
+    EndFormat;
+    StartFormat(15);
+    EndFormat;
+    custend = custend + bcfwdbal;
+  end;  
+  if (RepSpec.flags[1]==1) then begin
+    if nonblank(lastprintcu) then begin
+      Gray_Divider(0,1);
+      StartFormat(15);
+      OutString(2,0,USetStr(7815) & " " & USetStr(7828),false);
+      OutVal(1,0,custend,M4Val,true);
+      EndFormat;
+      custend = 0;
+    end;
+  end; 
+  Gray_Divider(0,1);
+  if (RepSpec.flags[4]==0) then begin
+    PrintCurTotalsRow(CurTotalsr,7824,450,-1,-1);
+  end;  
+  StartFormat(15);
+  OutString(2+40,0,USetStr(7826),false);
+  OutVal(1,0,tt,M4Val,true);
+  EndFormat;
+  EndJob;
+  return;
+end;

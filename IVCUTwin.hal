@@ -1,0 +1,154 @@
+event DefineWindows
+begin
+ Real h,h1,h2,h3,h4,h5,h6,h7,hs,hm,v,v3,l,vs,vm,f,t,x,v2;
+  integer flagtr;
+  string 255 label;
+    
+	SetLangMode(LangUkrainian,"UKR",0);
+	
+	
+
+  
+  WindowBegin("Акт/накладна клієнту",IVDClass,CGview,IVView);
+  SetWRect(20,80,620,420);
+  Sizeable(-1,-1,0,0);
+  UseView(IVVc);
+  ActiveFieldOnNew("CustCode");  
+  CommunicateButton;
+  Tile(0,48+22,false,"",CustCode);
+  EditField(75,vm=(v=6), 95,"Номер",Normal,SerNr,false,TSerSClass);
+  EditField(75,v+=20,95, "Клієнт",Normal,CustCode,false,CUSClass);
+  EnterSkip(PayDeal);
+  EditField(h=270,v=vm,-40,"Найменування",Normal,Addr0,false,0);
+  v = v+24;
+  TileButton(1,"Терміни");
+  TileButton(2,"Товари");
+ //  CheckBox(210,v,0,"OK",OKFlag);
+  Tile(1,92,false,"1",InvDate);
+  vs = 20; h1 = 100; h2 = 305; h3 = 485;
+  EditField(h1,vm=(v=6),82,"Дата",Normal,InvDate,false,PasteCurDate);
+  EditField(h1,v+=vs,20,"Умови сплати",Normal,PayDeal,false,PDSClass);//PDMSClass);
+  EditField(h1,v+=vs,82,"Дата сплати",Normal,PayDate,false,PasteCurDate);
+  EditField(h1,v+=vs,82,"Дата операції",Normal,TransDate,false,PasteCurDate);
+  EditField(h2,v=vm,135,"Посилання",Normal,OurContact,false,0);
+  EditField(h3+50,v,50,"Продавець",Normal,SalesMan,false,UserSClass);
+  EditField(h2,v+=vs, 135,"Контактна особа",Normal,ClientContact,false,ContactSClass);
+  EditField(h2,v+=vs,135,"Об'єкт",Normal,Objects,false,ObjSClass);
+  EditField(h2,v+=vs,135,"Офіц. серійний №",Normal,OfficialSerNr,false,LegalInvNrSClass);
+//  SoftEditField(h3+50,v,100,"Контрольний код"  ,ViewOnly ,"TaxAuthIDCC",false,0,M4Str,60);
+  EnterSkip(Math);
+  Tile(2,190,true,"2",Math);
+  CheckBox(20,-20,0,"OK",OKFlag);
+  EditField(65,-41,50,"Валюта",Normal,CurncyCode,false,CurncyCodeSClass);
+  EditField(190,-41,70,"Фрахт",Normal,FrPrice,true,0);
+  EditField(190,-21,70,"Дод. податок",ViewOnly,TAX1Sum,true,0);
+  EditField(310,-41,80,"ПДВ",ViewOnly ,Sum3,true,0);
+  EditField(310,-21,80,"Под. 2",ViewOnly,TAX2Sum,true,0);
+  EditField(440,-21,95,"Осн. 1",ViewOnly,BaseSum4,true,0);
+  EditField(-133,-41,95,"Разом",ViewOnly ,Sum1,true,0);
+  EditField(-133,-21,95,"Всього",ViewOnly ,Sum4,true,0);
+  v = 24;
+  MatrixBegin(4,v,-50,-49,-,200);
+  MatTypedRow(stp);
+  Flip(0);
+  MatCol(t=1,32,"Товар",0,ArtCode,false,INSClass);
+//  MatCol(t,94,"Var",0,VARList,true,VARSClass);
+//  MatCol(t,144,"Кіл",0,Quant,true,0);
+  MatCol(t,194,"Кіл-ть",0,Quant,true,MATVARINSClass);
+  EnterSkip(ArtCode);
+  MatText(t=3,32,"Кредитує акт/накл.",true);
+  MatCol(t,208,"",0,OrdRow,false,ARSClass);
+  MatCol(t,-216,"",0,Spec,false,0);//MatText(t,-216,"",true);
+  MatText(t=4,32,"Відсоток",true);
+  MatCol(t,98,"",0,ArtCode,false,0);
+  MatCol(t,153,"",0,Quant,true,0);
+  MatCol(t,188,"",0,Spec,false,0);
+  MatText(t=5,32,"Аванс",true);
+  MatColTL(t,122,"",0,-1,ViewOnly,0,ArtCode,true,0); 
+  MatColTL(t,188,"",0,-1,ViewOnly,0,Quant,true,0);
+  MatCol(t,238,"",0,Spec,false,0);
+  MatColTL(t,-170,"",0,-1,Normal,0,Sum,true,0); //?? TL?
+  MatCol(t,-70,"",0,SalesAcc,false,AccSClass);
+  MatCol(t,-24,"",0,VATCode,false,VATCodeSClass);
+  MatText(t=6,32,"Передплати клієнта",true);
+  MatCol(t,170,"",0,CUPNr,true,ARPaySClass);
+  MatCol(t,-300,"",0,Spec,false,0);
+  MatCol(t,-170,"",0,Price,true,0);// Price holds the VAT sum, Recipe holds the date of prepaym. BasePrice holds amount in base 1, TAX1Reb holds TAX1Sum
+  MatCol(t,-100,"",0,Sum,true,0);
+  MatText(t=7,32,"Займ",true);
+  MatCol(t,98,"",0,CuAccCode,true,CuAccSClass);
+  MatCol(t,-350,"",0,SalesAcc,true,AccSClass);
+  MatCol(t,-230,"",0,Objects,false,0);
+  MatCol(t,-110,"",0,Sum,true,0);
+  MatCol(t,-30,"",0,VATCode,false,VATCodeSClass);
+  MatText(t=8,32,"% займу",true);
+  MatCol(t,98,"",0,CuAccCode,true,CuAccSClass);
+  MatCol(t,-350,"",0,SalesAcc,true,AccSClass);
+  MatCol(t,-230,"",0,Objects,false,0);
+  MatCol(t,-110,"",0,Sum,true,0);
+  MatCol(t,-30,"",0,VATCode,false,VATCodeSClass);
+  MatText(t=9,34,"Разом",true);
+  MatCol(t,100,"",0,Spec,false,0);
+  MatColTL(t,-140,"Сума",0,-1,ViewOnly,0,Sum,true,0);
+//  MatCol(t,-70,"Варт.",0,Cost,true,0);
+  MatText(t=10,32,"Цей рядок і всі наступні не відображати при друк.",false);  
+  MatText(t=11,32,"К",true);
+  MatCol(t,47,"Товар",0,ArtCode,false,INSClass);
+  MatCol(t,94,"Кіл-ть",0,Quant,true,0);
+  MatText(t=12,32,"Утримані",true);
+  MatCol(t,188,"",0,Spec,false,0);
+  MatColTL(t,-170,"",0,-1,ViewOnly,0,Sum,true,0); //?? TL?
+  MatCol(t,-70,"",0,SalesAcc,false,AccSClass);
+  MatCol(t,-24,"",0,VATCode,false,VATCodeSClass);
+  MatText(t=13,28,"GV",true);
+  MatCol(t,58,"",0,OrdRow,false,GCSClass);
+  MatCol(t,-316,"",0,Spec,false,0);
+  MatCol(t,-84,"Сума",0,Sum,true,0);
+  MatCol(t,-24,"",0,VATCode,false,VATCodeSClass);  
+  MatText(t=14,28,"GVR",true);
+  MatCol(t,58,"",0,OrdRow,false,GCSSClass);
+  MatCol(t,-316,"",0,Spec,false,0);
+  MatCol(t,-84,"Сума",0,Sum,true,0);
+  MatCol(t,-24,"",0,VATCode,false,VATCodeSClass);  
+  MatText(t=15,28,"Готівка",true);
+  MatCol(t,68,"Сума",0,Sum,true,0);
+  MatCol(t,108,"Валюта",0,CurncyCode,true,CurncyCodeSClass);
+  MatCol(t,-280,"Опис",0,Spec,false,0);
+  MatText(t=16,28,"Копія",true);
+  MatCol(t,58,"Сума",0,Sum,true,0);
+  MatCol(t,-280,"",0,CreditCard,false,CreditCardSClass);
+  MatCol(t,-84,"Авторизація",0,AuthorizationCode,false,0);
+  MatText(t=17,32,"Заголовок",true);
+  MatCol(t,100,"",0,Spec,false,0);
+  MatText(t=18,28,"Зарезервовано",true); // Don't use this number
+  MatCol(t,100,"",0,Spec,false,0);
+  MatText(t=19,28,"Зарезервовано",true); // Don't use this number
+  MatCol(t,100,"",0,Spec,false,0);
+
+
+  Flip(1);
+//  MatCol(t=1,194,"Наймен.",0,Spec,false,0);
+  MatCol(t=1,244,"Найменування",0,Spec,false,0);
+  MatCol(t,-200,"Ціна",0,Price,true,0);
+//  MatColTL(t,-235,"",0,M45Val,Normal,0,Price,true,0);
+  MatCol(t,-120,"%",0,vRebate,true,0);
+  MatCol(t,-80,"Сума",0,Sum,true,0);
+  MatCol(t=4,-260,"",0,OrdRow,true,0);
+  MatCol(t,-235,"",0,BasePrice,true,0);
+  MatCol(t,-135,"",0,vRebate,true,0);
+  MatCol(t,-100,"",0,Sum,true,0);
+  MatCol(t=11,144,"Найменування",0,Spec,false,0);
+  MatCol(t,-235,"Ціна",0,Price,true,0);
+  MatCol(t,-135,"%",0,vRebate,true,0);
+  MatCol(t,-100,"Сума",0,Sum,true,0);
+  
+  InsertRowTest;
+  DeleteRowTest;
+  EndMatrix;
+  vs = 22;
+  v = 18; VTab(-35,v,-16,v+vs,ToolFlip,1,"A");
+  EndWindow;
+ 
+  
+   return;
+end;

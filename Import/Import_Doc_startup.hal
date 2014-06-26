@@ -1,0 +1,11 @@
+event startup
+begin
+
+  SetLangMode(LangUkrainian,"UKR",0);
+  
+  Import("Import Print Form",ImportDocClass,ImportDocIn,modSY);
+  Import("Import CashFlow",ImportDocClass,ImportCashFlowIn,modNL);
+  Import("Import CashFlow Direct mt.",ImportDocClass,ImportCashFlowDirectIn,modNL);
+
+ return;
+end;  

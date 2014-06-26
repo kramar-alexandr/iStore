@@ -1,0 +1,219 @@
+//******************** Undelivered goods  ****************
+SetLangMode(LangUkrainian,"UKR",0);
+
+global procedure UndeliveredItemsReportRn(record RcVc RepSpec)
+begin
+  record INVc INr;
+  Boolean TrHs,TrHs1;
+  Boolean Mool,testf;
+  record ItemStatusVc ISr;
+  record PLVc PLr;
+  record ITVc ITr;
+  
+  startreportnoheaderjob("UndeliveredItemsReportRn");
+  
+  startformat(15);
+    outstring(0,0,"PartNo",false);
+    outstring(0,0,"Name",false);
+    outstring(0,0,"In Stock",false);
+    outstring(0,0,"Available",false);
+    outstring(0,0,"Cost",false);
+    outstring(0,0,"Sum",false);
+    outstring(0,0,"Stock",false);
+    if(CurrentCompany==2)then begin
+      if(nonblank(RepSpec.f3))then begin
+      OutString(4,0,"Price " & RepSpec.f3,false);
+      end else begin
+      OutString(4,0,"Price P1",false);
+      OutString(4,0,"Price RRP",false);
+      OutString(4,0,"Price IS",false);
+      OutString(4,0,"Price IM-1",false);
+      OutString(4,0,"Price IM-2",false);
+      end;
+    end;
+    /*if(CurrentCompany==1)then begin
+      if(nonblank(RepSpec.f3))then begin
+      OutString(4,0,"Price " & RepSpec.f3,false);
+      end else begin
+      //OutString(4,0,"Price RRP_U",false);
+      end;
+    end;*/
+    outstring(0,0,"Group",false);
+    //outstring(0,0,"Alternative code",false);
+  endformat;
+  
+  Mool = true;
+  ISr.Code = "";
+  while (loopmain(ISr,1,Mool)) begin
+  	testf = true;
+    if(ISr.Instock!=0 and ISr.Location!=";;;" and (ISr.Location != "EQUI_DREAM") and (ISr.Location != "EQUI_D_DEK") and (ISr.Location != "EQUI_KARAV") and (ISr.Location != "EQUI_KH_KR") and (ISr.Location != "EQUI_OFFIC") and (ISr.Location != "EQUI_OLIMP") and (ISr.Location != "EQUI_O_SAD") and (ISr.Location != "OFFICE_EQU")) then begin
+    end else begin
+    		testf = false;
+    	end;
+    
+    if(nonblank(RepSpec.f1) and setinset("," & ISr.Location & ",",RepSpec.f1)==false)then begin testf = false; end;
+    
+    if(testf)then begin
+      INr.Code = ISr.Code;
+      If(readfirstmain(INr,1,True)) then begin
+        StartFormat(15)
+          OutString(0,0,ISr.Code,false);
+          OutString(1,0,INr.Name,false);
+          OutString(2,0,ISr.Instock,false);
+          OutString(3,0,ISr.Instock-ISr.RsrvQty-ISr.StockRsrvQty,false);
+          OutString(1,0,INr.InPrice,false);
+          OutString(1,0,INr.InPrice*ISr.Instock,false);
+          OutString(4,0,ISr.Location,false);
+          if(CurrentCompany==2)then begin
+            if(nonblank(RepSpec.f3))then begin
+              PLr.ArtCode = ISr.Code;
+              PLr.PLCode = RepSpec.f3;
+              if(ReadFirstMain(PLr,2,true))then begin
+                OutString(4,0,PLr.ExVatPrice,false);
+              end else begin
+                OutString(4,0,0,false);
+              end;
+            end else begin
+              PLr.ArtCode = ISr.Code;
+              PLr.PLCode = "P1";
+              if(ReadFirstMain(PLr,2,true))then begin
+                OutString(4,0,PLr.ExVatPrice,false);
+              end else begin
+                OutString(4,0,0,false);
+              end;
+              PLr.ArtCode = ISr.Code;
+              PLr.PLCode = "RRP";
+              if(ReadFirstMain(PLr,2,true))then begin
+                OutString(4,0,PLr.ExVatPrice,false);
+              end else begin
+                OutString(4,0,0,false);
+              end;
+              PLr.ArtCode = ISr.Code;
+              PLr.PLCode = "IS";
+              if(ReadFirstMain(PLr,2,true))then begin
+                OutString(4,0,PLr.ExVatPrice,false);
+              end else begin
+                OutString(4,0,0,false);
+              end;
+              PLr.ArtCode = ISr.Code;
+              PLr.PLCode = "IM-1";
+              if(ReadFirstMain(PLr,2,true))then begin
+                OutString(4,0,PLr.ExVatPrice,false);
+              end else begin
+                OutString(4,0,0,false);
+              end;
+              PLr.ArtCode = ISr.Code;
+              PLr.PLCode = "IM-2";
+              if(ReadFirstMain(PLr,2,true))then begin
+                OutString(4,0,PLr.ExVatPrice,false);
+              end else begin
+                OutString(4,0,0,false);
+              end;
+            end;
+          end;
+          	/*
+          	if(CurrentCompany==1)then 
+          	begin
+          		if(nonblank(RepSpec.f3))then 
+          		begin
+              		PLr.ArtCode = ISr.Code;
+              		PLr.PLCode = RepSpec.f3;
+              		
+              		if(ReadFirstMain(PLr,2,true))then 
+              		begin
+                		OutString(4,0,PLr.ExVatPrice,false);
+              		end else 
+              			begin
+                			OutString(4,0,0,false);
+              			end;
+				end else 
+					begin
+						PLr.ArtCode = ISr.Code;
+						PLr.PLCode = "RRP_U";
+						if(ReadFirstMain(PLr,2,true))then 
+						begin
+							OutString(4,0,PLr.ExVatPrice,false);
+						end else 
+							begin
+								OutString(4,0,0,false);
+							end;
+					end;
+			end;
+          */
+          ITr.Code = INr.Group;
+          readfirstmain(ITr,1,true);
+          	OutString(5,0,ITr.Comment,false);
+			//Outstring(0,0,INr.AlternativeCode,false);
+        endformat;
+      end;
+    end;
+  end;
+  endjob;
+return;
+end;
+
+global procedure UndeliveredItemsReportEn()
+begin
+record RcVc RepSpec;
+integer compno;
+  compno = CurrentCompany;
+  if(GetDateID(currentdate)==1)then 
+  begin
+		  switch (compno) 
+		  begin
+		  case 1: CreateFile("Stock/iStoreUndeliveredItems.xls");
+				  closefile;
+				  logtext(0,"1");
+				  millisleep(100);
+				  openexportfile("Stock/iStoreUndeliveredItems.xls",true);
+				  RepSpec.f1 = ",TRANSIT,";
+				  UndeliveredItemsReportRn(RepSpec);
+				  RunProgram("Stock/iStoreUndeliveredItems.sh", "");
+		  
+		  case 2: CreateFile("Stock/ITEKUndeliveredItems.xls");
+				  closefile;
+				  openexportfile("Stock/ITEKUndeliveredItems.xls",true);
+				  RepSpec.f1 = ",TRANSIT#2,";
+				  UndeliveredItemsReportRn(RepSpec);
+				  RunProgram("Stock/ITEKUndeliveredItems.sh", "");
+
+		  
+		  /*case 2: CreateFile("Stock/CUAUndeliveredItems1.xls");
+				  closefile;
+				  openexportfile("Stock/CUAUndeliveredItems1.xls",true);
+				  RepSpec.f1 = ",INV#1,INV#2,EXHIBITION,STORE,STORE_DEMO,STORE_SM,STORE_SM_D,TRWH,DEMO,"; //edit by Victor add DEMO stock
+				  UndeliveredItemsReportRn(RepSpec);
+				  RunProgram("Stock/CUAUndeliveredItems1.sh", "");
+				  
+				  CreateFile("Stock/CUAUndeliveredItems2.xls");
+				  closefile;
+				  openexportfile("Stock/CUAUndeliveredItems2.xls",true);
+				  RepSpec.f1 = ",INV#1/ADJ,INV#2/ADJ,INV#2/ADJS,EXHIBITION/ADJ,INV#1/E,SRV_OUT,INV#2/RTN,TRANSIT#2,";
+				  UndeliveredItemsReportRn(RepSpec);
+				  RunProgram("Stock/CUAUndeliveredItems2.sh", "");*/
+				  
+		  case 5: CreateFile("Stock/TXTUndeliveredItems.xls");
+				  closefile;
+				  openexportfile("Stock/TXTUndeliveredItems.xls",true);
+				  RepSpec.f1 = ",TRANSIT#2,TRNS#2_TXT,";
+				  UndeliveredItemsReportRn(RepSpec);
+				  RunProgram("Stock/TXTUndeliveredItems.sh", "");
+				  
+		  case 7: CreateFile("Stock/TNMUndeliveredItems.xls");
+				  closefile;
+				  openexportfile("Stock/TNMUndeliveredItems.xls",true);
+				  RepSpec.f1 = ",TRANSIT#2,";
+				  UndeliveredItemsReportRn(RepSpec);
+				  RunProgram("Stock/TNMUndeliveredItems.sh", "");
+		  
+		 /* case 8: CreateFile("Stock/AServiceUndeliveredItems.xls");
+				  closefile;
+				  openexportfile("Stock/AServiceUndeliveredItems.xls",true);
+				  UndeliveredItemsReportRn(RepSpec);
+				  RunProgram("Stock/AServiceUndeliveredItems.sh", "");*/
+		end;
+  end;
+  closefile;
+return;
+end;
+//******************** End UndeliveredItemsReport *****************************

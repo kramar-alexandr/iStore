@@ -1,0 +1,575 @@
+external function val MulRateToBase1(var string,val,val,val,val,val,val,Integer);
+external function val FindVAT(string,val,Integer,Integer);
+external procedure IVCashSumup(var record IVCashVc,Boolean);
+external function Integer GetVATLaw();
+external procedure SendArtStat(string,string,string,val,val,val,Date);
+remote procedure GetFullCurncyRate (var string,Date,var val,var val,var val,var val,var val);
+/*
+external function Boolean GetItemPriceDiscount3(string,val,var record INVc,string,
+         val,val,val,val,val,
+         string,string,string,string,
+         var val,var string,var val,
+         var string,var val,var string,Integer,var Boolean,Date,string,Boolean,var Boolean,string,var string,var val,string);
+*/
+external procedure SetupVATBase(var record SMVc,var Integer);
+external function Boolean GetItemNameStr(Integer,var string,string,string,string);
+
+global
+procedure GetVATCodeAccNumbers(string vatcode,var string svatacc,var string pvatacc)
+BEGIN
+  record VATCodeBlock VATRec;
+  row VATCodeBlock vatrw;
+  Integer i,rwcnt;
+
+  BlockLoad(VATRec);
+  svatacc = "";  
+  pvatacc = "";  
+  rwcnt = MatRowCnt(VATRec);  
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(VATRec,i,vatrw);
+    if (vatrw.VATCode==vatcode) then begin 
+      svatacc = vatrw.SalesVATAcc;
+      pvatacc = vatrw.PurchVATAcc;
+      i = rwcnt;
+    end;  
+  end;  
+  RETURN;
+END;
+
+global
+procedure VIGetVATCodeAccNumbers(string vatcode,Integer OPBookVAT,var string svatacc,var string pvatacc)
+BEGIN
+  record VATCodeBlock VATRec;
+  row VATCodeBlock vatrw;
+  Integer i,rwcnt;
+
+  BlockLoad(VATRec);
+  svatacc = "";  
+  pvatacc = "";  
+  rwcnt = MatRowCnt(VATRec);  
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(VATRec,i,vatrw);
+    if (vatrw.VATCode==vatcode) then begin 
+      svatacc = vatrw.SalesVATAcc;
+      pvatacc = vatrw.PurchVATAcc;
+      if (blank(pvatacc)) then begin
+        if (OPBookVAT!=0) then begin
+          pvatacc = vatrw.PayPurchVATAcc;
+        end;
+      end;
+      i = rwcnt;
+    end;  
+  end;  
+  RETURN;
+END;
+
+global
+function Boolean PayModeAccIsClosed(string paymode)
+BEGIN
+  record AccVc Accr;
+  record PMBlock PMRec;
+  row PMBlock PMrw;
+  Integer i,rwcnt;
+  string 255 accnr;
+  Boolean res;
+  
+  if (blank(paymode)) then begin
+    goto LPayModeAccIsClosed;
+  end;
+  BlockLoad(PMRec);
+  rwcnt = MatRowCnt(PMRec);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(PMRec,i,PMrw);  
+    if (PMrw.Code==paymode) then begin
+      accnr = PMrw.AccNr;
+      i = rwcnt;
+    end;
+  end;  
+  Accr.AccNumber = accnr;
+  if (ReadFirstMain(Accr,1,true)==false) then begin
+    res = true;
+  end else begin
+    if (Accr.blockedFlag!=0) then begin
+      res = true;
+    end;
+  end;
+LPayModeAccIsClosed:;  
+  PayModeAccIsClosed = res;
+  RETURN;
+END;
+
+global
+function Boolean PayModeExists(string paymode)
+BEGIN
+  record PMBlock PMRec;
+  row PMBlock PMrw;
+  Integer i,rwcnt;
+  Boolean res;
+  
+  BlockLoad(PMRec);
+  rwcnt = MatRowCnt(PMRec);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(PMRec,i,PMrw);  
+    if (PMrw.Code==paymode) then begin
+      res = true;
+      i = rwcnt;
+    end;
+  end;  
+  PayModeExists = res;
+  RETURN;
+END;
+
+global
+function Boolean VATCodeExists(string vc)
+BEGIN
+  Boolean res;
+  record VATCodeBlock VATCodeRec;
+  row VATCodeBlock VATCoderw;
+  Integer rwcnt,i;
+
+  res = false; 
+  BlockLoad(VATCodeRec);
+  rwcnt = MatRowCnt(VATCodeRec);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(VATCodeRec,i,VATCoderw);  
+    if (vc==VATCoderw.VATCode) then begin
+      res = true;
+      goto LVATCodeExists;
+    end;
+  end;
+LVATCodeExists:;
+  VATCodeExists = res;
+  RETURN;
+END;
+
+global
+procedure ChangeIVCashSerialNr(Integer wn,var record IVCashVc IVCashp)
+BEGIN
+  if (WindowState(wn)==1) then begin//Rs_insert
+    if (ServingClient==true) then begin
+      IVCashp.SerNr = NextSerNr("IVCashVc",IVCashp.TransDate,IVCashp.SerNr,false,IVCashp.LangCode);
+    end;
+  end;
+  RETURN;
+END;
+
+global
+procedure GetPriceList(string custcat,var string pricelist,var Integer inclvatp)
+begin
+  record CCatVc CCatR;
+  record PLDefVc PLDefR;
+  record AccBlock ARAccRec;
+  
+  if (blank(pricelist)) then begin
+    CCatR.Code = custcat;
+    if (ReadFirstMain(CCatR,1,true)) then begin
+      pricelist = CCatR.PLCode;
+    end;
+  end;
+  PLDefR.Code = pricelist;
+  if (ReadFirstMain(PLDefR,1,true)) then begin
+    inclvatp = PLDefR.InclVAT;
+  end;
+  if (blank(pricelist)) then begin
+    BlockLoad(ARAccRec);
+    inclvatp = ARAccRec.BasePriceInclVAT;
+  end;
+  return;
+end;
+
+global
+procedure IVCashGetRate(Integer wn,var record IVCashVc IVCashp)
+BEGIN
+  val from,to1,to2,base1,base2;
+  val sum;
+  string 5 crncy;
+ 
+  crncy = IVCashp.CurncyCode;
+  GetFullCurncyRate(crncy,IVCashp.InvDate,from,to1,to2,base1,base2);
+  IVCashp.CurncyCode = crncy;
+  IVCashp.FrRate = from;
+  IVCashp.ToRateB1 = to1;
+  IVCashp.ToRateB2 = to2;
+  IVCashp.BaseRate1 = base1;
+  IVCashp.BaseRate2 = base2;  
+  sum = MulRateToBase1(IVCashp.CurncyCode,IVCashp.Sum4,from,to1,to2,base1,base2,DefaultCurRoundOff);
+  IVCashp.BaseSum4 = sum;  
+  RETURN;
+END;
+
+global
+function Boolean PasteCustInCashInv(var record IVCashVc IVCashp,string lmlocation,var string warning)
+BEGIN
+  record CUVc CUr;
+  Boolean found;
+  string 5 tstr,pricelist;
+  Integer InclVAT;
+  record LocalMachineAccBlock LMAb;// Edit ************************** Wednesday, 19 October 2011 10:59:48
+  row LocalMachineAccBlock LMArw;// Edit ************************** Wednesday, 19 October 2011 10:59:49
+  integer mtrw,i;// Edit ************************** Wednesday, 19 October 2011 10:59:50
+  string 255 MyObjects;
+  
+  CUr.Code = IVCashp.CustCode;
+  found = ReadFirstMain(CUr,1,true);
+  if (found) then begin
+    IVCashp.Location = lmlocation;
+    IVCashp.Addr0 = CUr.Name;
+    IVCashp.Addr1 = CUr.InvAddr0;
+    IVCashp.Addr2 = CUr.InvAddr1;
+    IVCashp.Addr3 = CUr.InvAddr2;
+    IVCashp.InvAddr3 = CUr.InvAddr3;
+    IVCashp.InvAddr4 = CUr.InvAddr4;
+    IVCashp.ClientContact = CUr.Person;
+    IVCashp.CustCat = CUr.CustCat;
+    if(setinset(CUr.Objects,IVCashp.Objects)==false)then begin// Edit ************************** Thursday, 20 October 2011 11:05:13
+      if (nonblank(IVCashp.Objects) and nonblank(CUr.Objects)) then begin
+        IVCashp.Objects = IVCashp.Objects & ",";
+      end;
+      IVCashp.Objects = IVCashp.Objects & CUr.Objects;
+    end;// Edit ************************** Thursday, 20 October 2011 11:05:15
+    IVCashp.LangCode = CUr.LangCode;    
+    IVCashp.CustVATCode = CUr.VATCode;
+    IVCashp.CurncyCode = CUr.CurncyCode;
+    IVCashp.VATNr = CUr.VATNr;
+    IVCashp.RebCode = CUr.RebCode;
+    pricelist = CUr.PLCode;
+    GetPriceList(IVCashp.CustCat,pricelist,InclVAT);
+    
+      // Edit Start ---------------------------------------------- Edit Start
+    //Wednesday, 19 October 2011 17:08:10
+    if(blank(pricelist))then begin
+        blockload(LMAb);// Edit ************************** Wednesday, 19 October 2011 10:59:52
+        mtrw = matrowcnt(LMAb);
+        for(i=0;i<mtrw;i=i+1)begin
+          matrowget(LMAb,i,LMArw);
+          if(LMArw.LocalMachine==IVCashp.LocalMachineCode)then begin
+            if(nonblank(LMArw.Str01))then begin
+              pricelist = LMArw.Str01;
+            end;
+            if(nonblank(LMArw.Objects))then begin
+              MyObjects = LMArw.Objects;
+            end;
+          end;
+        end;
+      end;
+      if(setinset(MyObjects,IVCashp.Objects)==false)then begin
+        if(nonblank(MyObjects))then begin
+          if (nonblank(IVCashp.Objects)) then begin
+            IVCashp.Objects = IVCashp.Objects & ",";
+          end;
+          IVCashp.Objects = IVCashp.Objects & MyObjects;
+        end;
+      end;
+    // Edit End ---------------------------------------------- Edit End
+    
+    IVCashp.InclVAT = InclVAT;
+    IVCashp.PriceList = pricelist;
+    IVCashp.FiscalFlag = CUr.FiscalFlag;
+// Shouldn't be here
+//    IVCashp.PayDeal = CUr.PayDeal;
+    warning = CUr.WarnText1;
+  end;
+  PasteCustInCashInv = found;
+  RETURN;
+END;
+
+
+global
+procedure CalcProc(val basep,val gpp,var val resp)
+BEGIN  
+  if (basep==0) then begin
+    resp = blankval;
+  end else begin
+    resp = gpp*100;
+    resp = resp/basep;
+  end;
+  RETURN;
+END;
+
+/*
+global
+procedure MultiLineText(Integer wn,record INVc INr,string  langcode,LongInt fo,Integer arow)
+BEGIN
+  string 255 tstr;
+  Integer tcnt;
+ 
+  tcnt = 2;
+  while (GetItemNameStr(tcnt,tstr,langcode,INr.Name,INr.Code)) begin      
+    InsertRow(wn,arow+tcnt-2,1);
+//    EFRowSetDisp(wn,arow+tcnt-2,fo,tstr);    
+    tcnt = tcnt + 1;
+  end;
+  RETURN;
+END;
+*/
+
+global
+procedure AddCalcPrice(record INVc INr,record CPMVc CPp,string item,val sump,string vatcode,Integer InclVAT,var val pricep)
+BEGIN
+  Integer i,rwcnt;
+  record INVc IN2r;
+  record ItemSettingBlock ItemSettingRec;
+  string 255 f1,f2;
+  val t,t100,t1;
+  row CPMVc CPMrw;
+  Boolean testf;
+  
+  BlockLoad(ItemSettingRec);
+  t100 = 100;
+  IN2r.Code = item;
+  if (ReadFirstMain(IN2r,1,true)) then begin
+  rwcnt = MatRowCnt(CPp);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(CPp,i,CPMrw);
+    testf = false;
+    if (nonblank(CPMrw.ItemGroups)) then begin
+      f1 = FirstInRange(CPMrw.ItemGroups,20);
+      f2 = LastInRange(CPMrw.ItemGroups,20);
+      if (IN2r.Group>=f1) then begin
+        if (IN2r.Group<=f2) then begin testf = true; end;
+      end;  
+    end else begin
+      testf = true;
+    end;
+    if (nonblank(CPMrw.FromAmount)) then begin
+      if (sump<CPMrw.FromAmount) then begin testf = false; end;
+    end;
+    if (nonblank(CPMrw.ToAmount)) then begin
+      if (sump>CPMrw.ToAmount) then begin testf = false; end;
+    end;
+    if (testf) then begin
+      if (InclVAT>0) then begin
+        if (ItemSettingRec.ItemFormulaeInclVAT>0) then begin
+          t = sump;
+        end else begin                      
+          if (nonblank(vatcode)) then begin
+            t = FindVAT(vatcode,sump,InclVAT,0);//jjtax
+            t = sump - t;
+          end else begin
+            t = sump;
+          end;
+        end;  
+      end else begin
+        t = sump;
+      end;
+      t = t*CPMrw.Val;
+      t = t/t100;
+      pricep = pricep + t;
+    end;
+  end;
+  end;
+  RETURN;
+END;
+
+global
+procedure IVCashVcGetCalcItemPrice(record INVc INr,record IVCashVc IVCashp,Integer rownr,var val pricep)
+BEGIN
+  row IVCashVc IVCashrw;
+  record CPMVc CPr;
+  Integer i,rwcnt;
+  val price;
+  
+  rwcnt = MatRowCnt(IVCashp);
+  MatRowGet(IVCashp,rownr,IVCashrw);
+  IVCashrw.Price = blankval;
+  MatRowPut(IVCashp,rownr,IVCashrw);
+
+  CPr.Code = INr.CalcPrice;
+  if (ReadFirstMain(CPr,1,true)) then begin
+    for (i=0;i<rwcnt;i=i+1) begin
+      MatRowGet(IVCashp,i,IVCashrw);
+      if (i!=rownr) then begin
+        if (IVCashrw.stp==1) then begin
+          AddCalcPrice(INr,CPr,IVCashrw.ArtCode,IVCashrw.Sum,IVCashrw.VATCode,IVCashp.InclVAT,price);
+        end;
+      end;  
+    end;
+    price = Round(price,DefaultCurRoundOff);
+    MatRowGet(IVCashp,rownr,IVCashrw);
+    IVCashrw.Price = price;
+    MatRowPut(IVCashp,rownr,IVCashrw);
+  end;
+  if (pricep!=-1) then begin pricep = price; end;
+      
+  RETURN;
+END;  
+
+global
+procedure QTGetCalcItemPrice(record INVc INr,record QTVc QTp,Integer rownr,var val pricep)
+BEGIN
+  row QTVc QTrw;
+  record CPMVc CPr;
+  Integer i,rwcnt;
+  val price;
+  
+  rwcnt = MatRowCnt(QTp);
+  MatRowGet(QTp,rownr,QTrw);
+  QTrw.Price = blankval;
+  MatRowPut(QTp,rownr,QTrw);
+
+  CPr.Code = INr.CalcPrice;
+  if (ReadFirstMain(CPr,1,true)) then begin
+    for (i=0;i<rwcnt;i=i+1) begin
+      MatRowGet(QTp,i,QTrw);
+      if (i!=rownr) then begin
+        if (QTrw.stp==1) then begin
+          AddCalcPrice(INr,CPr,QTrw.ArtCode,QTrw.Sum,QTrw.VATCode,QTp.InclVAT,price);
+        end;
+      end;  
+    end;
+    price = Round(price,DefaultCurRoundOff);
+    MatRowGet(QTp,rownr,QTrw);
+    QTrw.Price = price;
+    MatRowPut(QTp,rownr,QTrw);
+  end;
+  if (pricep!=-1) then begin pricep = price; end;
+      
+  RETURN;
+END;  
+
+/* Not used?
+global
+procedure IVCashVcCheckItemPrice(record IVCashVc IVCashp,var row IVCashVc IVCashrw, Boolean getprice)
+BEGIN
+  record PLVc PLr;
+  record PLQVc PLQr;
+  record PLDefVc PLDefr;
+  record AccBlock ARAccRec;
+  string 20 artcode;
+  string 2 vatcode,paydeal;
+  string 10 pricelist,tax2code;
+  Boolean recalcprice,pldeffound,pricefound,priceqfound,deppr;
+  Boolean res,dummyf;
+  val price,vatval,t1,tax2prc;
+
+  record INVc INr;
+  Boolean calcprice2;
+  string 255 tstr;
+  string 2 fakeVATCode;
+  val t;
+
+
+  res = true;
+  recalcprice = false;
+  pldeffound = false;
+  pricefound = false;
+  priceqfound = false;
+  deppr = false;
+  BlockLoad(ARAccRec);
+  paydeal = "";
+  pricelist = IVCashp.PriceList;
+  vatcode = IVCashrw.VATCode;
+  artcode = IVCashrw.ArtCode;
+  price = IVCashrw.Price;
+  paydeal = IVCashp.PayDeal;
+  if (blank(VATCode)) then begin goto LIVCashCIP; end;
+  if ((ARAccRec.BasePriceInclVAT==0) and blank(pricelist)) then begin
+    recalcprice = true;
+  end else begin
+    if (nonblank(pricelist)) then begin
+      PLDefr.Code = PriceList;
+      pldeffound = ReadFirstMain(PLDefr,1,true);
+      if (PLDefr.DepPrice!=0) then begin deppr = true; end;
+    end;    
+    PLr.PLCode = PriceList;
+    PLr.ArtCode = ArtCode;
+    pricefound = ReadFirstMain(PLr,2,true);    
+    if (deppr) then begin
+      PLQr.PLCode = PriceList;
+      PLQr.ArtCode = ArtCode;
+      priceqfound = ReadFirstMain(PLQr,2,true);
+    end;
+    if ((!priceqfound and (ARAccRec.BasePriceInclVAT==0)) or
+         (pricefound and pldeffound and (PLDefr.InclVAT==0)) or
+         (priceqfound and pldeffound and (PLDefr.InclVAT==0))) then begin
+      recalcprice = true;
+    end;  
+  end;
+  if (recalcprice) then begin
+    if (getprice) then begin
+      price = blankval;
+      if (GetItemPriceDiscount3(artcode,IVCashrw.Quant,INr,IVCashp.CurncyCode,
+          IVCashp.FrRate,IVCashp.ToRateB1,IVCashp.ToRateB2,IVCashp.BaseRate1,IVCashp.BaseRate2,
+          IVCashp.LangCode,IVCashp.CustCat,IVCashp.PriceList,IVCashp.RebCode,
+          price,tstr,IVCashrw.vRebate,
+          fakeVATCode,t,IVCashrw.SalesAcc,0,calcprice2,IVCashp.TransDate,IVCashp.CustCode,true,dummyf,IVCashp.PayDeal,tax2code,tax2prc,"")) then begin 
+      end;
+      IVCashrw.Price = price;          
+    end;
+    vatval = FindVAT(vatcode,price,0,0);
+    price = price + vatval;
+  end;
+LIVCashCIP:;
+  RETURN;
+END;   
+*/
+global
+procedure COVcGetCalcItemPrice(record COVc COp,Integer rownr,var val pricep)
+BEGIN
+  record CPMVc CPr;
+  record INVc INr;
+  row COVc COrw;
+  Integer rwcnt,i;
+  val price;
+      
+  rwcnt = MatRowCnt(COp);
+  MatRowGet(COp,rownr,COrw);
+  INr.Code = COrw.ArtCode;
+  if (ReadFirstMain(INr,1,true)) then begin end;
+  CPr.Code = INr.CalcPrice;
+  if (ReadFirstMain(CPr,1,true)) then begin
+    for (i=0;i<rwcnt;i=i+1) begin
+      MatRowGet(COp,i,COrw);
+      if (i!=rownr) then begin
+        if (COrw.stp==1) then begin
+          INr.Code = COrw.ArtCode;
+          if (ReadFirstMain(INr,1,true)) then begin          
+            AddCalcPrice(INr,CPr,COrw.ArtCode,COrw.Sum,COrw.VATCode,COp.InclVAT,price);
+          end;
+        end;
+      end;        
+    end;
+    price = Round(price,DefaultCurRoundOff);
+  end;
+  MatRowGet(COp,rownr,COrw);
+  COrw.Price = price;
+  MatRowPut(COp,rownr,COrw);  
+  if (pricep!=-1) then begin pricep = price; end;
+      
+  RETURN;
+END;
+
+global
+procedure RestAccVcGetCalcItemPrice(record INVc INr,record RestAccVc RestAccp,Integer rownr,var val pricep)
+BEGIN
+  row RestAccVc RestAccrw;
+  record CPMVc CPr;
+  Integer i,rwcnt;
+  val price;
+  record INVc locINr;
+  
+  rwcnt = MatRowCnt(RestAccp);
+  MatRowGet(RestAccp,rownr,RestAccrw);
+  RestAccrw.Price = blankval;
+  MatRowPut(RestAccp,rownr,RestAccrw);
+
+  CPr.Code = INr.CalcPrice;
+  if (ReadFirstMain(CPr,1,true)) then begin
+    for (i=0;i<rwcnt;i=i+1) begin
+      MatRowGet(RestAccp,i,RestAccrw);
+      if (i!=rownr) then begin
+        locINr.Code = RestAccrw.ArtCode;
+        if (ReadFirstMain(locINr,1,true)) then begin          
+          AddCalcPrice(locINr,CPr,RestAccrw.ArtCode,RestAccrw.Quant*RestAccrw.Price,RestAccrw.VATCode,0,price);
+        end;  
+      end;  
+    end;
+    price = Round(price,DefaultCurRoundOff);
+    MatRowGet(RestAccp,rownr,RestAccrw);
+    RestAccrw.Price = price;
+    MatRowPut(RestAccp,rownr,RestAccrw);
+  end;
+  if (pricep!=-1) then begin pricep = price; end;
+      
+  RETURN;
+END; 

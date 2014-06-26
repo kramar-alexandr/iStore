@@ -1,0 +1,9 @@
+event startup
+begin
+
+  SetLangMode(LangUkrainian,"UKR",0);
+ 
+  Maintenance("Clear SVOVc",SVOClrVClass,SVOClrMn,modMSVO);
+
+ return;
+end;  

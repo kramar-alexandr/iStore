@@ -1,0 +1,28 @@
+
+event DefineWindows
+begin
+	Real h,h1,h2,h3,h4,h5,h6,h7,hs,hm,v,v3,l,vs,vm,f,t,x,v2;
+	string 60 label;
+	record RcVc recc;
+	SetLangMode(LangUkrainian,"UKR",0);
+	//recc.f1 = "asd";
+	
+
+ 
+  WindowBegin("Prices  Export",MyExportPLEClass,CGEcW,RcType);
+  SetWrect(20,80,450,150);
+  v = 10; vs = 20; h = 160;
+
+    
+  EndWindow;
+  
+  WindowBegin("…кспорт опису товару",MyGigieneEClass,CGEcW,RcType);
+  SetWrect(20,80,450,150);
+  v = 10; vs = 20; h = 160;
+
+    
+  EndWindow;
+  
+  return;
+  end;
+  

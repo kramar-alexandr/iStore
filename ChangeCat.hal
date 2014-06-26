@@ -1,0 +1,164 @@
+
+global
+updating function val DelSealMn()
+BEGIN
+boolean TrHs;
+record CUVc CUr,oldCUr;
+LogText(0,"Delete SalesMan from Customercard");
+  CUr.Code = "";
+  
+  TrHs = true;
+  While(LoopMain(CUr,1,TrHs)) begin
+    RecordCopy(oldCUr,CUr);
+    CUr.SalesMan = "";
+    if(RecordUpdate(oldCUr,CUr,false)) then begin end;
+  end;
+
+return;
+end;
+
+
+global
+function val IVCashGetTurnover(string custcode,string item,string colns,Date sd,Date ed)
+BEGIN
+  val res,v;
+  record IVCashVc IVr;
+  row IVCashVc IVrw;
+  Integer i,rwcnt;
+  Boolean found,testf;
+  string 30 ckey;
+  Integer keys,ivtype;
+/*could be maybe based on ItemHist*/
+
+  found = true;
+  //IVr.CustCode=custcode;
+  //  IVr.InvDate = sd;
+  //  ckey = "InvDate";
+  //  keys = 1;
+    
+    if (nonblank(custcode)) then begin
+    IVr.CustCode = custcode;
+    //IVr.InvDate = sd;
+    ckey = "CustCode";
+    keys = 2;
+  end else begin
+    //IVr.InvDate = sd;
+    ckey = "CustCode";
+    keys = 1;
+  end;
+    	
+  
+//TransDateCust  
+  while (LoopKey(ckey,IVr,keys,true)) begin
+  If (IVr.CustCode==custcode) then begin
+  
+ // StopAlert(IVr.CustCode);
+  if (nonblank(custcode)) then begin
+    //StopAlert(custcode);//**************************************
+      if (IVr.CustCode!=custcode) then begin found = false;end;
+      //StopAlert(colns);
+    end;
+  //  if (IVr.InvDate>ed) then begin found = false; end;
+    if (found) then begin
+    
+      testf = true;
+      if (IVr.OKFlag==0) then begin testf = false; end;
+      if (testf) then begin
+        if (blank(item)) then begin
+
+          switch (colns) begin
+           
+            case "salesinclvat":
+        
+                v = (IVr.Sum4);
+           
+          end;
+          //if (IVr.InvType==3) then begin v = -v; end;
+         // StopAlert("2");
+          res = res + v;
+        end else begin
+          rwcnt = MatRowCnt(IVr);
+          for (i=0;i<rwcnt;i=i+1) begin
+            MatRowGet(IVr,i,IVrw);
+            if (IVrw.ArtCode==item) then begin
+              switch (colns) begin
+              
+                case "salesinclvat": v = IVrw.Sum;
+              end;
+              StopAlert("3");
+              res = res + v;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;  
+  end;//**********************
+  IVCashGetTurnover = res;
+  RETURN;
+END;
+
+global 
+updating function ChangeCatMn(Record RcVc RecSpec)
+Begin
+record CuVc Cur,Cu2r;
+record IVVc IVr;
+record IvCashVc IvCashr;
+boolean flag1,flag2,flag3;
+val res,res2,res1,rate;
+Date sStartDate,sEndDate;
+string 50 catfrom,catto,text1,text2;
+integer i;
+
+flag1=true;
+flag2=true;
+flag3=true;
+
+rate=EvalToVal(RecSpec.f1);
+catfrom=RecSpec.f3;
+catto=RecSpec.f2;
+
+sStartDate=RecSpec.sStartDate;
+sEndDate=RecSpec.sEndDate;
+
+Cur.Code=0;
+ while (flag1) begin
+ text1=Cur.Code;
+	LoopMain(Cur,1,true)
+	//StopAlert(CUr.Code & "-11-"& res);
+	text2=Cur.Code;
+		If(text1==text2) then begin flag1=false; goto LChangeCatMn; end;
+		if (Cur.CustCat==catfrom) then begin
+			
+			res1 = GetTurnover(CUr,"salesinclvat",sStartDate,sEndDate);
+			res2 = IVCashGetTurnover(CUr.Code,"","salesinclvat",sStartDate,sEndDate);
+			res=res1+res2;
+			if (res>=rate) then 
+			 begin
+			 	 RecordCopy(Cu2r,Cur);
+			     Cur.CustCat=catto;
+			     RecordUpdate(Cu2r,Cur,true);
+			 end;
+		end;	
+
+	text1=text2;
+ end;
+ LChangeCatMn:;
+
+return;
+end;
+
+global 
+function boolean MyVClassBeforeEditField()
+begin
+Record RcVc RecSpec;
+integer wn;
+
+wn =  FindWindow("MyVClass");
+GetWindowRecord(wn,RecSpec);
+RecSpec.sStartDate="1/1/2005";
+RecSpec.sEndDate=CurrentDate;
+PutWindowRecord(wn,RecSpec);
+
+return;
+end;

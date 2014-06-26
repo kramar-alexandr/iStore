@@ -1,0 +1,625 @@
+external procedure CUPer_PrintTransaction(record RcVc,record CUVc,
+                             record IPrsVc,var val,var val,var val,var val,var val,Integer,Integer);
+external procedure MyCUPer_PrintReceipt(record RcVc,record IPVc,record CUVc,record BaseCurBlock,
+                             record IPrsVc,Array LongInt,var Integer,
+                             var val,var val,var val,var val,var val,Integer,Integer);
+external procedure MyCUPer_PrintInvoice(record RcVc,LongInt,record CUVc,record BaseCurBlock,
+                                      var val,var val,var val,var val,var val,Integer,Integer,var string);
+external procedure CUPer_PrintDataForInvoice(record RcVc,LongInt,record CUVc,record BaseCurBlock,
+                                             var val,var val,var val,var val,var val,Integer,Integer);
+external procedure PrintCurncyTotals(array string,array val,array val,array val,Integer,Integer,Integer,Integer,Integer,Boolean,Integer);
+external procedure HTCustClass(string,var string);
+external function string 255 CreateInvoiceNumber(LongInt);
+external procedure CustListTransCLOut(record RcVc,record IPrsVc,record CUVc,var val,var val,Integer,Integer);
+external procedure MyCustListTransCLIn(record RcVc,record IPrsVc,record CUVc,var val,var val,Integer,Integer);
+external procedure CustListTransCredMan(record RcVc,record IPrsVc,record CUVc,var val,var val,Integer,Integer);
+external procedure SplitEclass(string,var Array string);
+external procedure PrintCurTotalsRow(record SMVc,Integer,Integer,Integer,Integer);
+external procedure AddCurTotalsRow(string,val,val,val,var record SMVc);
+external procedure HT2Per(Date, Date , var string);
+external procedure HTDetailLevel(Integer, var string);
+external procedure HTCusts(string, string, var string);
+external procedure HTCustCat(string,var string);
+external procedure HTObj(string,var string);
+external function Integer GetProgramMode();
+external function Integer SclassInEclass(Array string,string);
+external procedure CUGetStartBalance(record CUVc,string,Date,var val,Boolean);
+external procedure CUGetEndBalance(record CUVc,string,Date,var val);
+external procedure GetBaseCurncy(Integer,var string);
+
+procedure CUPer_PrintTotals(record RcVc RepSpec,record CUVc CUp,record BaseCurBlock bascur,
+                            Boolean custout,val SumDebet,val SumCredit,val startbal,
+                            var val totloss,var val totgain,
+                            var val balp,var val TotSumDebet,var val TotSumCredit)
+BEGIN
+  val v;
+  
+  if (custout) then begin
+    TotSumDebet = TotSumDebet + SumDebet;
+    TotSumCredit = TotSumCredit + SumCredit;
+//*    if (RepSpec.flags[2]==1) then begin
+//*      TotSumDebet = TotSumDebet + totloss;
+//*      TotSumCredit = TotSumCredit + totgain;
+//*    end;
+    v = SumDebet - SumCredit;
+    if (RepSpec.ArtMode==1) then begin
+      Black_Divider(9,1);
+      StartFormat(15);
+      OutString(6,0,USetStr(3192),false);
+      if (RepSpec.Media==mtFile) or (RepSpec.Media==mtExcel) or (RepSpec.Media==mtClipboard) then begin
+        OutString(3,0,"",true);
+        OutString(3,0,"",true);
+      end;
+      OutVal(3,0,SumDebet,M4Val,true);
+      if (RepSpec.Media==mtFile) or (RepSpec.Media==mtExcel) or (RepSpec.Media==mtClipboard) then begin
+        OutString(3,0,"",true);
+      end;
+      OutVal(4,0,SumCredit,M4Val,true);
+      EndFormat;
+      if ((totloss>0) or (totgain<0)) then begin
+        StartFormat(15);
+        OutString(6,0,USetStr(3201) & " " & bascur.BaseCur1,false);
+        if (totgain<0) then begin
+          totloss = -totgain;
+        end;
+        OutVal(3,0,totloss,M4Val,true);
+        EndFormat;
+      end;
+      if ((totgain>0) or (totloss<0)) then begin
+        StartFormat(15);
+        OutString(6,0,USetStr(3200) & " " & bascur.BaseCur1,false);
+        if (totloss<0) then begin
+          totgain = -totloss;
+        end;
+        OutVal(4,0,totgain,M4Val,true);
+        EndFormat;
+      end;
+      StartFormat(5);
+      EndFormat;
+      StartFormat(15);
+      OutString(6,0,USetStr(3194),false);
+      OutVal(3,0,v,M4DVal,true);
+      OutVal(4,0,v,M4CVal,true);
+      EndFormat;
+      StartFormat(15);
+      OutString(6,0,USetStr(3195),false);
+      OutVal(1,0,balp,M4Val,true);
+      EndFormat;
+      Gray_Divider(0,1);
+    end else begin
+      StartFormat(15);
+      OutString(15,0,CUp.Code,false);
+      OutString(100,0,CUp.Name,false);
+      OutVal(3,0,startbal,M4Val,true);
+      OutVal(4,0,v,M4Val,true);
+      OutVal(1,0,balp,M4Val,true);
+      EndFormat;
+    end;
+  end;
+
+  return;
+end;
+
+procedure CustHead(record RcVc RepSpec,record CUVc CUp,val startbalp,Integer inbase,Integer pos1,Integer pos2)
+BEGIN
+  string 60 curncy;
+
+  StartFormat(15);
+  EndFormat;
+  StartFormat(15);
+  OutString(0,0,CUp.Code,false);
+  OutString(2,0,CUp.Name,false);
+  OutString(350,0,CUp.VATNr,false);        
+  EndFormat;
+  Gray_Divider(0,1);
+  StartFormat(15);
+  OutString(0,0,USetStr(3184),false);
+  OutString(pos1,0,USetStr(2435),false);
+  OutString(pos2,0,USetStr(2436),false);
+  OutString(3,0,USetStr(2490),true);
+  if (RepSpec.Media==mtFile) or (RepSpec.Media==mtExcel) or (RepSpec.Media==mtClipboard) then begin
+    OutString(3,0,"",true);
+  end;
+  OutString(4,0,USetStr(2491),true);
+  if (inbase==0) then begin
+    OutString(420,0,USetStr(3201) & "/" & USetStr(3200),true);
+  end;
+  if ((nonblank(CUp.CurncyCode)) and (inbase==1)) then begin
+    OutString(1,0,CUp.CurncyCode,true);
+  end else begin
+    GetBaseCurncy(1,curncy);
+    OutString(1,0,curncy,true);
+  end;
+  EndFormat;
+  Gray_Divider(0,1);
+  StartFormat(15);
+  OutString(6,0,USetStr(2492),false);
+  OutVal(1,0,startbalp,M4Val,true);
+  EndFormat;
+  RETURN;
+END;
+
+procedure CustListTrans(record RcVc RepSpec,record CUVc CUp,var val balp,var val TotSumDebet,var val TotSumCredit,var record SMVc CurTotalsr)
+BEGIN
+  record IPVc IPr;
+  record IPrsVc IPrsr;
+  record IPrsVc OldIPrsr;
+  record BaseCurBlock bascur;
+  Boolean custout,found;
+  val v,SumDebet,SumCredit;
+  val startbal;
+  string 255 ckey;
+  val totgain,totloss;
+  string 60 curncy;
+  array val ipav1;
+  array val ipav2;
+  array val ipav3;
+  array string 20 ipacur;
+  Integer ipcurcnt;
+  Array LongInt aipnr;
+  Integer acnt,ai;
+  val cashv;
+  Integer pos1,pos2;
+  string 255 cuperlastprepcur;
+
+  pos1 = 90;
+  pos2 = 140;
+  if (RepSpec.flags[8]!=0) then begin
+    pos1 = 60;
+    pos2 = 180;
+  end;
+  BlockLoad(bascur);
+  startbal = balp;
+
+  custout = false;
+  if (balp!=0) then begin custout = true; end;
+  if (RepSpec.flags[1]==0) then begin custout = true; end;
+  if (custout) then begin
+    //CustHead(RepSpec,CUp,balp,RepSpec.flags[2],pos1,pos2);
+  end;
+
+  RecordNew(OldIPrsr);
+  IPrsr.CustCode = CUp.Code;
+  if (RepSpec.flags[5]==1) then begin
+    IPrsr.CustDate = RepSpec.sStartDate;
+    ckey = "MainKey";
+  end else begin
+    IPrsr.TransDate = RepSpec.sStartDate;
+    ckey = "CustTransKey";
+  end;
+  found = true;
+  while (LoopKey(ckey,IPrsr,2,found)) begin
+    if (IPrsr.CustCode!=CUp.Code) then begin
+      found = false;
+    end;  
+    if (found) then begin
+      if (RepSpec.flags[5]==1) then begin
+        if (IPrsr.CustDate>RepSpec.sEndDate) then begin found = false; end;
+      end else begin
+        if (IPrsr.TransDate>RepSpec.sEndDate) then begin found = false; end;
+      end;
+    end;      
+    if (found) then begin
+      if (custout==false) then begin
+        CustHead(RepSpec,CUp,balp,RepSpec.flags[2],pos1,pos2);
+        custout = true;
+      end;
+      if (IPrsr.TransType==0) then begin
+        MyCUPer_PrintInvoice(RepSpec,IPrsr.TransNr,CUp,bascur,balp,SumDebet,SumCredit,totloss,totgain,pos1,pos2,cuperlastprepcur);
+      end;       
+      if (IPrsr.TransType==1) then begin
+        if (nonblank(RepSpec.ObjStr)) then begin goto L55; end;
+        IPr.SerNr = IPrsr.TransNr;
+        if (ReadFirstMain(IPr,1,true)) then begin
+          curncy = "";
+          if (IPr.RejectedFlag!=0) then begin goto L55; end;
+          if (RepSpec.flags[4]==1) then begin
+            if (IPr.ReceivedFlag==0) then begin
+               if (IPr.OKFlag==0) then begin
+                 goto L55;
+               end;
+             end;    
+          end else begin
+            if (IPr.OKFlag==0) then begin
+              goto L55;
+            end;  
+          end;
+          MyCUPer_PrintReceipt(RepSpec,IPr,CUp,bascur,IPrsr,aipnr,acnt,balp,SumDebet,SumCredit,totloss,totgain,pos1,pos2);
+//  PrintCurncyTotals(ipacur,ipav1,ipav2,ipav3,ipcurcnt,4,480,-1,300,false,RepSpec.PocketPC);
+        end;
+      end;
+      if (IPrsr.TransType==2) then begin
+        CUPer_PrintTransaction(RepSpec,CUp,IPrsr,balp,SumDebet,SumCredit,totloss,totgain,pos1,pos2);
+      end;
+      if (IPrsr.TransType==3) then begin
+        MyCustListTransCLIn(RepSpec,IPrsr,CUp,balp,SumCredit,pos1,pos2);
+      end;
+      if (IPrsr.TransType==4) then begin
+        CustListTransCLOut(RepSpec,IPrsr,CUp,balp,SumDebet,pos1,pos2);
+      end;    
+      if (IPrsr.TransType==5) then begin
+        CustListTransCLOut(RepSpec,IPrsr,CUp,balp,SumDebet,pos1,pos2);
+      end;    
+      if (IPrsr.TransType==6) then begin
+        CustListTransCredMan(RepSpec,IPrsr,CUp,balp,SumDebet,pos1,pos2);
+      end;    
+    end;
+L55:;
+  end;
+  //CUPer_PrintTotals(RepSpec,CUp,bascur,custout,SumDebet,SumCredit,startbal,totloss,totgain,balp,TotSumDebet,TotSumCredit);
+  if ((RepSpec.flags[2]==1) and (nonblank(CUp.CurncyCode))) then begin
+    curncy = CUp.CurncyCode;
+  end else begin
+    GetBaseCurncy(1,curncy);
+  end;
+  AddCurTotalsRow(curncy,startbal,v,balp,CurTotalsr);                
+  RETURN;
+END;
+
+procedure CustListTrans_SortOnInvoice(record RcVc RepSpec,record CUVc CUp,var val balp,var val TotSumDebet,var val TotSumCredit,var record SMVc CurTotalsr,
+                                      Integer pos1,Integer pos2)
+BEGIN
+  record IPrsVc IPrsr;
+  Boolean found,custout;
+  string 50 ckey;
+  record IPVc IPr;
+  record BaseCurBlock bascur;
+  val SumDebet,SumCredit,totloss,totgain,startbal;
+  string 60 curncy;
+  val v;
+  Array LongInt aipnr;
+  Integer acnt;
+  string 255 cuperlastprepcur;
+  
+  startbal = balp;
+
+  BlockLoad(bascur);
+  IPrsr.CustCode = CUp.Code;
+  if (RepSpec.flags[5]==1) then begin
+    IPrsr.CustDate = RepSpec.sStartDate;
+    ckey = "MainKey";
+  end else begin
+    IPrsr.TransDate = RepSpec.sStartDate;
+    ckey = "CustTransKey";
+  end;
+  found = true;
+  while (LoopKey(ckey,IPrsr,2,found)) begin
+    if (IPrsr.CustCode!=CUp.Code) then begin
+      found = false;
+    end;  
+    if (found) then begin
+      if (RepSpec.flags[5]==1) then begin
+        if (IPrsr.CustDate>RepSpec.sEndDate) then begin found = false; end;
+      end else begin
+        if (IPrsr.TransDate>RepSpec.sEndDate) then begin found = false; end;
+      end;
+    end;  
+    if (found) then begin
+      if (custout==false) then begin
+        CustHead(RepSpec,CUp,balp,RepSpec.flags[2],pos1,pos2);
+        custout = true;
+      end;
+      if (IPrsr.TransType==0) then begin
+        if (IPrsr.IVNr==IPrsr.TransNr) then begin
+          MyCUPer_PrintInvoice(RepSpec,IPrsr.TransNr,CUp,bascur,balp,SumDebet,SumCredit,totloss,totgain,pos1,pos2,cuperlastprepcur);
+          CUPer_PrintDataForInvoice(RepSpec,IPrsr.TransNr,CUp,bascur,balp,SumDebet,SumCredit,totloss,totgain,pos1,pos2);
+        end;
+      end;       
+
+      if (IPrsr.TransType==1) then begin
+        if (IPrsr.IVNr>0) then begin goto L555; end;
+        if (nonblank(RepSpec.ObjStr)) then begin goto L555; end;
+        IPr.SerNr = IPrsr.TransNr;
+        if (ReadFirstMain(IPr,1,true)) then begin
+          curncy = "";
+          if (IPr.RejectedFlag!=0) then begin goto L555; end;
+          if (RepSpec.flags[4]==1) then begin
+            if (IPr.ReceivedFlag==0) then begin
+               if (IPr.OKFlag==0) then begin
+                 goto L555;
+               end;
+             end;    
+          end else begin
+            if (IPr.OKFlag==0) then begin
+              goto L555;
+            end;  
+          end;
+          MyCUPer_PrintReceipt(RepSpec,IPr,CUp,bascur,IPrsr,aipnr,acnt,balp,SumDebet,SumCredit,totloss,totgain,pos1,pos2);
+        end;
+      end;
+
+      if (IPrsr.TransType==2) then begin
+        if (IPrsr.IVNr<=0) then begin
+          CUPer_PrintTransaction(RepSpec,CUp,IPrsr,balp,SumDebet,SumCredit,totloss,totgain,pos1,pos2);
+        end;
+      end;
+      if (IPrsr.TransType==3) then begin
+        if (IPrsr.IVNr<=0) then begin
+          MyCustListTransCLIn(RepSpec,IPrsr,CUp,balp,SumCredit,pos1,pos2);
+        end;
+      end;
+      if (IPrsr.TransType==4) then begin
+        if (IPrsr.IVNr<=0) then begin
+          CustListTransCLOut(RepSpec,IPrsr,CUp,balp,SumDebet,pos1,pos2);
+        end;
+      end;    
+      if (IPrsr.TransType==5) then begin
+        if (IPrsr.IVNr<=0) then begin
+          CustListTransCLOut(RepSpec,IPrsr,CUp,balp,SumDebet,pos1,pos2);
+        end;
+      end;    
+      if (IPrsr.TransType==6) then begin
+        CustListTransCredMan(RepSpec,IPrsr,CUp,balp,SumDebet,pos1,pos2);
+      end;
+L555:;        
+    end;
+  end;
+  //CUPer_PrintTotals(RepSpec,CUp,bascur,custout,SumDebet,SumCredit,startbal,totloss,totgain,balp,TotSumDebet,TotSumCredit);
+  if ((RepSpec.flags[2]==1) and (nonblank(CUp.CurncyCode))) then begin
+    curncy = CUp.CurncyCode;
+  end else begin
+    GetBaseCurncy(1,curncy);
+  end;
+  AddCurTotalsRow(curncy,startbal,v,balp,CurTotalsr);                
+  RETURN;
+END;
+
+
+global
+procedure MyCuPerRn(record RcVc RepSpec)
+BEGIN
+  record CUVc CUr;
+  record CSVc CSr;
+  Boolean TrHs,stfound,testf;
+  val sum1,StartBal,EndBal,DiffBal;
+  val TotStartBal,TotCustBal,v;
+  val TotSumDebet,TotSumCredit;
+  string 20 lastcust;
+  string 20 frcc,tocc;
+  Array string 20 ac;
+  string 255 tstr;
+  Integer rw;
+  record SMVc CurTotalsr;  //addcurencytotals
+  Boolean notfullmonthf;
+  Integer pos1,pos2;
+  record BaseCurBlock BCb;
+
+  //StopAlert(1);
+  BlockLoad(BCb);
+  pos1 = 90;
+  pos2 = 140;
+  if (RepSpec.flags[8]!=0) then begin
+    pos1 = 60;
+    pos2 = 180;
+  end;
+  SplitEclass(RepSpec.f4,ac);
+  frcc = FirstInRange(RepSpec.f1,20);
+  tocc = LastInRange(RepSpec.f1,20);
+  RecordNew(CurTotalsr);
+  StartReportJob(USetStr(2480));
+   rw = 1;    
+   HT2Per(RepSpec.sStartDate,RepSpec.sEndDate,tstr);
+   Header(rw,tstr,1);
+   rw = rw + 1;
+   HTDetailLevel(RepSpec.ArtMode,tstr);
+   Header(rw,tstr,0);
+   HTCusts(frcc,tocc,tstr);
+   Header(rw,tstr,1);
+   rw = rw + 1;
+   HTCustCat(RepSpec.f3,tstr);
+   if (nonblank(tstr)) then begin
+     Header(rw,tstr,1);
+     rw = rw + 1;
+   end;  
+   if (nonblank(RepSpec.ObjStr)) then begin
+     HTObj(RepSpec.ObjStr,tstr);
+     Header(rw,tstr,1);
+     rw = rw + 1;
+   end;
+   if (RepSpec.flags[1]==1) then begin
+     tstr = USetStr(6651);
+     Header(rw,tstr,1);
+     rw = rw + 1;
+   end;
+   if ((RepSpec.flags[2]==1) and (GetProgramMode!=4)) then begin
+     tstr = USetStr(6650);
+     Header(rw,tstr,1);
+     rw = rw + 1;
+   end;
+   HTCustClass(RepSpec.f4,tstr);
+   if (nonblank(tstr)) then begin
+     Header(rw,tstr,1);
+     rw = rw + 1;
+   end;  
+  EndHeader;
+  notfullmonthf = GetDay(RepSpec.sStartDate)!=1;
+  if (RepSpec.wholemonthf==0) then begin
+//    StartFormat(15);
+//     OutString(0,0,USetStr(1163),false);
+//    EndFormat;
+//    goto LCuPerRn;
+  end;
+  
+  SetRepCol(2,60);
+  SetRepCol(3,288);
+  if (RepSpec.ArtMode==0) or (RepSpec.flags[2]==1) then begin
+    SetRepCol(4,384);
+  end else begin
+    SetRepCol(4,358);
+  end;
+  SetRepCol(5,293);
+  SetRepCol(6,140);
+  SetRepCol(7,293);
+  SetRepCol(8,389);
+  SetRepCol(9,221);
+  sum1 = 0;  
+  
+  StartFormat(15);
+    OutString(11,0,"Customer",false);
+    OutString(12,0,"Date",false);
+    OutString(13,0,"Balance",false);
+    OutString(14,0,"Invoice #",false);
+    OutString(15,0,"Due Date",false);
+    OutString(17,0,"Amount USD",false);
+    OutString(18,0,"Part#",false);
+    OutString(19,0,"Description",false);
+    OutString(20,0,"Qt-ty",false);
+    OutString(21,0,"Unit Price",false);
+    OutString(22,0,"Ext Price",false);
+    OutString(23,0,"Pmt",false);
+    OutString(24,0,"Type",false);
+    OutString(25,0,"Pmt USD",false);
+    OutString(26,0,"Pmt UAH_B",false);
+    OutString(27,0,"Pmt UAH",false);
+    OutString(28,0,"Pmt EUR",false);
+    OutString(29,0,"Rate",false);
+    EndFormat;
+  
+  if (RepSpec.ArtMode==0) then begin
+    StartFormat(15);
+    OutString(0,0,USetStr(2482),false);
+    OutString(2,0,USetStr(2483),false);
+    OutString(3,0,USetStr(2495),true);
+    OutString(4,0,USetStr(2496),true);
+    OutString(1,0,USetStr(2489),true);
+    EndFormat;
+    Gray_Divider(0,1);
+  end;
+  CUr.Code = frcc;
+  TrHs = true;
+  while (LoopMain(CUr,1,TrHs)) begin
+    if (nonblank(tocc)) then begin
+      if (CUr.Code>tocc) then begin
+        TrHs = false;
+      end;
+    end;    
+    testf = true;
+    if (CUr.CUType==0) then begin testf = false; end;
+    if (TrHs and testf) then begin
+      if (RepSpec.flags[6]==1) then begin
+        if (blank(lastcust)) then begin
+          lastcust = CUr.Code;
+        end;  
+        if (lastcust!=CUr.Code) then begin
+          if (RepSpec.Media!=6) then begin
+            NewPage(false);
+            if (RepSpec.ArtMode==0) then begin
+              StartFormat(15);
+              OutString(0,0,USetStr(2482),false);
+              OutString(2,0,USetStr(2483),false);
+              OutString(3,0,USetStr(2495),true);
+              OutString(4,0,USetStr(2496),true);
+              OutString(1,0,USetStr(2489),true);
+              EndFormat;
+              Gray_Divider(0,1);
+            end;
+          end;
+          lastcust = CUr.Code;
+        end;
+      end;
+    end;
+    if (TrHs) then begin
+      testf = true;
+      if (nonblank(RepSpec.f3) and (RepSpec.f3!=CUr.CustCat)) then begin testf = false; end;
+      if (nonblank(RepSpec.f4)) then begin
+        if (SclassInEclass(ac,CUr.Classification)==0) then begin testf = false; end;
+      end;  
+      if (CUr.CUType==0) then begin testf = false; end; 
+      if (testf) then begin
+        CSr.CustCode = CUr.Code;
+        stfound = ReadFirstMain(CSr,1,true);
+        if (stfound==true) then begin
+          if ((RepSpec.flags[2]==1) and (nonblank(CUr.CurncyCode))) then begin
+            if (notfullmonthf) then begin
+              CUGetStartBalance(CUr,"salesinclvat",RepSpec.sStartDate,StartBal,false);
+              CUGetStartBalance(CUr,"paidvalue",RepSpec.sStartDate,v,false);  
+              StartBal = StartBal - v;
+              CUGetEndBalance(CUr,"salesinclvat",RepSpec.sEndDate,EndBal);
+              CUGetEndBalance(CUr,"paidvalue",RepSpec.sEndDate,v);
+            end else begin
+              CUGetStartBalance(CUr,"salesinclvat",RepSpec.sStartDate,StartBal,blank(CUr.CurncyCode) or CUr.CurncyCode==BCb.BaseCur1);
+              CUGetStartBalance(CUr,"paidvalue",RepSpec.sStartDate,v,blank(CUr.CurncyCode) or CUr.CurncyCode==BCb.BaseCur1);  
+              StartBal = StartBal - v;
+              EndBal = GetBalance(CUr,"salesinclvat",RepSpec.sEndDate);
+              v = GetBalance(CUr,"paidvalue",RepSpec.sEndDate);  
+            end;
+            EndBal = EndBal - v;            
+            DiffBal = EndBal - StartBal;
+          end else begin
+            if (notfullmonthf) then begin
+              CUGetStartBalance(CUr,"balance",RepSpec.sStartDate,StartBal,blank(CUr.CurncyCode) or CUr.CurncyCode==BCb.BaseCur1);
+              CUGetEndBalance(CUr,"balance",RepSpec.sEndDate,EndBal);
+            end else begin
+              CUGetStartBalance(CUr,"balance",RepSpec.sStartDate,StartBal,blank(CUr.CurncyCode) or CUr.CurncyCode==BCb.BaseCur1);
+              CUGetEndBalance(CUr,"balance",RepSpec.sEndDate,EndBal);
+            end;
+            DiffBal = EndBal - StartBal;
+            if (RepSpec.ArtMode==0) then begin
+              TotSumDebet = TotSumDebet + DiffBal;
+            end;  
+          end;
+        end else begin
+          StartBal = 0;
+          EndBal = 0;
+          DiffBal = 0;
+        end;
+        TotStartBal = TotStartBal + StartBal;
+        if (RepSpec.ArtMode==0) then begin
+          if (RepSpec.flags[1]!=0) then begin
+            if ((StartBal==0) and (DiffBal==0) and (EndBal==0)) then begin 
+              goto L33; 
+            end;
+          end;    
+          StartFormat(15);
+          OutString(0,0,CUr.Code,false);
+          OutString(2,0,CUr.Name,false);
+          OutVal(3,0,StartBal,M4Val,true);
+          OutVal(4,0,DiffBal,M4Val,true);
+          OutVal(1,0,EndBal,M4Val,true);
+          EndFormat;
+L33:;
+          TotCustBal = TotCustBal + EndBal;
+          if ((RepSpec.flags[2]==1) and (nonblank(CUr.CurncyCode))) then begin
+            tstr = CUr.CurncyCode;
+          end else begin
+            GetBaseCurncy(1,tstr);
+          end;          
+          AddCurTotalsRow(tstr,StartBal,DiffBal,EndBal,CurTotalsr);            
+        end;
+        if (RepSpec.ArtMode==1) then begin
+          if (RepSpec.flags[9]==0) then begin
+            CustListTrans(RepSpec,CUr,StartBal,TotSumDebet,TotSumCredit,CurTotalsr);
+          end else begin
+            CustListTrans_SortOnInvoice(RepSpec,CUr,StartBal,TotSumDebet,TotSumCredit,CurTotalsr,pos1,pos2);
+          end;
+          TotCustBal = TotCustBal + StartBal;
+        end;
+      end;
+    end;
+  end;
+  if (RepSpec.ArtMode==0) then begin
+    Gray_Divider(0,1);
+  end;  
+/*  if (RepSpec.flags[2]==0) then begin
+    //Gray_Divider(0,1);
+    v = TotSumDebet - TotSumCredit;
+    StartFormat(15);
+    OutString(6,0,USetStr(2429),false);
+    OutVal(3,0,TotStartBal,M4Val,true);
+    OutVal(4,0,v,M4Val,true);
+    OutVal(1,0,TotCustBal,M4Val,true);
+    EndFormat;
+  end else begin
+    StartFormat(15);
+    OutString(6,0,USetStr(2429),false);
+    OutString(3,0,USetStr(2495),true);
+    OutString(4,0,USetStr(2496),true);
+    OutString(1,0,USetStr(2489),true);
+    EndFormat;
+  end;*/
+  //Gray_Divider(0,1);
+  //PrintCurTotalsRow(CurTotalsr,-1,3,4,1);    
+LCuPerRn:;
+  EndJob;
+  RETURN;
+END;

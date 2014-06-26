@@ -1,0 +1,42 @@
+remote function Boolean CreateCreditNoteIV(record IVVc,var record IVVc,string);
+
+global
+updating procedure CreateCreditNoteIVDsm()
+BEGIN
+  record IVVc IVr;
+  record IVVc IVCreditr;
+  Integer wn,nwn;
+  Integer normalstate;
+  Boolean res;
+  record LocalMachineBlock LMb;
+	
+  normalstate = 0;//Rs_normal
+  wn = CurWindow;
+  DeselectWindow(wn,false);
+  if (WindowState(wn)==normalstate) then begin
+    GetWindowRecord(wn,IVr);
+    if ((IVr.OKFlag!=0) and (IVr.InvType<>3)) then begin
+      BlockLoad(LMb);
+      res = CreateCreditNoteIV(IVr,IVCreditr,LMb.DefReturnLocation);
+      if (res) then begin
+        nwn = OpenWindow("IVDClass",1,0,"","",IVCreditr);
+        if (WindowDoOK(nwn,0)) then begin
+          UpdateBrowses("IVVc");
+					getwindowrecord(nwn,IVCreditr);// Edit ************************** Tuesday, 5 February 2013 16:49:39
+					CopyRecordLinks(IVr,IVCreditr);// Edit ************************** Tuesday, 5 February 2013 16:49:27
+        end;
+      end else begin
+        Beep;
+      end;
+    end else begin
+      Beep;
+    end;
+  end else begin
+    Beep;
+  end;
+  RETURN;
+END;
+
+
+
+

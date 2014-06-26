@@ -1,0 +1,341 @@
+external procedure Mul2VAT(string,val,var val,var val,Integer);
+external function val MulRateToBase1(var string,val,val,val,val,val,val,Integer);
+external procedure MulVATIV(string,val,var val,var val,Integer,Integer);
+external function Integer DaysInMonth(Integer,Integer);
+external procedure ExtractObj(string,var Integer,var string);
+external function Boolean PasteInvIn2OPr(var record OPVc,Integer,Date,Integer,val,var string,Integer,var Boolean);
+external function Integer GetCheck(string,string,LongInt,var string,var string,var string,var val,var Date);
+external function Boolean GetPMCurrency(string,var string);
+external procedure MatchOPRowSums(string,string,Date,string,var val,var string,var val,string,var val,Boolean,Boolean,Boolean);
+external function Integer GetVATLaw();
+external function Boolean WarnOldRecords(Date,string,LongInt);
+external function Boolean DateWarned(Date,string);
+external procedure CurValToOtherCur(Date,string,val,string,var val,Integer);
+external procedure OPSumup(var record OPVc,Boolean);
+external procedure GetFullCurncyRate(var string,Date,var val,var val,var val,var val,var val);// Edit ************************** пятница, 25 июня 2010 г. 14:03:51
+
+
+// Edit Start ---------------------------------------------- Edit Start
+	//пятница, 25 июня 2010 г. 14:03:55
+	function val conv(string curcode,date curdate)
+begin
+val frrate,to1,to2,br1,br2;
+//String 5 curcode;
+val rank;
+  
+  GetFullCurncyRate(curcode,curdate,frrate,to1,to2,br1,br2);
+  rank=frrate/to1;
+  conv = rank;
+  if(blank(rank)) then begin conv=1; rank = 1; end;
+
+return;
+end;
+	// Edit End ---------------------------------------------- Edit End
+	
+global
+procedure OPVc_PasteTransDate(var record OPVc OPp)
+BEGIN
+  if (blankdate(OPp.TransDate)) then begin
+    OPp.TransDate = OPp.PayDate;
+  end;
+  if (DateWarned(OPp.TransDate,"OPVc")) then begin
+    MessageBox(1045,"");
+  end;
+  if (WarnOldRecords(OPp.TransDate,"OPVc",OPp.SerNr)) then begin
+    MessageBox(2020,"");
+  end;
+  RETURN;
+END;
+
+global
+procedure ChangeOPInvVal(row OPVc oprp,Date tdp)
+begin
+  val t;
+
+  if (oprp.PInvCurncy==oprp.RecCurncy) then begin
+    oprp.PInvVal = oprp.RecVal;
+  end else begin
+    CurValToOtherCur(tdp,oprp.RecCurncy,oprp.RecVal,oprp.PInvCurncy,t,DefaultCurRoundOff);
+    oprp.PInvVal = t;
+  end;
+  return;
+end;
+
+procedure ChangeOPRecVal(Integer rownr,row OPVc oprp,Date tdp)
+BEGIN
+  val t;
+  
+  ChangeOPInvVal(oprp,tdp);
+  if (oprp.BankCurncy==oprp.PInvCurncy) then begin
+    oprp.BankVal = oprp.PInvVal;
+  end else begin
+    if (oprp.BankCurncy==oprp.RecCurncy) then begin
+      oprp.BankVal = oprp.RecVal;
+    end else begin
+      CurValToOtherCur(tdp,oprp.RecCurncy,oprp.RecVal,oprp.BankCurncy,t,DefaultCurRoundOff);
+      oprp.BankVal = t;
+    end;
+  end;
+  if (oprp.PInvVal<0) then begin
+    oprp.B1BankVal = -oprp.B1BankVal;
+    oprp.B2BankVal = -oprp.B2BankVal;
+  end;
+  RETURN;
+END;
+
+procedure ChangeOPBankCurncy(var record OPVc OPp,string curcode)
+BEGIN
+  row OPVc OPrw;
+  Integer rwcnt,i;
+  
+  rwcnt = MatRowCnt(OPp);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(OPp,i,OPrw);
+    OPrw.BankCurncy = curcode;
+    ChangeOPRecVal(i,OPrw,OPp.TransDate);
+    MatRowPut(OPp,i,OPrw);
+  end;
+  RETURN;
+END;
+
+global
+procedure OPVc_PastePayCurCode(var record OPVc OPp)
+BEGIN
+  ChangeOPBankCurncy(OPp,OPp.PayCurCode);
+  OPSumup(OPp,true);
+  RETURN;
+END;
+
+procedure ChangeOPTotPay(var record OPVc OPp,val totvalp)
+BEGIN
+  row OPVc OPrw;
+  Integer rwcnt,i;
+  val oldbtot,sumt,incr,diff;
+  
+  rwcnt = MatRowCnt(OPp);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(OPp,i,OPrw);
+    if ((OPrw.stp==1) and (OPrw.ovst==0)) then begin
+      oldbtot = oldbtot + OPrw.BankVal;
+    end;
+  end;
+  diff = totvalp/oldbtot;
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(OPp,i,OPrw);
+    if ((OPrw.stp==1) and (OPrw.ovst==0)) then begin
+      sumt = totvalp + oldbtot;
+      OPrw.BankVal = OPrw.BankVal*diff;
+      OPrw.BankVal = Round(OPrw.BankVal,DefaultCurRoundOff);
+      if (OPrw.BankVal==0) then begin OPrw.BankVal = blankval; end;
+      MatRowPut(OPp,i,OPrw);
+      incr = incr + OPrw.BankVal;
+    end;
+  end;
+  for (i=rwcnt-1;i>=0;i=i-1) begin
+    MatRowGet(OPp,i,OPrw);
+    if ((OPrw.stp==1) and (OPrw.ovst==0)) then begin
+      if (OPrw.BankVal!=0) then begin
+        sumt = totvalp - incr;
+        OPrw.BankVal = OPrw.BankVal + sumt;
+        if (OPrw.BankVal==0) then begin OPrw.BankVal = blankval; end;
+        MatRowPut(OPp,i,OPrw);
+        goto LChangeOPTotPay;
+      end;
+    end;
+  end;
+LChangeOPTotPay:;
+  RETURN;
+END;
+
+global
+procedure OPVc_PasteCurPayVal(var record OPVc OPp)
+BEGIN
+  ChangeOPTotPay(OPp,OPp.CurPayVal);
+  OPSumup(OPp,true);
+  RETURN;
+END;
+
+global
+procedure OPVc_PasteVECode(var record OPVc OPp,Integer rownr)
+BEGIN
+  record APAccBlock APAccRec;
+  record BaseCurBlock bascur;
+  record VIVc VIr;
+  record CUVc VEr;
+  string 5 crncy,thepm;
+  string 255 t1,t2;
+  row OPVc OPrw;
+  
+  MatRowGet(OPp,rownr,OPrw);
+  BlockLoad(APAccRec);
+  VIr.SerNr = OPrw.VISerNr;
+  if (ReadFirstMain(VIr,1,true)) then begin
+    if (OPrw.VECode!=VIr.VECode) then begin
+      MessageBox(1251," " & OPrw.VECode);
+    end;
+  end;
+  VEr.Code = OPrw.VECode;
+  if (ReadFirstMain(VEr,1,true)) then begin
+    t1 = VEr.Name;
+    if (GetVATLaw==5) then begin//vatSwedish
+      if (nonblank(VEr.BankAccount)) then begin  //Then bankfile now supports both formats
+        t2 = VEr.BankAccount;
+      end else begin
+        t2 = VEr.Bank;
+      end;
+    end else begin
+      t2 = VEr.BankAccount;
+    end;
+    if (APAccRec.OnAccUseObj!=0) then begin
+      OPrw.Objects = VEr.VEObjects;
+    end;    
+  end;
+  OPrw.BankAcc = t2;
+  OPrw.Comment = t1;
+  crncy = VEr.VECurncyCode; 
+  if (blank(crncy)) then begin
+    BlockLoad(bascur);  
+    crncy = bascur.StdBaseCur;
+  end;             
+  OPrw.PInvCurncy = crncy;  
+  OPrw.BankCurncy = crncy;  
+  OPrw.RecCurncy = crncy;
+  if (nonblank(OPrw.PayMode)) then begin
+    thepm = OPrw.PayMode;
+  end else begin
+    thepm = OPp.PayMode;
+  end;  
+  if (GetPMCurrency(thepm,crncy)) then begin end;  
+  if (nonblank(crncy)) then begin
+    OPrw.BankCurncy = crncy;
+  end;
+  MatRowPut(OPp,rownr,OPrw);
+  RETURN;
+END;
+
+procedure ChangeOPRecCur(Integer rownr,row OPVc oprp,Date tdp)
+BEGIN
+  Boolean copytobank;
+  val t;
+
+  if (oprp.PInvCurncy==oprp.RecCurncy) then begin
+    if (oprp.RecVal!=oprp.BankVal) then begin copytobank = true; end;
+    oprp.RecVal = oprp.PInvVal;
+  end else begin
+    if (oprp.RecVal!=oprp.BankVal) then begin copytobank = true; end;
+    CurValToOtherCur(tdp,oprp.PInvCurncy,oprp.PInvVal,oprp.RecCurncy,t,DefaultCurRoundOff);
+    oprp.RecVal = t;
+  end;
+  oprp.RecVal = oprp.RecVal;
+  oprp.PInvVal = oprp.PInvVal;
+  if (copytobank) then begin
+    oprp.BankVal = oprp.RecVal;
+    oprp.BankCurncy = oprp.RecCurncy;
+    oprp.BankVal = oprp.BankVal;
+    oprp.BankCurncy = oprp.BankCurncy;
+  end;
+  if (oprp.VISerNr==-1) then begin
+    oprp.PInvCurncy = oprp.RecCurncy;
+    oprp.PInvVal = oprp.RecVal;
+  end;  
+  RETURN;
+END;
+
+global
+procedure OPVc_PasteRecCurncy(var record OPVc OPp,Integer rownr)
+BEGIN
+  row OPVc OPrw;
+  
+  MatRowGet(OPp,rownr,OPrw);
+  ChangeOPRecCur(rownr,OPrw,OPp.TransDate);
+  MatRowPut(OPp,rownr,OPrw);
+  OPSumup(OPp,true);
+  RETURN;
+END;
+
+global
+procedure OPVc_PasteRecVal(var record OPVc OPp,Integer rownr)
+BEGIN
+  row OPVc OPrw;
+  val t,rs,t1;
+  record AccBlock Accb;
+  record RoundBlock Rb;
+  
+  BlockLoad(Rb);  
+  MatRowGet(OPp,rownr,OPrw);
+  ChangeOPRecVal(rownr,OPrw,OPp.TransDate);
+  if (nonblank(OPrw.VATCode)) then begin
+    if (OPrw.VISerNr<0) then begin
+      BlockLoad(Accb);  
+      MulVATIV(OPrw.VATCode,OPrw.PInvVal,t,t1,1,Accb.NoTAXonVAT);
+      OPrw.VATVal = Round(t,Rb.RndVat);
+      OPrw.TAX1Sum = Round(t1,Rb.RndVat);
+    end else begin
+      Mul2VAT(OPrw.VATCode,OPrw.PInvVal,t,rs,1);
+      OPrw.VATVal = Round(t,Rb.RndVat);;
+    end;
+  end else begin
+    OPrw.VATVal = blankval;
+    OPrw.TAX1Sum = blankval;
+  end;  
+  MatRowPut(OPp,rownr,OPrw);
+  OPSumup(OPp,true);
+  RETURN;
+END;
+
+procedure ChangeOPBankVal(Integer rownr,row OPVc oprp,Date tdp)
+BEGIN
+  val t;
+  
+  if (oprp.RecVal==0) then begin
+    if (oprp.BankCurncy==oprp.PInvCurncy) then begin
+      oprp.PInvVal = oprp.BankVal;
+    end else begin
+      if (oprp.BankCurncy==oprp.RecCurncy) then begin
+        oprp.PInvVal = oprp.BankVal;
+      end else begin
+        CurValToOtherCur(tdp,oprp.BankCurncy,oprp.BankVal,oprp.PInvCurncy,t,DefaultCurRoundOff);
+        oprp.PInvVal = t;
+      end;
+    end;  
+    if (oprp.BankCurncy==oprp.RecCurncy) then begin
+      oprp.RecVal = oprp.BankVal;
+    end else begin
+      CurValToOtherCur(tdp,oprp.BankCurncy,oprp.BankVal,oprp.RecCurncy,t,DefaultCurRoundOff);
+      oprp.RecVal = t;
+    end;
+  end;  
+  RETURN;
+END;
+
+global
+procedure OPVc_PasteBankVal(var record OPVc OPp,Integer rownr)
+BEGIN
+  row OPVc OPrw;
+  val oldBank;
+  
+  MatRowGet(OPp,rownr,OPrw);
+  if (OPrw.BankCurncy==OPrw.RecCurncy) then begin
+    ChangeOPRecVal(rownr,OPrw,OPp.TransDate);          
+  end else begin
+    oldBank = OPrw.BankVal;
+    OPrw.RecVal = round(OPrw.BankVal*conv(OPrw.RecCurncy,OPp.TransDate)/conv(OPrw.BankCurncy,OPp.TransDate),defaultcurroundoff);// Edit ************************** пятница, 25 июня 2010 г. 14:15:13
+    MatRowPut(OPp,rownr,OPrw);
+    ChangeOPRecVal(rownr,OPrw,OPp.TransDate);
+    MatRowPut(OPp,rownr,OPrw);
+ // Edit Start ---------------------------------------------- Edit Start
+	//Monday, 15 November 2010 10:50:11
+	   MatRowGet(OPp,rownr,OPrw);
+    OPrw.BankVal = oldBank;
+    MatRowPut(OPp,rownr,OPrw);
+	// Edit End ---------------------------------------------- Edit End
+	
+    
+  end;
+  
+  
+  MatRowPut(OPp,rownr,OPrw);
+  OPSumup(OPp,true);
+  RETURN;
+END;
+

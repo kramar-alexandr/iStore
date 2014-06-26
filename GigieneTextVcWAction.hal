@@ -1,0 +1,64 @@
+
+function Boolean GigieneTextDClassArtCodeEFAfter(Integer wn,Integer rownr,Integer changed)
+BEGIN
+  record INVc INr;
+  record GigieneTextVc GGr;
+  row GigieneTextVc GGrw;
+  Boolean res;
+  string 200 tstr;
+  integer i,mtrw;
+  
+  res = true;
+  if (changed!=0) then begin
+    GetWindowRecord(wn,GGr);
+    
+    INr.Code = GGr.ArtCode;
+    if(ReadFirstMain(INr,1,true))then begin
+      tstr = INr.Name;
+    end;
+    mtrw = matrowcnt(GGr);
+    if(mtrw>0)begin
+      matrowget(GGr,0,GGrw);
+      GGrw.Str1 = USetStr(31015) & " " & tstr;
+      MatROwPut(GGr,0,GGrw);
+    end else begin
+      GGrw.Str1 = USetStr(31015) & " " & tstr;
+      MatROwInsert(GGr,0,GGrw);
+      GGrw.Str1 = USetStr(31016);
+      MatROwInsert(GGr,1,GGrw);
+      GGrw.Str1 = USetStr(31017);
+      MatROwInsert(GGr,2,GGrw);
+      GGrw.Str1 = USetStr(31018);
+      MatROwInsert(GGr,3,GGrw);
+      GGrw.Str1 = USetStr(31019);
+      MatROwInsert(GGr,4,GGrw);
+      GGrw.Str1 = USetStr(31020);
+      MatROwInsert(GGr,5,GGrw);
+      GGrw.Str1 = USetStr(31021);
+      MatROwInsert(GGr,6,GGrw);
+      GGrw.Str1 = USetStr(31022);
+      MatROwInsert(GGr,7,GGrw);
+      GGrw.Str1 = USetStr(31023);
+      MatROwInsert(GGr,8,GGrw);
+    end;
+    
+    PutWindowRecord(wn,GGr);    
+  end;
+  GigieneTextDClassArtCodeEFAfter = res;
+  RETURN;
+END;
+
+global
+function Boolean GigieneTextDClassAfterEditField(Integer wn,string fieldname,Integer fn, Integer rownr,Integer changed)
+BEGIN
+  Boolean res;
+  switch (fieldname) begin
+   
+    case "ArtCode": res = GigieneTextDClassArtCodeEFAfter(wn,rownr,changed);
+                    
+    
+  end;
+  GigieneTextDClassAfterEditField = res;
+  RETURN;
+END;
+

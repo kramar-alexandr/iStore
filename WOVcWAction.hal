@@ -1,0 +1,58 @@
+function Boolean WODClassOurContactEFAfter(Integer wn,Integer rownr,Integer changed)
+BEGIN
+  record WOVc WOr,oldWOr;
+  record CUVc ContactCUr;
+  Boolean res;
+  
+  res = true;
+  if (changed!=0) then begin
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,WOr);
+    oldWOr.SerNr = WOr.SerNr;
+    
+    If(ReadFirstMain(oldWOr,1,true)) then begin
+      if(blank(oldWOr.OurContact)) then begin
+        res = true;
+      end else begin
+        if(oldWOr.OurContact != WOr.OurContact) then begin
+          WOr.OurContact = oldWOr.OurContact;
+        end;
+      end;
+    end;
+
+    PutWindowRecord(wn,WOr);
+  end;
+  WODClassOurContactEFAfter = res;
+  RETURN;
+END;
+
+global
+function Boolean WODClassAfterEditField(Integer wn,string fieldname,Integer fn, Integer rownr,Integer changed)
+BEGIN
+  Boolean res;
+
+  switch (fieldname) begin
+    case "OurContact": res = WODClassOurContactEFAfter(wn,rownr,changed);
+    
+  end;
+  
+  res = inner.WODClassAfterEditField(wn,fieldname,fn,rownr,changed);
+  
+  WODClassAfterEditField = res;
+  RETURN;
+END;
+
+global
+function Boolean WODClassActiveEditField(Integer wn,string fieldname,Integer fn,Integer wnst,Integer rownr,Integer changed)
+BEGIN
+  Boolean res;
+  record WOVc WOr;
+  
+  res = true;
+  GetWindowRecord(wn,WOr)
+  if (WOr.Closed!=0 and fieldname!="OurContact") then begin
+    res = false;
+  end;
+  WODClassActiveEditField = res;
+  RETURN;
+END;

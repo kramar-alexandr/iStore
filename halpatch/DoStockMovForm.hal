@@ -1,0 +1,395 @@
+external procedure GetMonthText(string,Date,var string);
+external procedure GetCurUser(var record UserVc);
+external procedure ValToText(val,Integer,string,string,var string);
+external function Boolean FindFormcode(Integer,Integer);
+external procedure SetConversionFields(record INVc,val,var val,var val,var val);
+external procedure PrintValue(string,val,Integer,record LangNrVc,record SysFormatBlock,Boolean);
+external procedure BC39(string,var string);
+external procedure ItemBC39(string,var string);
+external procedure ItemBCEAN(string,var string);
+external procedure ItemBCEAN13(string,var string);
+external procedure RussianPaymentNr(LongInt,var string);
+external procedure CommonDocumentFields(record RcVc);
+external function Boolean Getformcode(Integer,Integer,string,string,string,LongInt,LongInt,string,string,Integer,string,var string);
+external procedure NumberofDocumentPages(string,Integer);
+external procedure GetLangNr(string,var record LangNrVc);
+
+procedure PrintStockMovRows(record RcVc RepSpec,record StockMovVc StockMovr,record LangNrVc LangNrr,record SysFormatBlock SysFormatRec,
+                            record MainStockBlock MSb,
+                            var val totbasprice,var val totinprice,var val totprice,var val totqty,var val totweight,var val totvolume,var val totmyprice)
+BEGIN
+  record INVc INr;
+  row StockMovVc StockMovrw;
+  Integer i,rwcnt,rownr;
+  val qtyconv1,qtyconv2,qtyconv3;
+  string 255 tstr;
+  val koeficient,price,rrp;// Edit ************************** Wednesday, 19 October 2011 14:34:09
+  record UnitVc Unitr;
+  RECORD PLVc PLr;
+ 
+  rwcnt = MatRowCnt(StockMovr);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(StockMovr,i,StockMovrw);
+    INr.Code = StockMovrw.ArtCode;
+    if (ReadFirstMain(INr,1,true)) then begin end;
+    SetConversionFields(INr,StockMovrw.Quant,qtyconv1,qtyconv2,qtyconv3);      
+    OUTFORMFIELD("F_CONVERSION1",qtyconv1);
+    OUTFORMFIELD("F_CONVERSION2",qtyconv2);
+    OUTFORMFIELD("F_CONVERSION3",qtyconv3);
+    PrintValue("F_CONVERSIONVAL1",INr.Conversion1,M4UVal,LangNrr,SysFormatRec,false);
+    PrintValue("F_CONVERSIONVAL2",INr.Conversion2,M4UVal,LangNrr,SysFormatRec,false);
+    OUTFORMFIELD("F_COMMODITYCODE",INr.EUCodex);
+    OUTFORMFIELD("F_ALTERNATIVECODE",INr.AlternativeCode);
+    
+    if (FIELDINFORM("F_ENHET")) then begin
+      Unitr.Code = INr.Unittext;
+      readfirstmain(Unitr,1,true);
+      OUTFORMFIELD("F_ENHET",Unitr.Comment);
+    end;  
+    
+    if (FIELDINFORM("MY_PRICE")) then begin
+      PLr.PLCode = "RRP_U";
+      if(currentcompany==2)then begin
+      	switch(StockMovr.ToLocation)begin
+      		case "STORE": PLr.PLCode = "IM-1";
+      		case "STORE_DEMO": PLr.PLCode = "IM-1";
+      		case "STORE_SM": PLr.PLCode = "IM-2";
+      		case "STORE_SM_D": PLr.PLCode = "IM-2";
+      	end;
+      end;
+      if(currentcompany==6)then begin
+      	switch(StockMovr.ToLocation)begin
+      		case "K_A_OP": PLr.PLCode = "P211";
+      		case "K_A_OP_EX": PLr.PLCode = "P211";
+      		case "K_OL": PLr.PLCode = "P111";
+      		case "K_OL_EXB": PLr.PLCode = "P111";
+      	end;
+      end;
+      
+      PLr.ArtCode = INr.Code;
+      if(readfirstmain(PLr,2,true))then begin
+				OUTFORMFIELD("MY_PRICE",PLr.ExVatPrice);// Edit ************************** Monday, 11 March 2013 16:13:48
+      end;
+    end;  
+    
+    OUTFORMFIELD("F_ENHET",INr.Unittext);
+    
+    OUTFORMFIELD("F_SHELFCODE",INr.InvCode);
+    PrintValue("F_BASPRIS",INr.UPrice1,M423Val,LangNrr,SysFormatRec,false);
+    PrintValue("F_WIDTH",INr.Width,M4Qty,LangNrr,SysFormatRec,false);
+    PrintValue("F_HEIGHT",INr.Height,M4Qty,LangNrr,SysFormatRec,false);
+    PrintValue("F_DEPTH",INr.Depth,M4Qty,LangNrr,SysFormatRec,false);
+    PrintValue("F_WEIGHT",INr.Weight,M4Qty,LangNrr,SysFormatRec,false);
+    PrintValue("F_VOLUME",INr.Volume,M4Qty,LangNrr,SysFormatRec,false);
+    PrintValue("F_ROWWEIGHT",StockMovrw.Quant*INr.Weight,M4Qty,LangNrr,SysFormatRec,false);
+    totweight = totweight + StockMovrw.Quant*INr.Weight;
+    PrintValue("F_ROWVOLUME",StockMovrw.Quant*INr.Volume,M4Qty,LangNrr,SysFormatRec,false);
+    totvolume = totvolume + StockMovrw.Quant*INr.Volume;
+    PrintValue("F_SUMBASPRIS",StockMovrw.Quant*INr.UPrice1,M4Val,LangNrr,SysFormatRec,false);
+    PrintValue("F_SUMFIFO",StockMovrw.FIFORowVal,M45Val,LangNrr,SysFormatRec,false);
+    totbasprice = totbasprice + StockMovrw.Quant*INr.UPrice1;
+    
+    if (FIELDINFORM("F_ARTNRBC39")) then begin
+      ItemBC39(StockMovrw.ArtCode,tstr);
+      OUTFORMFIELD("F_ARTNRBC39",tstr);
+    end;  
+    if (FIELDINFORM("F_ARTNRBCEAN")) then begin
+      ItemBCEAN(StockMovrw.ArtCode,tstr);
+      OUTFORMFIELD("F_ARTNRBCEAN",tstr);
+    end;  
+    if (FIELDINFORM("F_ARTNRBCEAN13")) then begin
+      ItemBCEAN13(StockMovrw.ArtCode,tstr);    
+      OUTFORMFIELD("F_ARTNRBCEAN13",tstr);
+    end;  
+    if (FIELDINFORM("F_SERIENRBC39")) then begin
+      BC39(StockMovrw.SerialNr,tstr);    
+      OUTFORMFIELD("F_SERIENRBC39",tstr);
+    end;  
+    OUTFORMFIELD("F_ARTNR",StockMovrw.ArtCode);
+    OUTFORMFIELD("F_ARTNR2",StockMovrw.ArtCode);
+    OUTFORMFIELD("F_SERIENR",StockMovrw.SerialNr);
+    OUTFORMFIELD("F_SPECIFIKATION",StockMovrw.Spec);
+    PrintValue("F_ANTAL",StockMovrw.Quant,M4UVal,LangNrr,SysFormatRec,false);
+
+    if (MSb.UnitConvCalc==0) then begin
+      PrintValue("F_ANTAL2",StockMovrw.Quant*StockMovrw.Coefficient,M4UVal,LangNrr,SysFormatRec,false);
+		end else begin
+      PrintValue("F_ANTAL2",StockMovrw.Quant/StockMovrw.Coefficient,M4UVal,LangNrr,SysFormatRec,false);
+    end;
+
+    totqty = totqty + StockMovrw.Quant;
+    PrintValue("F_PRIS",StockMovrw.NewPrice,M45Val,LangNrr,SysFormatRec,false);
+    totprice = totprice + StockMovrw.Quant*StockMovrw.NewPrice;
+    PrintValue("F_ROWPRICE",StockMovrw.BasePrice,M45Val,LangNrr,SysFormatRec,false);
+    PrintValue("F_BELOPP",StockMovrw.Quant*StockMovrw.BasePrice,M45Val,LangNrr,SysFormatRec,false);
+    // Edit ************************** Wednesday, 19 October 2011 14:23:39// Edit ************************** Wednesday, 19 October 2011 14:23:42// Edit ************************** Wednesday, 19 October 2011 14:23:45
+    koeficient = 3.25;
+    price = round(StockMovrw.NewPrice*koeficient,2);
+    PrintValue("F_MYROWPRICE",price,M45Val,LangNrr,SysFormatRec,false);
+    PrintValue("F_MYROWPRICESUM",StockMovrw.Quant*price,M45Val,LangNrr,SysFormatRec,false);
+    totmyprice = totmyprice+price*StockMovrw.Quant;
+    
+    // Edit ************************** Wednesday, 19 October 2011 14:23:40// Edit ************************** Wednesday, 19 October 2011 14:23:44// Edit ************************** Wednesday, 19 October 2011 14:23:48
+    totinprice = totinprice + StockMovrw.Quant*StockMovrw.BasePrice;
+    PrintValue("F_SUMPRIS",StockMovrw.Quant*StockMovrw.NewPrice,M45Val,LangNrr,SysFormatRec,false);
+    PrintValue("F_ORDQTY",StockMovrw.OrdQuant,M4UVal,LangNrr,SysFormatRec,false);
+    PrintValue("F_SENTQTY",StockMovrw.SentQuant,M4UVal,LangNrr,SysFormatRec,false);
+    PrintValue("F_SENTPRICE",StockMovrw.SentNewPrice,M45Val,LangNrr,SysFormatRec,false);
+    PrintValue("F_SENTSUM",StockMovrw.SentQuant*StockMovrw.SentNewPrice,M4Val,LangNrr,SysFormatRec,false);
+    PrintValue("F_SENTOLDPRICE",StockMovrw.SentOldPrice,M4Val,LangNrr,SysFormatRec,false);
+    OUTFORMFIELD("F_FROMPOSITIONROW",StockMovrw.FrPosCode);
+    OUTFORMFIELD("F_TOPOSITIONROW",StockMovrw.ToPosCode);
+    OUTFORMFIELD("F_SENTEXTRACOST",StockMovrw.SentExtraSCost);
+    if (nonblank(StockMovrw.ArtCode)) then begin
+      rownr = rownr + 1;
+      OUTFORMFIELD("F_ROWNR",rownr);      
+    end;
+    EndFormRow;
+  end;
+  RETURN;
+END;
+
+global
+procedure DoStockMovForm(record RcVc RepSpec,record StockMovVc StockMovr)
+BEGIN
+  record UserVc Userr;
+  record StockMovDefBlock StockMovDefRec;
+  row StockMovDefBlock StockMovDefrw;
+  record SysFormatBlock SysFormatRec;
+  record LangNrVc LangNrr;
+  Integer i,rwcnt;
+  record LocationVc FromLocr;
+  record LocationVc ToLocr;
+  record LocationVc ViaLocr;
+  record MainStockBlock MainStockRec;
+  val totbasprice,totinprice,totprice,totqty,totweight,totvolume;
+  string 255 tstr;
+  Integer OKFlag;
+  record StockMovVc realStockMovr;
+  
+  Boolean printf;
+  Integer intdocnr;
+  string 30 formcode;
+  record StandProblemVc SPr;
+  val mypdv,totmyprice;// Edit ************************** Wednesday, 19 October 2011 14:32:16
+    
+    
+  realStockMovr.SerNr = StockMovr.SerNr;
+  if (ReadFirstMain(realStockMovr,1,true)) then begin end;//for some reason we change OKFlag status in ivdclassprint
+  BlockLoad(MainStockRec);
+  BlockLoad(SysFormatRec);  
+  BlockLoad(StockMovDefRec);
+  rwcnt = MatRowCnt(StockMovDefRec);
+  GetLangNr("",LangNrr);
+  OKFlag = realStockMovr.OKFlag;
+  if (OKFlag==0) then begin
+//    OKFlag = realStockMovr.OrdFlag;
+  end;
+  if (OKFlag==0) then begin
+    OKFlag = realStockMovr.SentOKFlag;
+  end;
+  intdocnr = 1;
+  printf = true;
+  while (intdocnr<=RepSpec.flags[0] and printf) begin  // Edit ************************** Friday, 21 October 2011 13:18:43
+    formcode = "";
+    if(intdocnr==RepSpec.flags[0]) then begin// Edit ************************** Friday, 21 October 2011 13:19:52
+      for (i=rwcnt-1;i>=0;i=i-1) begin
+        MatRowGet(StockMovDefRec,i,StockMovDefrw);
+        if (FindFormcode(OKFlag,StockMovDefrw.Typ)) then begin 
+          if (Getformcode(i,StockMovDefrw.intdocnr,StockMovDefrw.FPCode,StockMovDefrw.UserGroup,StockMovDefrw.LangCode,StockMovDefrw.SerNr,StockMovr.SerNr,StockMovDefrw.PrintGroupCode,
+                          "",intdocnr,"StockMovVc",formcode)) then
+          begin
+            goto LBREAKStockMov;
+          end;
+        end;
+      end;
+  LBREAKStockMov:;
+      if (nonblank(formcode)) then begin
+        if (OpenForm(formcode)) then begin
+          CommonDocumentFields(RepSpec);
+          NumberofDocumentPages(StockMovDefrw.FPCode,MatRowCnt(StockMovr));
+          if (FIELDINFORM("F_RUSPAYNR")) then begin
+            RussianPaymentNr(StockMovr.SerNr,tstr);
+            OUTFORMFIELD("F_RUSPAYNR",tstr);
+          end;  
+          if (blank(StockMovr.FrLocation)) then begin
+            FromLocr.Code = MainStockRec.MainStock;
+          end else begin
+            FromLocr.Code = StockMovr.FrLocation;
+          end;
+          if (blank(StockMovr.ToLocation)) then begin
+            ToLocr.Code = MainStockRec.MainStock;
+          end else begin
+            ToLocr.Code = StockMovr.ToLocation;
+          end;
+          if (ReadFirstMain(FromLocr,1,true)) then begin end;
+          if (ReadFirstMain(ToLocr,1,true)) then begin end;
+          if nonblank(StockMovr.ThrouLocation) then begin
+            ViaLocr.Code = StockMovr.ThrouLocation;
+            if (ReadFirstMain(ViaLocr,1,true)) then begin end;
+            OUTFORMFIELD("F_VIALOCATION",StockMovr.ThrouLocation);
+            OUTFORMFIELD("F_VIANAME",ViaLocr.Name);
+            OUTFORMFIELD("F_VIAPHONE",ViaLocr.Phone);
+            OUTFORMFIELD("F_VIAFAX",ViaLocr.Fax);
+            OUTFORMFIELD("F_VIACONTACT",ViaLocr.Contact);
+            OUTFORMFIELD("F_VIAADRESS",ViaLocr.Addr0);
+            OUTFORMFIELD("F_VIAADRESS",ViaLocr.Addr1);
+            OUTFORMFIELD("F_VIAADRESS",ViaLocr.Addr2);
+            OUTFORMFIELD("F_VIAADRESS",ViaLocr.Addr3);
+            OUTFORMFIELD("F_VIAADRESS",ViaLocr.Addr4);  
+            OUTFORMFIELD("F_VIAEMAIL",ViaLocr.Email);  
+          end; 
+          
+          if (FIELDINFORM("MY_TOLOCKNAME")) then begin//jzs// Edit ************************** Monday, 11 March 2013 16:08:57
+            OUTFORMFIELD("MY_TOLOCKNAME",ToLocr.Name);        
+          end; 
+          if (FIELDINFORM("MY_TOLOCKADDR0")) then begin//jzs
+            OUTFORMFIELD("MY_TOLOCKADDR0",ToLocr.Addr0);        
+          end;
+          if (FIELDINFORM("MY_TOLOCKADDR1")) then begin//jzs
+            OUTFORMFIELD("MY_TOLOCKADDR1",ToLocr.Addr1);        
+          end;
+          if (FIELDINFORM("MY_TOLOCKADDR2")) then begin//jzs
+            OUTFORMFIELD("MY_TOLOCKADDR2",ToLocr.Addr2);        
+          end;
+          if (FIELDINFORM("MY_TOLOCKADDR3")) then begin//jzs
+            OUTFORMFIELD("MY_TOLOCKADDR3",ToLocr.Addr3);        
+          end;
+          if (FIELDINFORM("MY_TOLOCKADDR4")) then begin//jzs
+            OUTFORMFIELD("MY_TOLOCKADDR4",ToLocr.Addr4);        
+          end;
+          if (FIELDINFORM("MY_TOLOCKCONTACT")) then begin//jzs
+            OUTFORMFIELD("MY_TOLOCKCONTACT",ToLocr.Contact);        
+          end;
+          
+          if (FIELDINFORM("MY_FROMLOCKNAME")) then begin//jzs
+            OUTFORMFIELD("MY_FROMLOCKNAME",FromLocr.Name);        
+          end; 
+          if (FIELDINFORM("MY_FROMLOCKADDR0")) then begin//jzs
+            OUTFORMFIELD("MY_FROMLOCKADDR0",FromLocr.Addr0);        
+          end;
+          if (FIELDINFORM("MY_FROMLOCKADDR1")) then begin//jzs
+            OUTFORMFIELD("MY_FROMLOCKADDR1",FromLocr.Addr1);        
+          end;
+          if (FIELDINFORM("MY_FROMLOCKADDR2")) then begin//jzs
+            OUTFORMFIELD("MY_FROMLOCKADDR2",FromLocr.Addr2);        
+          end;
+          if (FIELDINFORM("MY_FROMLOCKADDR3")) then begin//jzs
+            OUTFORMFIELD("MY_FROMLOCKADDR3",FromLocr.Addr3);        
+          end;
+          if (FIELDINFORM("MY_FROMLOCKADDR4")) then begin//jzs
+            OUTFORMFIELD("MY_FROMLOCKADDR4",FromLocr.Addr4);        
+          end;
+          if (FIELDINFORM("MY_FROMLOCKCONTACT")) then begin//jzs
+            OUTFORMFIELD("MY_FROMLOCKCONTACT",FromLocr.Contact);        
+          end;// Edit ************************** Monday, 11 March 2013 16:08:56// Edit ************************** Monday, 11 March 2013 16:09:02
+          
+           
+          OUTFORMFIELD("F_LEVDATUM",StockMovr.TransDate);
+          OUTFORMFIELD("F_LEVNUMMER",StockMovr.SerNr);
+          OUTFORMFIELD("F_COMMENT",StockMovr.Comment);
+          OUTFORMFIELD("F_FROMLOCATION",StockMovr.FrLocation);
+          OUTFORMFIELD("F_TOLOCATION",StockMovr.ToLocation);
+          
+          OUTFORMFIELD("F_FROMNAME",FromLocr.Name);
+          OUTFORMFIELD("F_FROMPHONE",FromLocr.Phone);
+          OUTFORMFIELD("F_FROMFAX",FromLocr.Fax);
+          OUTFORMFIELD("F_FROMCONTACT",FromLocr.Contact);
+          OUTFORMFIELD("F_FROMADRESS",FromLocr.Addr0);
+          OUTFORMFIELD("F_FROMADRESS",FromLocr.Addr1);
+          OUTFORMFIELD("F_FROMADRESS",FromLocr.Addr2);
+          OUTFORMFIELD("F_FROMADRESS",FromLocr.Addr3);
+          OUTFORMFIELD("F_FROMADRESS",FromLocr.Addr4);
+          OUTFORMFIELD("F_TONAME",ToLocr.Name);
+          OUTFORMFIELD("F_TOPHONE",ToLocr.Phone);
+          OUTFORMFIELD("F_TOFAX",ToLocr.Fax);
+          OUTFORMFIELD("F_TOCONTACT",ToLocr.Contact);
+          OUTFORMFIELD("F_TOADRESS",ToLocr.Addr0);
+          OUTFORMFIELD("F_TOADRESS",ToLocr.Addr1);
+          OUTFORMFIELD("F_TOADRESS",ToLocr.Addr2);
+          OUTFORMFIELD("F_TOADRESS",ToLocr.Addr3);
+          OUTFORMFIELD("F_TOADRESS",ToLocr.Addr4);        
+          OUTFORMFIELD("F_FREIGHTCOMPCODE",StockMovr.FreightCode);
+          OUTFORMFIELD("F_FREIGHTCOMP",StockMovr.FreightCompany); 
+          OUTFORMFIELD("F_FREIGHTCOMPREGNO",StockMovr.FreightCompanyRegNr);
+          OUTFORMFIELD("F_TRUCKINFO",StockMovr.TruckInfo); 
+          OUTFORMFIELD("F_DRIVER",StockMovr.Driver); 
+          OUTFORMFIELD("F_CMRTEXT",StockMovr.CMRText);
+          OUTFORMFIELD("F_REASON",StockMovr.Reason);
+          if (FIELDINFORM("F_REASONTEXT")) then begin
+            SPr.Code = StockMovr.Reason;
+            if (ReadFirstMain(SPr,1,true)) then begin end;
+            OUTFORMFIELD("F_REASONTEXT",SPr.Comment1);
+            OUTFORMFIELD("F_REASONTEXT",SPr.Comment2);
+            OUTFORMFIELD("F_REASONTEXT",SPr.Comment3);
+          end;  
+          totmyprice=0;
+          PrintStockMovRows(RepSpec,StockMovr,LangNrr,SysFormatRec,MainStockRec,totbasprice,totinprice,totprice,totqty,totweight,totvolume,totmyprice);
+          
+          // Edit Start ---------------------------------------------- Edit Start
+    //Wednesday, 19 October 2011 14:32:21
+          PrintValue("F_MYTOTALNOTPDV",totmyprice,M45Val,LangNrr,SysFormatRec,false);
+          mypdv = round(totmyprice/5,2);
+          PrintValue("F_MYTOTALPDV",mypdv,M45Val,LangNrr,SysFormatRec,false);
+          PrintValue("F_MYTOTAL",totmyprice+mypdv,M45Val,LangNrr,SysFormatRec,false);
+          
+          if (FIELDINFORM("F_MYTOTALTEXT")) then begin
+            ValToText(totmyprice+mypdv,M4Val,StockMovr.CurncyCode,"",tstr);
+            OUTFORMFIELD("F_MYTOTALTEXT",tstr);        
+          end;   
+    // Edit End ---------------------------------------------- Edit End
+    
+          
+          PrintValue("F_TOTALINPRICE",totinprice,M45Val,LangNrr,SysFormatRec,false);
+          PrintValue("F_TOTBASPRIS",totbasprice,M45Val,LangNrr,SysFormatRec,false);
+          PrintValue("F_TOTPRIS",totprice,M45Val,LangNrr,SysFormatRec,false);
+          PrintValue("F_TOTQTY",totqty,M45Val,LangNrr,SysFormatRec,false);
+          PrintValue("F_TOTVOLUME",totvolume,M4Qty,LangNrr,SysFormatRec,false);
+          PrintValue("F_TOTWEIGHT",totweight,M4Qty,LangNrr,SysFormatRec,false);
+          OUTFORMFIELD("F_FROMPOSITION",StockMovr.FrPos);
+          OUTFORMFIELD("F_TOPOSITION",StockMovr.ToPos);
+          OUTFORMFIELD("F_SENTTRANSDATE",StockMovr.SentTransDate);
+          OUTFORMFIELD("F_DATEDAY",GetDay(StockMovr.TransDate));  
+          OUTFORMFIELD("F_DATEMONTH",GetMonth(StockMovr.TransDate));  
+          GetMonthText("",StockMovr.TransDate,tstr);
+          OUTFORMFIELD("F_DATEMONTHTEXT",tstr);  
+          OUTFORMFIELD("F_DATEYEAR",GetYear(StockMovr.TransDate));  
+          GetCurUser(Userr);
+          OUTFORMFIELD("F_PERSON",Userr.Name);
+          if (FIELDINFORM("F_ATTBETALATEXT")) then begin//jzs
+            ValToText(totprice,M4Val,StockMovr.CurncyCode,"",tstr);
+            OUTFORMFIELD("F_ATTBETALATEXT",tstr);        
+          end;   
+        
+          CloseForm;
+        end else begin
+          printf = false;
+          MessageBox(1546,formcode);
+        end;
+      end else begin
+        printf = false;
+        if (intdocnr==1) then begin
+          MessageBox(1624, " " & USetStr(1623));
+        end;
+      end;
+    end;// Edit ************************** Friday, 21 October 2011 13:22:35
+    intdocnr = intdocnr + 1;
+  end;
+L99:;
+  RETURN;
+END;
+
+
+global
+procedure DoStockMovForm1(record RcVc RepSpec)
+BEGIN
+  record StockMovVc StockMovr
+  
+  StockMovr.SerNr = RepSpec.long1;
+  if(readfirstmain(StockMovr,1,true))then begin
+    DoStockMovForm(RepSpec,StockMovr);
+  end;
+
+return;
+end;
+

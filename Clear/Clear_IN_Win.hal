@@ -1,0 +1,23 @@
+event DefineWindows
+begin
+	Real h,h1,h2,h3,h4,h5,h6,h7,hs,hm,v,v3,l,vs,vm,f,t,x,v2;
+	string 60 label;
+	SetLangMode(LangUkrainian,"UKR",0);
+	
+  WindowBegin("Clear Accounts",INClrVClass,CGMnt,RcType);
+  SetWRect(20,80,420,150);
+   StaticText(15,35,"Caution!!! All data from INVc will be deleted!!!",false);  
+  EndWindow;
+  
+  WindowBegin("Clear ORVc",ORClrVClass,CGMnt,RcType);
+  SetWRect(20,80,420,150);
+   StaticText(15,35,"Caution!!! All data from ORVc will be deleted!!!",false);  
+  EndWindow;
+  
+  WindowBegin("Clear ..Vc",REGClrVClass,CGMnt,RcType);
+  SetWRect(20,80,420,150);
+   StaticText(15,35,"Caution!!! All data from ..Vc will be deleted!!!",false);  
+  EndWindow;
+
+  return;
+  end;

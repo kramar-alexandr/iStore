@@ -1,0 +1,17 @@
+
+global
+procedure MyExportAssEn(record RcVc RepSpec)
+  begin
+  record CUVc MyRecordR;
+  Boolean TrHs;
+  string 2 separator;
+  string 255 tempstr;
+  Integer coun;
+  
+  SetExportCodePage("UTF-8");
+  RegisterExport("AT2UnitVc");
+
+return;
+end;
+	
+	 

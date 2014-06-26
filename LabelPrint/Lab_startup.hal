@@ -1,0 +1,25 @@
+event startup
+begin
+
+	SetLangMode(LangUkrainian,"UKR",0);
+	
+
+  Module("Друк етикеток","",730,modLabPrint);
+  
+  Register("Етикетки товарів","Етикетки товарів",MyLabelItemVc,modLabPrint);
+  Register("Друк етикеток","Друк етикеток",MyRepricingVc,modLabPrint);
+  Register("Друк етикеток","Друк етикеток",MyRepricingVc,modLabPrint);
+  Register("Форми документів","Форми документів",DocVc,modLabPrint);
+  Register("Стилі","Стилі",StyleVc,modLabPrint);
+  
+  Setting("Опис товарів",GigieneTextLClass,modLabPrint);
+  Document("Друк товару",GigieneTextRClass,GigieneTextForm,GigieneTextFClass,modLabPrint);
+  
+  Maintenance("Зміна валюти цінників",UpdateLablCurncyVClass,UpdateLablCurncy,modLabPrint);
+  
+  Document("Етикетка",MyLabelItemRClass,ItemLabForm,MyLabelItemFClass,modLabPrint);
+  Document("Друк етикеток",MyLabelItemRClass,ItemLabForm1,MyLabelItemFClass,modLabPrint);
+  
+  
+ return;
+end;  

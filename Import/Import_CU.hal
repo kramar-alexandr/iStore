@@ -1,0 +1,328 @@
+global
+function boolean ImportCUIClassBeforeEditField()
+begin
+  record RcVc RepSpec;
+Integer wn;
+  
+  wn =  FindWindow("ImportCUIClass");
+  GetWindowRecord(wn,RepSpec);
+  if (not RepSpec.flags[19]) then begin
+  RepSpec.flags[0] = 1;	
+  RepSpec.flags[19] = 19;
+ 
+ 
+ PutWindowRecord(wn,RepSpec);
+ end;
+ ImportCUIClassBeforeEditField = true;
+return;
+end;
+
+ //***********************************************************//
+
+global 
+updating function TramCU(record RcVc RepSpec)
+begin
+record SuppVc Suppr, oldSuppr;
+
+  Suppr.Code = 1;
+  ReadFirstMain(Suppr,0,true);
+  RecordCopy(oldSuppr,Suppr);
+  Suppr.Code = 1;
+  Suppr.flag1=RepSpec.flags[0];
+ 
+ 
+  RecordStore(Suppr,true);
+
+return;
+end;
+ //***********************************************************//
+
+global
+updating function boolean ImportCUIClassOnOkWindow()
+begin
+  record SuppVc Suppr, oldSuppr;
+  record RcVc RepSpec;
+  Integer wn;
+ 
+  wn =  FindWindow("ImportCUIClass");
+  GetWindowRecord(wn,RepSpec);
+  TramCU(RepSpec);
+  
+  ImportCUIClassOnOkWindow = true;
+  
+return;
+end;
+ //***********************************************************//
+
+global
+function LogOp()
+begin
+//CreateFile("ImportINLog.txt");
+OpenExportFile("ImportINLog.txt",false);
+stopalert("gii");
+ ExportString("Import Log"); 
+ NewLine;
+ closefile;
+return;
+end;
+
+global
+function LogWr(String str)
+begin
+OpenExportFile("ImportINLog.txt",true);
+
+//CloseFile;
+stopalert("gi1i");
+NewLine;
+ExportString(str); 
+closefile;
+return;
+end;
+
+global
+function LogCl()
+begin
+stopalert("gii2");
+
+CloseFile;
+ 	RunProgram("/Applications/TextEdit.app/Contents/MacOS/TextEdit","ImportINLog.txt");
+return;
+end;
+
+
+Global updating procedure ImportCUIn()
+begin
+	record CUVc CUr;
+    record SuppVc Suppr;
+	record CUVc Accr;
+	Integer flg,i,k;
+	string 5 sfield128;
+	string 100 sfield129;	
+	array string 255 sfield;
+	string 511 textmy;
+	Boolean testf,testin;
+	string 5 flag;
+	Integer coun;
+	
+	
+//LogOp;
+ ///CreateFile("ImportINLog.txt");
+ ///OpenExportFile("ImportINLog.txt",true);
+
+/// ExportString("Import Log"); 
+// NewLine;
+		
+ if (SetImportCodePage("UTF-8")) then begin end;
+ Suppr.Code = 1;	 
+ ReadFirstMain(Suppr,1,true);	 
+ flg = Suppr.flag1;
+ If (flg == 0) then 
+  begin
+   NextImportLine(true);
+  end; 
+     
+
+    while (TestEOF()==false) 
+    begin
+     
+for (i=1;i<=158;i=i+1) 
+    begin
+    sfield[i]=ImportField;
+    end;
+
+ 	if (nonblank (sfield[4])) then begin
+
+if (nonblank(sfield[1])) then begin /*CUr.UUID=EvalToVal(sfield[1]);*/ end;
+if (nonblank(sfield[2])) then begin CUr.ServerSequence=EvalToVal(sfield[2]); end;
+if (nonblank(sfield[3])) then begin CUr.SyncFlags=EvalToVal(sfield[3]); end;
+if (nonblank(sfield[4])) then begin CUr.Code=(sfield[4]); end;
+if (nonblank(sfield[5])) then begin CUr.Name=sfield[5]; end;
+if (nonblank(sfield[6])) then begin CUr.Person=sfield[6]; end;
+if (nonblank(sfield[7])) then begin CUr.WarnText1=(sfield[7]); end;
+if (nonblank(sfield[8])) then begin CUr.InvAddr0=(sfield[8]); end;
+if (nonblank(sfield[9])) then begin CUr.InvAddr1=sfield[9]; end;
+if (nonblank(sfield[10])) then begin CUr.InvAddr2=(sfield[10]); end;
+if (nonblank(sfield[11])) then begin CUr.InvoiceToCode=(sfield[11]); end;
+if (nonblank(sfield[12])) then begin CUr.DelAddr0=(sfield[12]); end;
+if (nonblank(sfield[13])) then begin CUr.DelAddr1=sfield[13]; end;
+if (nonblank(sfield[14])) then begin CUr.DelAddr2=(sfield[14]); end;
+if (nonblank(sfield[15])) then begin CUr.Phone=(sfield[15]); end;
+if (nonblank(sfield[16])) then begin CUr.Fax=sfield[16]; end;
+if (nonblank(sfield[17])) then begin CUr.CustCat=(sfield[17]); end;
+if (nonblank(sfield[18])) then begin CUr.Comment=(sfield[18]); end;
+if (nonblank(sfield[19])) then begin CUr.PayDeal=sfield[19]; end;
+if (nonblank(sfield[20])) then begin CUr.ExportFlag=EvalToVal(sfield[20]); end;
+if (nonblank(sfield[21])) then begin CUr.AccFlag=EvalToVal(sfield[21]); end;
+if (nonblank(sfield[22])) then begin CUr.Objects=sfield[22]; end;
+if (nonblank(sfield[23])) then begin CUr.InterestFlag=EvalToVal(sfield[23]); end;
+if (nonblank(sfield[24])) then begin CUr.VATNr=(sfield[24]); end;
+if (nonblank(sfield[25])) then begin CUr.CountryCode=sfield[25]; end;
+if (nonblank(sfield[26])) then begin CUr.SearchKey=(sfield[26]); end;
+if (nonblank(sfield[27])) then begin CUr.RemndrFlag=EvalToVal(sfield[27]); end;
+if (nonblank(sfield[28])) then begin CUr.LangCode=sfield[28]; end;
+if (nonblank(sfield[29])) then begin CUr.CurncyCode=sfield[29]; end;
+if (nonblank(sfield[30])) then begin CUr.OnAccount=EvalToVal(sfield[30]); end;
+if (nonblank(sfield[31])) then begin CUr.SalesMan=(sfield[31]); end;
+if (nonblank(sfield[32])) then begin CUr.CreditLimit=EvalToVal(sfield[32]); end;
+if (nonblank(sfield[33])) then begin CUr.ShipDeal=(sfield[33]); end;
+if (nonblank(sfield[34])) then begin CUr.ShipMode=sfield[34]; end;
+if (nonblank(sfield[35])) then begin CUr.VATCode=(sfield[35]); end;
+if (nonblank(sfield[36])) then begin CUr.Department=(sfield[36]); end;
+if (nonblank(sfield[37])) then begin CUr.OrderComment=(sfield[37]); end;
+if (nonblank(sfield[38])) then begin CUr.FreightNr=(sfield[38]); end;
+if (nonblank(sfield[39])) then begin CUr.PLCode=sfield[39]; end;
+if (nonblank(sfield[40])) then begin CUr.RebCode=sfield[40]; end;
+if (nonblank(sfield[41])) then begin CUr.Classification=sfield[41]; end;
+if (nonblank(sfield[42])) then begin CUr.blockedFlag=EvalToVal(sfield[42]); end;
+if (nonblank(sfield[43])) then begin CUr.DateChanged=stringtodate(sfield[43]); end;
+if (nonblank(sfield[44])) then begin CUr.AccOperator=(sfield[44]); end;
+if (nonblank(sfield[45])) then begin CUr.SecAccount=sfield[45]; end;
+if (nonblank(sfield[46])) then begin CUr.BankAccount=(sfield[46]); end;
+if (nonblank(sfield[47])) then begin CUr.JobDesc=sfield[47]; end;
+if (nonblank(sfield[48])) then begin CUr.CustType=EvalToVal(sfield[48]); end;
+if (nonblank(sfield[49])) then begin CUr.ComCode=sfield[49]; end;
+if (nonblank(sfield[50])) then begin CUr.Sorting=sfield[50]; end;
+if (nonblank(sfield[51])) then begin CUr.RegNr1=(sfield[51]); end;
+if (nonblank(sfield[52])) then begin CUr.RegNr2=(sfield[52]); end;
+if (nonblank(sfield[53])) then begin CUr.CPRNr=sfield[53]; end;
+if (nonblank(sfield[54])) then begin CUr.wwwAddr=sfield[54]; end;
+if (nonblank(sfield[55])) then begin CUr.CompItemCode=sfield[55]; end;
+if (nonblank(sfield[56])) then begin CUr.ANACode=sfield[56]; end;
+if (nonblank(sfield[57])) then begin CUr.EDIFlag=EvalToVal(sfield[57]); end;
+if (nonblank(sfield[58])) then begin CUr.eMail=(sfield[58]); end;
+if (nonblank(sfield[59])) then begin CUr.IntRate=EvalToVal(sfield[59]); end;
+if (nonblank(sfield[60])) then begin CUr.TheirCode=(sfield[60]); end;
+if (nonblank(sfield[61])) then begin CUr.PriceBasedOn=EvalToVal(sfield[61]); end;
+if (nonblank(sfield[62])) then begin CUr.DeliveryBasedOn=EvalToVal(sfield[62]); end;
+if (nonblank(sfield[63])) then begin CUr.SalesGroup=sfield[63]; end;
+if (nonblank(sfield[64])) then begin CUr.SortCode=(sfield[64]); end;
+if (nonblank(sfield[65])) then begin CUr.AllowLogin=EvalToVal(sfield[65]); end;
+if (nonblank(sfield[66])) then begin CUr.Password=EvalToVal(sfield[66]); end;
+if (nonblank(sfield[67])) then begin CUr.FTPLogin=EvalToVal(sfield[67]); end;
+if (nonblank(sfield[68])) then begin CUr.DateCreated=stringtodate(sfield[68]); end;
+if (nonblank(sfield[69])) then begin CUr.EGOFlag=EvalToVal(sfield[69]); end;
+if (nonblank(sfield[70])) then begin CUr.InvAddr3=sfield[70]; end;
+if (nonblank(sfield[71])) then begin CUr.DelAddr3=sfield[71]; end;
+if (nonblank(sfield[72])) then begin CUr.xArea=sfield[72]; end;
+if (nonblank(sfield[73])) then begin CUr.xAreaName=sfield[73]; end;
+if (nonblank(sfield[74])) then begin CUr.InvAddr4=sfield[74]; end;
+if (nonblank(sfield[75])) then begin CUr.DelAddr4=sfield[75]; end;
+if (nonblank(sfield[76])) then begin CUr.WebConf=sfield[76]; end;
+if (nonblank(sfield[77])) then begin CUr.WebStartPage=sfield[77]; end;
+if (nonblank(sfield[78])) then begin CUr.FreightCode=sfield[78]; end;
+if (nonblank(sfield[79])) then begin CUr.MainDispGroup=(sfield[79]); end;
+if (nonblank(sfield[80])) then begin CUr.AutoGiro=EvalToVal(sfield[80]); end;
+if (nonblank(sfield[81])) then begin CUr.OnHoldFlag=EvalToVal(sfield[81]); end;
+if (nonblank(sfield[82])) then begin CUr.ColectionFlag=EvalToVal(sfield[82]); end;
+if (nonblank(sfield[83])) then begin CUr.LocationCode=sfield[83]; end;
+if (nonblank(sfield[84])) then begin CUr.WebDisplays=sfield[84]; end;
+if (nonblank(sfield[85])) then begin CUr.Mobile=sfield[85]; end;
+if (nonblank(sfield[86])) then begin CUr.NoLetterPosting=EvalToVal(sfield[86]); end;
+if (nonblank(sfield[87])) then begin CUr.FiscalFlag=EvalToVal(sfield[87]); end;
+if (nonblank(sfield[88])) then begin CUr.UserStr1=(sfield[88]); end;
+if (nonblank(sfield[89])) then begin CUr.UserStr2=(sfield[89]); end;
+if (nonblank(sfield[90])) then begin CUr.UserStr3=sfield[90]; end;
+if (nonblank(sfield[91])) then begin CUr.UserStr4=sfield[91]; end;
+if (nonblank(sfield[92])) then begin CUr.UserStr5=sfield[92]; end;
+if (nonblank(sfield[93])) then begin CUr.UserVal1=EvalToVal(sfield[93]); end;
+if (nonblank(sfield[94])) then begin CUr.UserVal2=EvalToVal(sfield[94]); end;
+if (nonblank(sfield[95])) then begin CUr.UserVal3=EvalToVal(sfield[95]); end;
+if (nonblank(sfield[96])) then begin CUr.UserDate1=stringtodate(sfield[96]); end;
+if (nonblank(sfield[97])) then begin CUr.UserDate2=stringtodate(sfield[97]); end;
+if (nonblank(sfield[98])) then begin CUr.UserDate3=stringtodate(sfield[98]); end;
+if (nonblank(sfield[99])) then begin CUr.AccAP=(sfield[99]); end;
+if (nonblank(sfield[100])) then begin CUr.AccCost=(sfield[100]); end;
+if (nonblank(sfield[101])) then begin CUr.Bank=sfield[101]; end;
+if (nonblank(sfield[102])) then begin CUr.OnAccAccAP=sfield[102]; end;
+if (nonblank(sfield[103])) then begin CUr.MinOrdSum=EvalToVal(sfield[103]); end;
+if (nonblank(sfield[104])) then begin CUr.PurchAcc=(sfield[104]); end;
+if (nonblank(sfield[105])) then begin CUr.RefStr=(sfield[105]); end;
+if (nonblank(sfield[106])) then begin CUr.WithPayMode=(sfield[106]); end;
+if (nonblank(sfield[107])) then begin CUr.RetainPrc=(sfield[107]); end;
+if (nonblank(sfield[108])) then begin CUr.NoMailPosting=EvalToVal(sfield[108]); end;
+if (nonblank(sfield[109])) then begin CUr.VEType=EvalToVal(sfield[109]); end;
+if (nonblank(sfield[110])) then begin CUr.CUType=EvalToVal(sfield[110]); end;
+if (nonblank(sfield[111])) then begin CUr.VEPayDeal=(sfield[111]); end;
+if (nonblank(sfield[112])) then begin CUr.VEShipDeal=(sfield[112]); end;
+if (nonblank(sfield[113])) then begin CUr.VEShipMode=(sfield[113]); end;
+if (nonblank(sfield[114])) then begin CUr.VECreditLimit=EvalToVal(sfield[114]); end;
+if (nonblank(sfield[115])) then begin CUr.VEObjects=(sfield[115]); end;
+if (nonblank(sfield[116])) then begin CUr.VEWarnText1=sfield[116]; end;
+if (nonblank(sfield[117])) then begin CUr.VEInvoiceToCode=sfield[117]; end;
+if (nonblank(sfield[118])) then begin CUr.VECurncyCode=(sfield[118]); end;
+if (nonblank(sfield[110])) then begin CUr.VECustID=(sfield[119]); end;
+if (nonblank(sfield[120])) then begin CUr.VEVATCode=(sfield[120]); end;
+if (nonblank(sfield[121])) then begin CUr.NoFactoringFlag=EvalToVal(sfield[121]); end;
+if (nonblank(sfield[122])) then begin CUr.NoRepa=EvalToVal(sfield[122]); end;
+if (nonblank(sfield[123])) then begin CUr.VECat=(sfield[123]); end;
+if (nonblank(sfield[124])) then begin CUr.IBANCode=(sfield[124]); end;
+if (nonblank(sfield[125])) then begin CUr.EInvAddr=(sfield[125]); end;
+if (nonblank(sfield[126])) then begin CUr.EInvFunc=EvalToVal(sfield[126]); end;
+if (nonblank(sfield[127])) then begin CUr.AcceptanceGroup=(sfield[127]); end;
+if (nonblank(sfield[128])) then begin CUr.WebServiceChannel=EvalToVal(sfield[128]); end;
+if (nonblank(sfield[129])) then begin CUr.SkypeName=sfield[129]; end;
+if (nonblank(sfield[130])) then begin CUr.Region=sfield[130]; end;
+if (nonblank(sfield[131])) then begin CUr.NoTax1=EvalToVal(sfield[131]); end;
+if (nonblank(sfield[132])) then begin CUr.NoTax2=EvalToVal(sfield[132]); end;
+if (nonblank(sfield[133])) then begin CUr.GuestType=EvalToVal(sfield[133]); end;
+if (nonblank(sfield[134])) then begin CUr.PassportNr=sfield[134]; end;
+if (nonblank(sfield[135])) then begin CUr.Profesion=sfield[135]; end;
+if (nonblank(sfield[136])) then begin CUr.Nationality=sfield[136]; end;
+if (nonblank(sfield[137])) then begin CUr.BirthDate=stringtodate(sfield[137]); end;
+if (nonblank(sfield[138])) then begin CUr.Gender=EvalToVal(sfield[138]); end;
+if (nonblank(sfield[139])) then begin CUr.Newspaper=sfield[139]; end;
+if (nonblank(sfield[140])) then begin CUr.Smoking=EvalToVal(sfield[140]); end;
+if (nonblank(sfield[141])) then begin CUr.DocType=sfield[141]; end;
+if (nonblank(sfield[142])) then begin CUr.Blacklist=EvalToVal(sfield[142]); end;
+if (nonblank(sfield[143])) then begin CUr.MarStatus=EvalToVal(sfield[143]); end;
+if (nonblank(sfield[144])) then begin CUr.Passphrase=sfield[144]; end;
+if (nonblank(sfield[145])) then begin CUr.SIPCode=sfield[145]; end;
+if (nonblank(sfield[146])) then begin CUr.AltPhone=sfield[146]; end;
+if (nonblank(sfield[147])) then begin CUr.Comment0=sfield[147]; end;
+if (nonblank(sfield[148])) then begin CUr.Comment1=sfield[148]; end;
+if (nonblank(sfield[149])) then begin CUr.Comment2=sfield[149]; end;
+if (nonblank(sfield[150])) then begin CUr.Title=sfield[150]; end;
+if (nonblank(sfield[151])) then begin CUr.Salutation1=sfield[151]; end;
+if (nonblank(sfield[152])) then begin CUr.Salutation2=sfield[152]; end;
+if (nonblank(sfield[153])) then begin CUr.Salutation3=sfield[153]; end;
+if (nonblank(sfield[154])) then begin CUr.xUserCode=EvalToVal(sfield[154]); end;
+if (nonblank(sfield[155])) then begin CUr.DealerType=EvalToVal(sfield[155]); end;
+if (nonblank(sfield[156])) then begin CUr.GroupInv=EvalToVal(sfield[156]); end;
+if (nonblank(sfield[157])) then begin CUr.AddressBooks=sfield[157]; end;
+if (nonblank(sfield[158])) then begin CUr.Extension=sfield[158]; end;
+	 
+	 testin = RecordStore(CUr,false);
+	  	   RecordClear(CUr);
+
+	 
+	/* if (not testin) then 
+	   begin
+	   LogWr("Record with Code "& sfield[1] &" already exists");
+	    // ExportString("Record with Code "& sfield1 &" already exists"); NewLine;
+  	   end;
+	  */
+	 /*if (testin) then 
+	   begin
+	   	   LogWr("Record with Code "& sfield[1] &" addet in database");
+
+	  	// ExportString("Record with Code "& sfield1 &" addet in database"); NewLine;
+  	   end;*/
+	
+	end;
+       if (NextImportLine(true)) then begin end;
+	end;
+
+//LogCl;
+
+	
+ 	//RunProgram("/Applications/TextEdit.app/Contents/MacOS/TextEdit","ImportINLog.txt"); 
+ 	
+
+
+ return;
+end;
+	 
+
+	 
+	
+	 

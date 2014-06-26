@@ -1,0 +1,1100 @@
+external function Boolean ReadFirstItem(string,var record INVc,Boolean,Boolean);
+external function string 5 AddVATCodeToVATAccRows(string);
+external procedure ConvertSalesAcc(var string,Integer);
+external procedure GetItemSalesAcc(string,Integer,var string);
+external procedure MulVATIV(string,val,var val,var val,Integer,Integer);
+external function val MulRateToBase1(var string,val,val,val,val,val,val,Integer);
+external function Boolean GetPMRow(string,var row PMBlock);
+external function Boolean GetAccName(string,var string,Integer);
+external procedure GetVATCodeVatAcc(string,var string);
+external procedure AddSMRow(record SMVc,Date,string,string,string,string,val,Boolean,Boolean ,var val);
+
+global
+procedure InsertAtPos(Integer pos,string vcname,string thecode,LongInt serno,Date dat,Time tim,var array string avcn,var array string acod,var array LongInt aser,var array Date adat,var array Time atim,var Integer acnt)
+begin
+  Integer i;
+
+  for (i=acnt;i>pos;i=i-1) begin
+    avcn[i] = avcn[i-1];
+    acod[i] = acod[i-1];
+    aser[i] = aser[i-1];
+    adat[i] = adat[i-1];
+    atim[i] = atim[i-1];
+  end;
+  avcn[pos] = vcname;
+  acod[pos] = thecode;
+  aser[pos] = serno;
+  adat[pos] = dat;
+  atim[pos] = tim;
+  acnt = acnt + 1;
+  return;
+end;
+
+global
+procedure AddCashupToArray(string vcname,string thecode,LongInt serno,Date dat,Time tim,var array string avcn,var array string acod,var array LongInt aser,var array Date adat,var array Time atim,var Integer acnt)
+begin
+  Integer i;
+
+  for (i=0;i<acnt;i=i+1) begin
+    if ((dat<adat[i]) or ((dat==adat[i]) and (tim<atim[i]))) then begin
+      InsertAtPos(i,vcname,thecode,serno,dat,tim,avcn,acod,aser,adat,atim,acnt);
+      goto LAddCashupToArray;
+    end;
+  end;
+  avcn[acnt] = vcname;
+  acod[acnt] = thecode;
+  aser[acnt] = serno;
+  adat[acnt] = dat;
+  atim[acnt] = tim;
+  acnt = acnt + 1;
+LAddCashupToArray:;
+  return;
+end;
+
+procedure AddCashupToIVArray(string defcode,string thecode,val v,val tip,var array string aivcode,var array val aivval,var array val aivoutval,var array val atipsum,var Integer acnt)
+begin
+  Integer i;
+  string 200 locdefcode;
+
+  if (v==0) then begin
+    goto LAddCashupToIVArray;
+  end;
+  if (nonblank(thecode)) then begin
+    locdefcode = thecode;
+  end else begin
+    locdefcode = defcode;
+  end;
+  for (i=0;i<acnt;i=i+1) begin
+    if (locdefcode==aivcode[i]) then begin
+      if (v<0) then begin
+        aivoutval[i] = aivoutval[i] - v;
+      end else begin
+        aivval[i] = aivval[i] + v;
+      end;
+      atipsum[i] = tip;
+      goto LAddCashupToIVArray;
+    end;
+  end;
+  aivcode[acnt] = locdefcode;
+  atipsum[acnt] = tip;
+  if (v<0) then begin
+    aivoutval[acnt] = -v;
+    aivval[acnt] = BlankVal;
+  end else begin
+    aivval[acnt] = v;
+    aivoutval[acnt] = BlankVal;
+  end;
+  acnt = acnt + 1;
+LAddCashupToIVArray:;
+  return;
+end;
+
+global
+procedure FindTimeOfLastPOSBalance(var Date dfr,var Time tfr,string machine,string drawer,var val Bal)
+begin
+  record POSBalanceVc POSBalancer;
+  Boolean foundf,testf;
+
+  POSBalancer.MachineName = machine;
+  POSBalancer.Drawer = drawer;
+  POSBalancer.TransDate = dfr;
+  POSBalancer.TransTime = tfr;
+  foundf = true;
+  while (LoopBackKey("MachineName",POSBalancer,4,foundf))  begin
+    if (POSBalancer.MachineName!=machine) then begin
+      foundf = false;
+    end;
+    if (POSBalancer.Drawer!=drawer) then begin
+      foundf = false;
+    end;
+    if (POSBalancer.TransDate>dfr) then begin
+      foundf = false;
+    end;
+    testf = foundf;
+    if (testf) then begin
+      dfr = POSBalancer.TransDate;
+      tfr = POSBalancer.TransTime;
+      bal = POSBalancer.Bal;
+      foundf = false;
+    end;
+  end;
+  return;
+end;
+
+global
+function Boolean POSBalanceExistsAfterThis(Date dfr,Time tfr,string machine,string drawer)
+begin
+  record POSBalanceVc POSBalancer;
+  Boolean foundf,testf,res;
+
+  res = false;
+  POSBalancer.MachineName = machine;
+  POSBalancer.Drawer = drawer;
+  POSBalancer.TransDate = dfr;
+  POSBalancer.TransTime = tfr;
+  foundf = true;
+  while (LoopBackKey("MachineName",POSBalancer,4,foundf))  begin
+    if (POSBalancer.MachineName!=machine) then begin
+      foundf = false;
+    end;
+    if (POSBalancer.Drawer!=drawer) then begin
+      foundf = false;
+    end;
+    testf = foundf;
+    if (testf) then begin
+      if (POSBalancer.TransDate>dfr) then begin
+        res = true;
+        foundf = false;
+      end else begin
+        if (POSBalancer.TransDate==dfr) then begin
+          if (POSBalancer.TransTime>tfr) then begin
+            res = true;
+            foundf = false;
+          end;
+        end;
+      end;
+    end;
+  end;
+  POSBalanceExistsAfterThis = res;
+  return;
+end;
+
+global
+procedure FillUpAllCashBal(Date dfr,Date dto,Time tfr,Time tto,string machine,string drawer,var array string avcn,var array string acod,var array LongInt aser,var array Date adat,var array Time atim,var Integer acnt)
+begin
+  record CashierBalVc CashierBalr;
+  Boolean foundf,testf;
+
+  CashierBalr.MachineName = machine;
+  CashierBalr.Drawer = drawer;
+  CashierBalr.TransDate = dfr;
+  CashierBalr.TransTime = tfr;
+  foundf = true;
+  while (LoopKey("Cashup",CashierBalr,4,foundf)) begin
+    if (CashierBalr.MachineName!=machine) then begin
+      foundf = false;
+    end;
+    if (CashierBalr.Drawer!=drawer) then begin
+      foundf = false;
+    end;
+    if (CashierBalr.TransDate>dto) then begin
+      foundf = false;
+    end;
+    if (nonblanktime(tto)) then begin
+      if (CashierBalr.TransDate==dto) then begin
+        if (CashierBalr.TransTime>tto) then begin
+          foundf = false;
+        end;
+      end;
+    end;
+    testf = foundf;
+    if (CashierBalr.OKFlag==0) then begin
+      testf = false;
+    end;
+    if (testf) then begin
+      AddCashupToArray("CashierBalVc",CashierBalr.UserCode,-1,CashierBalr.TransDate,CashierBalr.TransTime,avcn,acod,aser,adat,atim,acnt);
+    end;
+  end;
+  return;
+end;
+
+global
+procedure FillUpAllPOSEvents(Date dfr,Date dto,Time tfr,Time tto,string machine,string drawer,var array string avcn,var array string acod,var array LongInt aser,var array Date adat,var array Time atim,var Integer acnt)
+begin
+  record POSEventVc POSEventr;
+  Boolean foundf,testf;
+
+  POSEventr.MachineName = machine;
+  POSEventr.Drawer = drawer;
+  POSEventr.TransDate = dfr;
+  POSEventr.TransTime = tfr;
+  foundf = true;
+  while (LoopKey("MachineName",POSEventr,4,foundf)) begin
+    if (POSEventr.MachineName!=machine) then begin
+      foundf = false;
+    end;
+    if (POSEventr.Drawer!=drawer) then begin
+      foundf = false;
+    end;
+    if (POSEventr.TransDate>dto) then begin
+      foundf = false;
+    end;
+    if (nonblanktime(tto)) then begin
+      if (POSEventr.TransDate==dto) then begin
+        if (POSEventr.TransTime>tto) then begin
+          foundf = false;
+        end;
+      end;
+    end;
+    testf = foundf;
+    if (testf) then begin
+      AddCashupToArray("POSEventVc","",POSEventr.SerNr,POSEventr.TransDate,POSEventr.TransTime,avcn,acod,aser,adat,atim,acnt);
+    end;
+  end;
+  return;
+end;
+
+global
+procedure FillUpAllPOSBalance(Date dfr,Date dto,Time tfr,Time tto,string machine,string drawer,var array string avcn,var array string acod,var array LongInt aser,var array Date adat,var array Time atim,var Integer acnt)
+begin
+  record POSBalanceVc POSBalancer;
+  Boolean foundf,testf,firstf;
+
+  firstf = false;
+  POSBalancer.MachineName = machine;
+  POSBalancer.Drawer = drawer;
+  POSBalancer.TransDate = dfr;
+  POSBalancer.TransTime = tfr;
+  foundf = true;
+  while (LoopKey("MachineName",POSBalancer,4,foundf)) begin
+    if (POSBalancer.MachineName!=machine) then begin
+      foundf = false;
+    end;
+    if (POSBalancer.Drawer!=drawer) then begin
+      foundf = false;
+    end;
+    if (POSBalancer.TransDate>dto) then begin
+      foundf = false;
+    end;
+    if (nonblanktime(tto)) then begin
+      if (POSBalancer.TransDate==dto) then begin
+        if (POSBalancer.TransTime>tto) then begin
+          foundf = false;
+        end;
+      end;
+    end;
+    testf = foundf;
+    if ((testf) and (firstf==false)) then begin
+      AddCashupToArray("POSBalanceVc","",POSBalancer.SerNr,POSBalancer.TransDate,POSBalancer.TransTime,avcn,acod,aser,adat,atim,acnt);
+    end;
+    firstf = false;
+  end;
+  return;
+end;
+
+global
+procedure FillUpAllCashEvents(Date dfr,Date dto,Time tfr,Time tto,string machine,string drawer,var array string avcn,var array string acod,var array LongInt aser,var array Date adat,var array Time atim,var Integer acnt)
+begin
+  record CashVc Cashr;
+  Boolean foundf,testf;
+
+  Cashr.MachineName = machine;
+  Cashr.Drawer = drawer;
+  Cashr.TransDate = dfr;
+  Cashr.TransTime = tfr;
+  foundf = true;
+  while (LoopKey("MachineName",Cashr,4,foundf)) begin
+    if (Cashr.MachineName!=machine) then begin
+      foundf = false;
+    end;
+    if (Cashr.Drawer!=drawer) then begin
+      foundf = false;
+    end;
+    if (Cashr.TransDate>dto) then begin
+      foundf = false;
+    end;
+    if (nonblanktime(tto)) then begin
+      if (Cashr.TransDate==dto) then begin
+        if (Cashr.TransTime>tto) then begin
+          foundf = false;
+        end;
+      end;
+    end;
+    testf = foundf;
+    if (Cashr.OKFlag==0) then begin
+      testf = false;
+    end;
+    if (testf) then begin
+      AddCashupToArray("CashVc","",Cashr.SerNr,Cashr.TransDate,Cashr.TransTime,avcn,acod,aser,adat,atim,acnt);
+    end;
+  end;
+  return;
+end;
+
+procedure AddupPOSLine(Integer whichone,string artcode,string insalesacc,string headobj,string lineobj,Integer incvat,Integer NoTAXonVAT,val sum,var array string aitcode,var array val aitsum,var array val aitvat,var Integer aitcnt,
+                       var val totsum,var val totvat,var array string avatcode,var array val avatsum,Integer avatcnt,var val maxsum,Boolean addtoit,var record SMVc SMr)
+begin
+  Integer rwcnt,i,i2;
+  row SMVc SMrw;
+  record INVc INr;
+  record ITVc ITr;
+  record RestITVc RestITr;
+  string 20 vatcode;
+  record AccBlock ARAccRec;
+  val tvat,t1;
+  val sumincvat;
+  string 255 objects,objstr,tstr;
+  string 40 salesacc;
+  val smsum;
+  record AccBlock Accbl;
+  record CCatVc CCatr;
+  record CUVc CUr;
+  record IVCashVc IVCashr;
+    record AccVc Accr;
+
+
+    //StopAlert("chubaka0 "&insalesacc);
+
+  if (ReadFirstItem(artcode,INr,false,true) and (maxsum!=0)) then begin
+    BlockLoad(ARAccRec);
+    objects = lineobj;
+    vatcode = INr.VATCode;
+    ITr.Code = INr.Group;
+    if(ReadFirstMain(ITr,1,true)) then begin
+      if(blank(vatcode)) then begin
+        vatcode = ITr.VATCodeDom;
+      end;
+    end;
+    if (whichone==2) then begin
+      RestITr.Code = INr.Group;
+      if (ReadFirstMain(RestITr,1,true)) then begin
+        if (nonblank(objects)) then begin
+          objects = objects & ",";
+        end;
+        objects = objects & RestITr.Object;
+      end;
+    end;
+    if(blank(vatcode)) then begin 
+      vatcode = ARAccRec.VATCodeDom;
+    end;
+    vatcode = "";
+    
+    sumincvat = sum;
+    tvat = 0;
+    MulVATIV(vatcode,sumincvat,tvat,t1,incvat,NoTAXonVAT);
+    if (incvat==0) then begin
+      sumincvat = sumincvat + tvat;
+    end;
+    if (sumincvat>maxsum) then begin
+      sumincvat = maxsum;
+      MulVATIV(vatcode,sumincvat,tvat,t1,1,0);
+    end;
+    
+    if (-sumincvat>maxsum) then begin
+     
+     sumincvat = maxsum;
+      MulVATIV(vatcode,sumincvat,tvat,t1,1,0);
+    end;
+    
+    maxsum = maxsum - sumincvat;
+    if (addtoit) then begin
+      for(i2=0;i2<avatcnt;i2=i2+1) begin
+        if(vatcode == avatcode[i2]) then begin
+          avatsum[i2] = avatsum[i2] + tvat;
+          i2 = avatcnt;
+        end;
+      end;
+      for(i2=0;i2<aitcnt;i2=i2+1) begin
+        if(ITr.Code == aitcode[i2]) then begin     
+          aitvat[i2] = aitvat[i2] + tvat;
+          aitsum[i2] = aitsum[i2] + sumincvat;
+          i2 = aitcnt;
+        end;
+      end;
+    totsum = totsum + sumincvat;
+    totvat = totvat + tvat;
+    end;
+    salesacc = insalesacc;
+    if (blank(salesacc)) then begin
+      GetItemSalesAcc(INr.Code,0,salesacc);
+    end;
+    if (blank(salesacc)) then begin
+    
+      salesacc = ARAccRec.DomSalesAcc;
+    end;
+    ConvertSalesAcc(salesacc,0);
+    if (GetAccName(salesacc,tstr,60)) then begin end;
+    objstr = objects;
+    //StopAlert("chubaka1 "&salesacc);
+    AddSMRow(SMr,SMr.TransDate,salesacc,objstr,vatcode,tstr,sumincvat-tvat,false,false,smsum);
+    GetVATCodeVatAcc(vatcode,salesacc);
+    ConvertSalesAcc(salesacc,0);
+    
+    if (GetAccName(salesacc,tstr,60)==false) then begin end;
+    objstr = objects;
+    //StopAlert("chubaka2 "&salesacc);
+    AddSMRow(SMr,SMr.TransDate,salesacc,objstr,AddVATCodeToVATAccRows(vatcode),tstr,tvat,false,false,smsum);
+  end;
+  return;
+end;
+
+function GetDebitAcc(var string AcccodeMy,var string Comment,string Customer, string locmachine)
+begin
+  record AccBlock Accbl;
+  record CCatVc CCatr;
+  record CUVc CUr;
+  record IVCashVc IVCashr;
+    record AccVc Accr;
+  record LocalMachineAccBlock LMAb;// Edit ************************** Wednesday, 19 October 2011 10:59:48
+  row LocalMachineAccBlock LMArw;// Edit ************************** Wednesday, 19 October 2011 10:59:49
+  integer mtrw,i;// Edit ************************** Wednesday, 19 October 2011 10:59:50
+
+
+ BlockLoad(Accbl);
+	If (nonblank(Accbl.ARAcc)) then begin AcccodeMy=Accbl.ARAcc;  end;
+	//TRrw.AccNumber= 
+	
+	CUr.Code=Customer;
+	ReadFirstMain(CUr,1,false);
+	
+CCatr.Code=CUr.CustCat;
+	ReadFirstMain(CCatr,1,false);
+	If (nonblank(CCatr.ARAcc)) then begin AcccodeMy=CCatr.ARAcc; end;
+	If (nonblank(CUr.AccAP)) then begin AcccodeMy=CUr.AccAP; end;
+	
+	blockload(LMAb);// Edit ************************** Wednesday, 19 October 2011 10:59:52
+
+  mtrw = matrowcnt(LMAb);
+  for(i=0;i<mtrw;i=i+1)begin
+    matrowget(LMAb,i,LMArw);
+    if(LMArw.LocalMachine==locmachine)then begin
+      if(nonblank(LMArw.RecAcc))then begin
+        AcccodeMy = LMArw.RecAcc;
+      end;
+    end;
+  end;
+	
+	Accr.AccNumber=AcccodeMy;
+	ReadFirstMain(Accr,1,false);
+	Comment=Accr.Comment;
+	
+return;
+end;
+
+procedure AddPMPOSToSM(string defcode,string thecode,string debugcomment,val sum,var record SMVc SMr)
+begin
+  row PMBlock PMrw;
+  string 200 locdefcode;
+  string 255 tstr;
+  val smsum;
+  
+
+  if (nonblank(thecode)) then begin
+    locdefcode = thecode;
+  end else begin
+    locdefcode = defcode;
+  end;
+  if (GetPMRow(locdefcode,PMrw)) then begin end;
+  if (GetAccName(PMrw.AccNr,tstr,60)==false) then begin end;
+  tstr = debugcomment;
+  //StopAlert("chubaka1 "&PMrw.AccNr);
+  AddSMRow(SMr,SMr.TransDate,PMrw.AccNr,"","",tstr,sum,false,true,smsum);
+  return;
+end;
+
+procedure AttToIVCashSpecArrays(record IVCashVc IVCashr,string defmode,var array string aitcode,var array val aitsum,var array val aitvat,var Integer aitcnt,var val totsum,var val totvat,var array string avatcode,var array val avatsum,Integer avatcnt,var val maxsum,Boolean addtoit,var record SMVc SMr)
+begin
+  Integer rwcnt,i,ii,lasti;
+  row IVCashVc IVCashrw;
+  val s;
+  record AccBlock Accbl;
+  record CUvc CUr;
+  record CCatVc CCatr;
+  string 20 Customer;
+  string 10 AcccodeMy;
+  string 20 Comment;
+  record VATCodeBlock VATb;
+  row VATCodeBlock VATrw1;
+  integer rwcnt1;
+  val VATRate;
+  string 255 locmachine;
+  
+  
+
+ //********************************
+   	Customer=IVCashr.CustCode;
+    locmachine = IVCashr.LocalMachineCode;
+	GetDebitAcc(AcccodeMy,Comment,Customer,locmachine);
+    
+  rwcnt = MatRowCnt(IVCashr);
+  for(i=0;i<rwcnt;i=i+1) begin
+      MatRowGet(IVCashr,i,IVCashrw);
+     //*****
+    blockload(VATb);
+	rwcnt1=MatRowCnt(VATb);
+	for (ii=0;ii<rwcnt1;ii=ii+1) begin
+	MatRowGet(VATb,ii,VATrw1);
+	 if (VATrw1.VATCode==IVCashrw.VATCode) then begin 
+		VATRate=VATrw1.ExVatpr ; 
+	 end;	
+	end;
+//    StopAlert(" 1-1 "& IVCashrw.Sum);
+    AddupPOSLine(0,IVCashrw.ArtCode,AcccodeMy,IVCashr.Objects,IVCashrw.Objects,IVCashr.InclVAT,IVCashr.NoTAXonVAT,IVCashrw.Sum,aitcode,aitsum,aitvat,aitcnt,totsum,totvat,avatcode,avatsum,avatcnt,maxsum,addtoit,SMr);
+//  AddupPOSLine(0,IVCashrw.ArtCode,IVCashrw.SalesAcc,IVCashr.Objects,IVCashrw.Objects,IVCashr.InclVAT,IVCashr.NoTAXonVAT,IVCashrw.Sum,aitcode,aitsum,aitvat,aitcnt,totsum,totvat,avatcode,avatsum,avatcnt,maxsum,addtoit,SMr);
+
+  if (nonblank(IVCashrw.ArtCode)) then begin
+      lasti = i;
+    end;
+  end;
+  if (lasti>-1) then begin
+    MatRowGet(IVCashr,lasti,IVCashrw);
+    //StopAlert(totsum & " 2-2 " & avatsum);
+    AddupPOSLine(0,IVCashrw.ArtCode,AcccodeMy,IVCashr.Objects,IVCashrw.Objects,IVCashr.InclVAT,IVCashr.NoTAXonVAT,IVCashr.Sum4,aitcode,aitsum,aitvat,aitcnt,totsum,totvat,avatcode,avatsum,avatcnt,maxsum,addtoit,SMr);
+ //AddupPOSLine(0,IVCashrw.ArtCode,IVCashrw.SalesAcc,IVCashr.Objects,IVCashrw.Objects,IVCashr.InclVAT,IVCashr.NoTAXonVAT,IVCashr.Sum0,aitcode,aitsum,aitvat,aitcnt,totsum,totvat,avatcode,avatsum,avatcnt,maxsum,addtoit,SMr);
+
+  end;
+  if (IVCashr.RetValue<0) then begin
+    s = IVCashr.CashValue;
+  end else begin
+    s = IVCashr.CashValue-IVCashr.RetValue;
+  end;
+  s = MulRateToBase1(IVCashr.CurncyCode,s,IVCashr.FrRate,IVCashr.ToRateB1,IVCashr.ToRateB2,IVCashr.BaseRate1,IVCashr.BaseRate2,DefaultCurRoundOff);
+  AddPMPOSToSM(defmode,defmode,"IVCash " & IVCashr.SerNr & IVCashrw.Spec,s,SMr);
+  s = MulRateToBase1(IVCashr.CurncyCode,IVCashr.RecValue,IVCashr.FrRate,IVCashr.ToRateB1,IVCashr.ToRateB2,IVCashr.BaseRate1,IVCashr.BaseRate2,DefaultCurRoundOff);
+  AddPMPOSToSM(defmode,IVCashr.PayDeal,"IVCash " & IVCashr.SerNr & IVCashrw.Spec,s,SMr);
+  s = MulRateToBase1(IVCashr.CurncyCode,IVCashr.RecValue2,IVCashr.FrRate,IVCashr.ToRateB1,IVCashr.ToRateB2,IVCashr.BaseRate1,IVCashr.BaseRate2,DefaultCurRoundOff);
+  AddPMPOSToSM(defmode,IVCashr.PayDeal2,"IVCash " & IVCashr.SerNr & IVCashrw.Spec,s,SMr);
+  s = MulRateToBase1(IVCashr.CurncyCode,IVCashr.RecValue3,IVCashr.FrRate,IVCashr.ToRateB1,IVCashr.ToRateB2,IVCashr.BaseRate1,IVCashr.BaseRate2,DefaultCurRoundOff);// Edit ************************** Monday, 15 April 2013 16:56:00
+  AddPMPOSToSM(defmode,IVCashr.PayDeal3,"IVCash " & IVCashr.SerNr & IVCashrw.Spec,s,SMr);// Edit ************************** Monday, 15 April 2013 16:55:45
+  return;
+end;
+
+global
+procedure FillUpAllIVCash(Date dfr,Date dto,Time tfr,Time tto,Date enddat,string machine,string drawer,string paymode,var array string aivcode,var array val aivval,var array val aivoutval,var array val atipsum,var Integer acnt,Integer detail,
+                          var array string aitcode,var array val aitsum,var array val aitvat,Integer aitcnt,Boolean addtoit,var val totsum,var val totvat,var array string avatcode,var array val avatsum,Integer avatcnt,var record SMVc SMr)
+begin
+  record IVCashVc IVCashr;
+  record DefCashBlock DefCashRec;
+  Boolean foundf,testf;
+  val s,maxsum;
+  Integer ri,ji;
+  record RestPMBlock REr;
+  record LocalMachineBlock LOCr;
+  row RestPMBlock RErw;
+  
+  BlockLoad(DefCashRec);
+  BlockLoad(REr);
+  BlockLoad(LOCr);
+  ri=matrowcnt(REr);
+  for (ji=0;ji<ri;ji=ji+1) begin
+  MatRowGet(REr,ji,RErw);
+  if (RErw.MachineName == machine) then begin
+   DefCashRec.DefCashPayMode = RErw.PMCode;
+  end;
+  end;
+  
+ 
+  foundf = true;
+  IVCashr.LocalMachineCode = machine;
+  IVCashr.DrawerCode = drawer;
+  IVCashr.TransDate = dfr;
+  IVCashr.TransTime = tfr;
+  while (LoopKey("Cashup",IVCashr,4,foundf)) begin
+    if (IVCashr.LocalMachineCode!=machine) then begin
+      foundf = false;
+    end;
+    if (IVCashr.DrawerCode!=drawer) then begin
+      foundf = false;
+    end;
+    if (IVCashr.TransDate>enddat) then begin
+      foundf = false;
+    end;
+    if (nonblankdate(dto)) then begin
+      if (IVCashr.TransDate>dto) then begin
+        foundf = false;
+      end;
+      if (IVCashr.TransDate==dto) then begin
+        if (nonblanktime(tto)) then begin
+          if (IVCashr.TransTime>=tto) then begin
+            foundf = false;
+          end;
+        end;
+      end;
+    end;
+    testf = foundf;
+    if (IVCashr.Invalid!=0) then begin
+      testf = false;
+    end;
+    if (IVCashr.OKFlag==0) then begin
+      testf = false;
+    end;
+    if (testf) then begin
+      if (detail!=0) then begin
+        if (IVCashr.RetValue<0) then begin // Can never happen, but perhaps one day
+          s = IVCashr.CashValue;
+        end else begin
+          s = IVCashr.CashValue-IVCashr.RetValue;
+        end;
+        s = MulRateToBase1(IVCashr.CurncyCode,s,IVCashr.FrRate,IVCashr.ToRateB1,IVCashr.ToRateB2,IVCashr.BaseRate1,IVCashr.BaseRate2,DefaultCurRoundOff);
+        s = s + MulRateToBase1(IVCashr.CurncyCode,IVCashr.RecValue,IVCashr.FrRate,IVCashr.ToRateB1,IVCashr.ToRateB2,IVCashr.BaseRate1,IVCashr.BaseRate2,DefaultCurRoundOff);
+        s = s + MulRateToBase1(IVCashr.CurncyCode,IVCashr.RecValue2,IVCashr.FrRate,IVCashr.ToRateB1,IVCashr.ToRateB2,IVCashr.BaseRate1,IVCashr.BaseRate2,DefaultCurRoundOff);
+        s = s + MulRateToBase1(IVCashr.CurncyCode,IVCashr.RecValue3,IVCashr.FrRate,IVCashr.ToRateB1,IVCashr.ToRateB2,IVCashr.BaseRate1,IVCashr.BaseRate2,DefaultCurRoundOff);
+        if (s!=0) then begin
+          aivcode[acnt] = IVCashr.SerNr;
+          if (s<0) then begin
+            aivoutval[acnt] = aivoutval[acnt] - s;
+            aivval[acnt] = BlankVal;
+          end else begin
+            aivval[acnt] = aivval[acnt] + s;
+            aivoutval[acnt] = BlankVal;
+          end;
+          atipsum[acnt] = BlankVal;
+          acnt = acnt + 1;
+        end;
+        maxsum = s;
+      end else begin
+        if (IVCashr.RetValue<0) then begin
+          s = IVCashr.CashValue;
+        end else begin
+          s = IVCashr.CashValue-IVCashr.RetValue;
+        end;
+        s = MulRateToBase1(IVCashr.CurncyCode,s,IVCashr.FrRate,IVCashr.ToRateB1,IVCashr.ToRateB2,IVCashr.BaseRate1,IVCashr.BaseRate2,DefaultCurRoundOff);
+        maxsum = s;
+        AddCashupToIVArray(DefCashRec.DefCashPayMode,DefCashRec.DefCashPayMode,s,0,aivcode,aivval,aivoutval,atipsum,acnt);
+        s = MulRateToBase1(IVCashr.CurncyCode,IVCashr.RecValue,IVCashr.FrRate,IVCashr.ToRateB1,IVCashr.ToRateB2,IVCashr.BaseRate1,IVCashr.BaseRate2,DefaultCurRoundOff);
+        maxsum = maxsum + s;
+        AddCashupToIVArray(DefCashRec.DefCashPayMode,IVCashr.PayDeal,s,0,aivcode,aivval,aivoutval,atipsum,acnt);
+        s = MulRateToBase1(IVCashr.CurncyCode,IVCashr.RecValue2,IVCashr.FrRate,IVCashr.ToRateB1,IVCashr.ToRateB2,IVCashr.BaseRate1,IVCashr.BaseRate2,DefaultCurRoundOff);
+        maxsum = maxsum + s;
+        AddCashupToIVArray(DefCashRec.DefCashPayMode,IVCashr.PayDeal2,s,0,aivcode,aivval,aivoutval,atipsum,acnt);
+        s = MulRateToBase1(IVCashr.CurncyCode,IVCashr.RecValue3,IVCashr.FrRate,IVCashr.ToRateB1,IVCashr.ToRateB2,IVCashr.BaseRate1,IVCashr.BaseRate2,DefaultCurRoundOff);
+        maxsum = maxsum + s;
+        AddCashupToIVArray(DefCashRec.DefCashPayMode,IVCashr.PayDeal3,s,0,aivcode,aivval,aivoutval,atipsum,acnt);
+      end;
+      AttToIVCashSpecArrays(IVCashr,DefCashRec.DefCashPayMode,aitcode,aitsum,aitvat,aitcnt,totsum,totvat,avatcode,avatsum,avatcnt,maxsum,addtoit,SMr);
+    end;
+  end;
+  return;
+end;
+
+procedure AttToSLIVSpecArrays(record IVVc IVr,var array string aitcode,var array val aitsum,var array val aitvat,var Integer aitcnt,var val totsum,var val totvat,var array string avatcode,var array val avatsum,Integer avatcnt,var val maxsum,Boolean addtoit,record SMVc SMr)
+begin
+  Integer rwcnt,i,lasti;
+  row IVVc IVrw;
+
+  rwcnt = MatRowCnt(IVr);
+  for(i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(IVr,i,IVrw);
+    AddupPOSLine(1,IVrw.ArtCode,IVrw.SalesAcc,IVr.Objects,IVrw.Objects,IVr.InclVAT,IVr.NoTAXonVAT,IVrw.Sum,aitcode,aitsum,aitvat,aitcnt,totsum,totvat,avatcode,avatsum,avatcnt,maxsum,addtoit,SMr);
+    if (nonblank(IVrw.ArtCode)) then begin
+      lasti = i;
+    end;
+  end;
+  if (lasti>-1) then begin
+    MatRowGet(IVr,lasti,IVrw);
+    AddupPOSLine(1,IVrw.ArtCode,IVrw.SalesAcc,IVr.Objects,IVrw.Objects,IVr.InclVAT,IVr.NoTAXonVAT,IVr.Sum0,aitcode,aitsum,aitvat,aitcnt,totsum,totvat,avatcode,avatsum,avatcnt,maxsum,addtoit,SMr);
+  end;
+  return;
+end;
+
+procedure AddIVPosSum(record IVVc IVr,val sum,string defmode,string themode,var array string aivcode,var array val aivval,var array val aivoutval,var array val atipsum,var Integer acnt,Integer detail,var val maxsum,var record SMVc SMr)
+begin
+  val s;
+  
+  if (sum!=0) then begin
+  if (detail!=0) then begin
+    s = MulRateToBase1(IVr.CurncyCode,sum,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,DefaultCurRoundOff);
+    if (s<0) then begin
+      aivoutval[acnt] = aivoutval[acnt] - s;
+    end else begin
+      aivval[acnt] = aivval[acnt] + s;
+    end;
+    acnt = acnt + 1;
+  end else begin
+    s = MulRateToBase1(IVr.CurncyCode,sum,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,DefaultCurRoundOff);
+    AddCashupToIVArray(defmode,themode,s,0,aivcode,aivval,aivoutval,atipsum,acnt);
+  end;
+  AddPMPOSToSM(defmode,themode,"IVVc " & IVr.SerNr,s,SMr);
+  maxsum = maxsum + s;
+  end;
+  return;
+end;
+
+global
+procedure FillUpAllSLIV(Date dfr,Date dto,Time tfr,Time tto,Date enddat,string machine,string drawer,string paymode,var array string aivcode,var array val aivval,var array val aivoutval,var array val atipsum,var Integer acnt,Integer detail,
+                          var array string aitcode,var array val aitsum,var array val aitvat,Integer aitcnt,Boolean addtoit,var val totsum,var val totvat,var array string avatcode,var array val avatsum,Integer avatcnt,var record SMVc SMr)
+begin
+  record IVVc IVr;
+  record DefCashBlock DefCashRec;
+  Boolean foundf,testf;
+  Boolean alliscash,addedf;
+  Integer rwcnt,i;
+  row IVVc IVrw;
+  val s,maxsum;
+  val vopen;
+  string 20 pmmodtocompare;
+  record CashierDefBlock CDb;
+
+ Integer ri,ji;
+  record RestPMBlock REr;
+  record LocalMachineBlock LOCr;
+  row RestPMBlock RErw;
+  
+  BlockLoad(DefCashRec);
+  BlockLoad(REr);
+  BlockLoad(LOCr);
+  ri=matrowcnt(REr);
+  for (ji=0;ji<ri;ji=ji+1) begin
+  MatRowGet(REr,ji,RErw);
+  if (RErw.MachineName == machine) then begin
+   DefCashRec.DefCashPayMode = RErw.PMCode;
+  end;
+  end;
+  
+  BlockLoad(CDb);
+  foundf = true;
+  IVr.MachineName = machine;
+  IVr.DrawerCode = drawer;
+  IVr.TransDate = dfr;
+  IVr.TransTime = tfr;
+  while (LoopKey("Cashup",IVr,4,foundf)) begin
+    if (IVr.MachineName!=machine) then begin
+      foundf = false;
+    end;
+    if (IVr.DrawerCode!=drawer) then begin
+      foundf = false;
+    end;
+    if (IVr.TransDate>enddat) then begin
+      foundf = false;
+    end;
+    if (nonblankdate(dto)) then begin
+      if (IVr.TransDate>dto) then begin
+        foundf = false;
+      end;
+      if (IVr.TransDate==dto) then begin
+        if (nonblanktime(tto)) then begin
+          if (IVr.TransTime>=tto) then begin
+            foundf = false;
+          end;
+        end;
+      end;
+    end;
+    testf = foundf;
+    if (IVr.Invalid!=0) then begin
+      testf = false;
+    end;
+    if (IVr.OKFlag==0) then begin
+      testf = false;
+    end;
+    if (testf) then begin
+      addedf = false;
+      if (IVr.InvType==2) then begin
+        alliscash = true;
+      end else begin
+        alliscash = false;
+      end;
+      if (detail!=0) then begin
+        aivcode[acnt] = IVr.SerNr;
+        aivoutval[acnt] = BlankVal;
+        aivval[acnt] = BlankVal;
+        atipsum[acnt] = BlankVal;
+      end;
+      maxsum = 0;
+      vopen = IVr.Sum4;
+      rwcnt = MatRowCnt(IVr);
+      for (i=0;i<rwcnt;i=i+1) begin
+        MatRowGet(IVr,i,IVrw);
+        s = 0;
+        switch (IVrw.stp) begin
+          case 13:
+            s = -IVrw.Sum;
+            if (IVr.InvType==3) then begin
+              s = -s;
+            end;
+            if (nonblank(IVrw.PayMode)) then begin
+              pmmodtocompare = IVrw.PayMode;
+            end else begin
+              pmmodtocompare = DefCashRec.DefGCSPayMode;
+            end;
+            addedf = true;
+          case 14:
+            s = IVrw.Sum;
+            if (IVr.InvType==3) then begin
+              s = -s;
+            end;
+            if (nonblank(IVrw.PayMode)) then begin
+              pmmodtocompare = IVrw.PayMode;
+            end else begin
+              pmmodtocompare = DefCashRec.DefGCRPayMode;
+            end;
+            addedf = true;
+            vopen = vopen - s;
+          case 15:
+            if (IVr.RetnValue<0) then begin // Can happen, cash is used and then rest is left as open invoice
+              s = IVrw.Sum;
+            end else begin
+              s = IVrw.Sum-IVr.RetnValue;
+            end;
+            if (IVr.InvType==3) then begin
+              s = -s;
+            end;
+            if (nonblank(IVrw.PayMode)) then begin
+              pmmodtocompare = IVrw.PayMode;
+            end else begin
+              pmmodtocompare = DefCashRec.DefCashPayMode;
+            end;
+            addedf = true;
+            vopen = vopen - s;
+          case 16:
+            s = IVrw.Sum;
+            if (nonblank(IVrw.PayMode)) then begin
+              pmmodtocompare = IVrw.PayMode;
+            end else begin
+              pmmodtocompare = DefCashRec.DefCCPayMode;
+            end;
+            addedf = true;
+            vopen = vopen - s;
+        end;
+        if ((blank(paymode)) or (paymode==pmmodtocompare)) then begin
+          AddIVPosSum(IVr,s,DefCashRec.DefCashPayMode,pmmodtocompare,aivcode,aivval,aivoutval,atipsum,acnt,detail,maxsum,SMr);
+        end;
+      end;
+      if ((alliscash) and (addedf==false)) then begin
+        if ((blank(paymode)) or (paymode==IVr.PayDeal)) then begin
+          AddIVPosSum(IVr,IVr.Sum4,DefCashRec.DefCashPayMode,IVr.PayDeal,aivcode,aivval,aivoutval,atipsum,acnt,detail,maxsum,SMr);
+          vopen = 0;
+        end;
+      end;
+      if (vopen!=0) then begin
+        if (CDb.InclOpenInvCashup) then begin
+          if ((blank(paymode)) or (paymode==IVr.PayDeal)) then begin
+            AddIVPosSum(IVr,vopen,IVr.PayDeal,IVr.PayDeal,aivcode,aivval,aivoutval,atipsum,acnt,detail,maxsum,SMr);
+          end;
+        end;
+      end;
+      if (detail!=0) then begin
+//        acnt = acnt + 1;
+      end;
+      AttToSLIVSpecArrays(IVr,aitcode,aitsum,aitvat,aitcnt,totsum,totvat,avatcode,avatsum,avatcnt,maxsum,addtoit,SMr);
+    end;
+  end;
+  return;
+end;
+
+procedure AttToRestAccSpecArrays(record RestAccVc RestAccr,string defmode,var array string aitcode,var array val aitsum,var array val aitvat,var Integer aitcnt,var val totsum,var val totvat,var array string avatcode,var array val avatsum,Integer avatcnt,var val maxsum,Boolean addtoit,var record SMVc SMr)
+begin
+  Integer rwcnt,i,lasti;
+  record CashierDefBlock CDb;
+  row RestAccVc RestAccrw;
+  val s,tiptemp;
+
+  BlockLoad(CDb);
+  
+  
+  
+  
+  lasti = -1;
+  rwcnt = MatRowCnt(RestAccr);
+  for(i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(RestAccr,i,RestAccrw);
+    AddupPOSLine(2,RestAccrw.ArtCode,"","","",1,0,RestAccrw.Price*RestAccrw.Quant,aitcode,aitsum,aitvat,aitcnt,totsum,totvat,avatcode,avatsum,avatcnt,maxsum,addtoit,SMr);
+    if (nonblank(RestAccrw.ArtCode)) then begin
+      lasti = i;
+    end;
+  end;
+  if (lasti>-1) then begin
+    MatRowGet(RestAccr,lasti,RestAccrw);
+    AddupPOSLine(2,RestAccrw.ArtCode,"","","",1,0,RestAccr.Sum0,aitcode,aitsum,aitvat,aitcnt,totsum,totvat,avatcode,avatsum,avatcnt,maxsum,addtoit,SMr);
+  end;
+  if (RestAccr.RetValue<0) then begin
+    s = RestAccr.CashValue;
+  end else begin
+    s = RestAccr.CashValue-RestAccr.RetValue;
+  end;
+  tiptemp = RestAccr.TipValue;
+  if (RestAccr.TipValue>0) then begin
+    if (s>0) then begin
+      if (s>RestAccr.TipValue) then begin
+        s = s - RestAccr.TipValue;
+        tiptemp = 0;
+      end else begin
+        tiptemp = RestAccr.TipValue - s;
+        RestAccr.TipValue = s;
+        s = 0;
+      end;
+    end;
+  end;
+  AddPMPOSToSM(defmode,RestAccr.PayDeal,"RestAcc " & RestAccr.SerNr & RestAccrw.Spec,s,SMr);
+  if (nonblank(CDb.TipPMCode)) then begin
+    AddPMPOSToSM(defmode,RestAccr.PayDeal,"Tip",RestAccr.TipValue-tiptemp,SMr);
+    AddPMPOSToSM(defmode,CDb.TipPMCode,"Tip",-(RestAccr.TipValue-tiptemp),SMr);
+  end;
+  s = RestAccr.Paid;
+  if (tiptemp>0) then begin
+    if (s>0) then begin
+      s = s - tiptemp;
+    end;
+  end;
+  AddPMPOSToSM(defmode,RestAccr.PayDeal2,"RestAcc " & RestAccr.SerNr & RestAccrw.Spec,s,SMr);
+  if (nonblank(CDb.TipPMCode)) then begin
+    AddPMPOSToSM(defmode,RestAccr.PayDeal2,"Tip",tiptemp,SMr);
+    AddPMPOSToSM(defmode,CDb.TipPMCode,"Tip",-tiptemp,SMr);
+  end;
+  s = RestAccr.Paid2;
+  AddPMPOSToSM(defmode,RestAccr.PayDeal3,"RestAcc " & RestAccr.SerNr & RestAccrw.Spec,s,SMr);
+  s = RestAccr.Paid3;
+  AddPMPOSToSM(defmode,RestAccr.PayDeal4,"RestAcc " & RestAccr.SerNr & RestAccrw.Spec,s,SMr);
+  return;
+end;
+
+global
+procedure FillUpAllRestAccCash(Integer onrooms,Date dfr,Date dto,Time tfr,Time tto,Date enddat,string machine,string drawer,string paymode,var array string aivcode,var array val aivval,var array val aivoutval,var array val atipsum,var Integer acnt,Integer detail,
+                               var array string aitcode,var array val aitsum,var array val aitvat,Integer aitcnt,Boolean addtoit,var val totsum,var val totvat,var array string avatcode,var array val avatsum,Integer avatcnt,var record SMVc SMr)
+
+begin
+  record RestAccVc RestAccr;
+  record DefCashBlock DefCashRec;
+  record CashierDefBlock CDb;
+  Boolean foundf,testf;
+  val s,maxsum,tmp;
+  val tiptemp,tip2;
+  val temp1,temp2,temp3;
+ Integer ri,ji;
+  record RestPMBlock REr;
+  record LocalMachineBlock LOCr;
+  row RestPMBlock RErw;
+    BlockLoad(CDb);
+  BlockLoad(DefCashRec);
+  BlockLoad(REr);
+  BlockLoad(LOCr);
+  ri=matrowcnt(REr);
+  for (ji=0;ji<ri;ji=ji+1) begin
+  MatRowGet(REr,ji,RErw);
+  if (RErw.MachineName == machine) then begin
+   DefCashRec.DefCashPayMode = RErw.PMCode;
+  end;
+  end;
+  
+  foundf = true;
+  RestAccr.MachineName = machine;
+  RestAccr.DrawerCode = drawer;
+  RestAccr.TransDate = dfr;
+  RestAccr.TransTime = tfr;
+  while (LoopKey("Cashup",RestAccr,4,foundf)) begin
+    if (RestAccr.MachineName!=machine) then begin
+      foundf = false;
+    end;
+    if (RestAccr.DrawerCode!=drawer) then begin
+      foundf = false;
+    end;
+    if (RestAccr.TransDate>enddat) then begin
+      foundf = false;
+    end;
+    if (nonblankdate(dto)) then begin
+      if (RestAccr.TransDate>dto) then begin
+        foundf = false;
+      end;
+      if (RestAccr.TransDate==dto) then begin
+        if (nonblanktime(tto)) then begin
+          if (RestAccr.TransTime>=tto) then begin
+            foundf = false;
+          end;
+        end;
+      end;
+    end;
+    testf = foundf;
+    if (RestAccr.Invalid!=0) then begin
+      testf = false;
+    end;
+    if (RestAccr.Closed==0) then begin
+      testf = false;
+    end;
+    if (testf) then begin
+      if (detail!=0) then begin
+        tmp = RestAccr.CashValue;
+        tiptemp = RestAccr.TipValue;
+        if (tiptemp>0) then begin
+          if (tmp>0) then begin
+            if (tmp>tiptemp) then begin
+              tmp = tmp - tiptemp;
+              tiptemp = 0;
+            end else begin
+              tiptemp = tiptemp - tmp;
+              tmp = 0;
+            end;
+          end;
+        end;
+        s = 0;
+        if ((blank(paymode)) or (paymode==RestAccr.PayDeal) or ((blank(RestAccr.PayDeal)) and (paymode==DefCashRec.DefCashPayMode))) then begin
+          s = s + tmp - RestAccr.RetValue; // All Cashbacks should be in Cash payment mode
+        end;
+        if ((blank(paymode)) or (paymode==RestAccr.PayDeal2) or ((blank(RestAccr.PayDeal2)) and (paymode==DefCashRec.DefCashPayMode))) then begin
+          s = s + RestAccr.Paid - tiptemp; // not 100% correct, but 99...
+          tiptemp = 0;
+        end;
+        if ((blank(paymode)) or (paymode==RestAccr.PayDeal3) or ((blank(RestAccr.PayDeal3)) and (paymode==DefCashRec.DefCashPayMode))) then begin
+          s = s + RestAccr.Paid2;
+        end;
+        if ((blank(paymode)) or (paymode==RestAccr.PayDeal4) or ((blank(RestAccr.PayDeal4)) and (paymode==DefCashRec.DefCashPayMode))) then begin
+          s = s + RestAccr.Paid3;
+        end;
+        if ((onrooms!=0) and (nonblank(RestAccr.Resource)) and (RestAccr.RemValue>0)) then begin
+          s = s + RestAccr.RemValue;
+        end;
+        if (s!=0) then begin
+          aivcode[acnt] = RestAccr.SerNr;
+          if (s<0) then begin
+            aivoutval[acnt] = aivoutval[acnt] - s;
+            aivval[acnt] = BlankVal;
+          end else begin
+            aivval[acnt] = aivval[acnt] + s;
+            aivoutval[acnt] = BlankVal;
+          end;
+          if (CDb.InclTipInCashup==0) then begin
+            atipsum[acnt] = BlankVal;
+          end else begin
+            atipsum[acnt] = RestAccr.TipValue;
+          end;
+          acnt = acnt + 1;
+        end;
+        maxsum = s + RestAccr.RetValue;
+      end else begin
+        s = RestAccr.CashValue;
+        tiptemp = RestAccr.TipValue;
+        temp1 = RestAccr.Paid;
+        temp2 = RestAccr.Paid2;
+        temp3 = RestAccr.Paid3;
+        if (tiptemp>0) then begin
+          if (s>0) then begin
+            if (s>tiptemp) then begin
+              s = s - tiptemp;
+              tiptemp = 0;
+            end else begin
+              tiptemp = tiptemp - s;
+              tiptemp = s;
+              s = 0;
+            end;
+          end;
+        end;
+        if ((blank(RestAccr.PayDeal2)) and (temp1!=0)) then begin
+          s = s + temp1;
+          temp1 = 0;
+        end;
+        if ((blank(RestAccr.PayDeal3)) and (temp2!=0)) then begin
+          s = s + temp2;
+          temp2 = 0;
+        end;
+        if ((blank(RestAccr.PayDeal4)) and (temp3!=0)) then begin
+          s = s + temp3;
+          temp3 = 0;
+        end;
+        s = s - RestAccr.RetValue;
+        maxsum = s;
+        AddCashupToIVArray(DefCashRec.DefCashPayMode,RestAccr.PayDeal,s,tiptemp,aivcode,aivval,aivoutval,atipsum,acnt);
+        s = temp1;
+        if (tiptemp>0) then begin
+          if (temp1>0) then begin
+            s = s - tiptemp;
+            tiptemp = 0;
+          end;
+        end;
+        maxsum = maxsum + s;
+        AddCashupToIVArray(DefCashRec.DefCashPayMode,RestAccr.PayDeal2,s,tiptemp,aivcode,aivval,aivoutval,atipsum,acnt);
+        s = temp2;
+        maxsum = maxsum + s;
+        AddCashupToIVArray(DefCashRec.DefCashPayMode,RestAccr.PayDeal3,s,tiptemp,aivcode,aivval,aivoutval,atipsum,acnt);
+        s = temp3;
+        maxsum = maxsum + s;
+        AddCashupToIVArray(DefCashRec.DefCashPayMode,RestAccr.PayDeal4,s,tiptemp,aivcode,aivval,aivoutval,atipsum,acnt);
+        if ((onrooms!=0) and (nonblank(RestAccr.Resource)) and (RestAccr.RemValue>0)) then begin
+          s = RestAccr.RemValue;
+          maxsum = maxsum + s;
+          AddCashupToIVArray(DefCashRec.DefCashPayMode,RestAccr.PayDeal4,s,tiptemp,aivcode,aivval,aivoutval,atipsum,acnt);
+        end;
+      end;
+      AttToRestAccSpecArrays(RestAccr,DefCashRec.DefCashPayMode,aitcode,aitsum,aitvat,aitcnt,totsum,totvat,avatcode,avatsum,avatcnt,maxsum,addtoit,SMr);
+    end;
+  end;
+  return;
+end;
+

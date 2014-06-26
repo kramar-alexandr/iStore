@@ -1,0 +1,2839 @@
+external procedure IPRn(record RcVc);
+external procedure GetFullCurncyRate(var string,Date,var val,var val,var val,var val,var val);// Edit ************************** пятница, 25 июня 2010 г. 14:03:51
+external function LongInt DateDiff(Date,Date);
+
+SetLangMode(LangUkrainian,"UKR",0);
+
+global procedure IPEn()
+begin
+record RcVc RepSpec;
+string 50 filename;
+date repdate;
+integer compnr;
+  
+      compnr = currentcompany;
+      
+        switch(compnr)begin
+          case 1: filename = "Reports/1/ISTORPayments.xls";
+          case 2: filename = "Reports/2/ITEKUAPayments.xls";
+          case 3: filename = "Reports/3/WDPayments.xls";
+          case 5: filename = "Reports/5/TXTPayments.xls";
+          case 6: filename = "Reports/6/ITEKMDPayments.xls";
+          case 7: filename = "Reports/7/TNMPayments.xls";
+          case 8: filename = "Reports/8/A-SRVPayments.xls";
+        end;
+        recordnew(RepSpec);
+        CreateFile(filename);
+        closefile;
+        millisleep(150);
+        openexportfile(filename,true);
+        ReportDefaults(RepSpec,"IPRClass");
+        repdate = addday(Currentdate,-1);
+        if(GetDateID(currentdate)==1)then begin
+          repdate = addday(Currentdate,-3);
+        end;
+
+        RepSpec.sStartDate = repdate;
+        RepSpec.sEndDate = repdate;
+        RepSpec.flags[1] = 0;
+        RepSpec.flags[2] = 1;
+        switch(compnr)begin
+          //case 1: RepSpec.f2 = "27";
+          case 2: RepSpec.f3 = "B1";//IP
+          //case 3: RepSpec.f3 = "27";
+          case 5: RepSpec.f3 = "24";//TXT
+          //case 6: RepSpec.f2 = "27";
+          case 7: RepSpec.f3 = "24";//tntm
+          //case 8: RepSpec.f2 = "27";
+        end;
+        RepSpec.Media = 20;
+        IPRn(RepSpec);
+        
+        if(compnr==1)then begin
+        RepSpec.f3 = "30";
+        IPRn(RepSpec);
+        
+        RepSpec.f3 = "6";
+        IPRn(RepSpec);
+        end;
+        
+        if(compnr==7)then begin
+        RepSpec.f3 = "OI";
+        IPRn(RepSpec);
+        end;
+        
+        
+        closefile;
+        millisleep(100);
+        switch(compnr)begin
+          case 1: RunProgram("Reports/1/ISTORPayments.sh","");
+          case 2: RunProgram("Reports/2/ITEKUAPayments.sh","");
+          case 3: RunProgram("Reports/3/WDPayments.sh","");
+          case 5: RunProgram("Reports/5/TXTPayments.sh","");
+          case 6: RunProgram("Reports/6/ITEKMDPayments.sh","");
+          case 7: RunProgram("Reports/7/TNMPayments.sh","");
+          case 8: RunProgram("Reports/8/A-SRVPayments.sh","");
+        end;
+return;
+end;
+
+
+global
+procedure MyRetailSalesRClassReportDefaults(Integer wn)
+BEGIN
+  record RcVc RepSpec;
+   
+  DeselectWindow(wn,false);
+  GetWindowRecord(wn,RepSpec);
+  ReportDefaults(RepSpec,"MyRetailSalesRClass");  
+  
+  RepSpec.d2 = CurrentDate;
+  
+  PutWindowRecord(wn,RepSpec);
+  SelectWindow(wn);
+  RETURN;
+END;
+
+global updating procedure MyRetailSalesIstoreRn(record RcVc RepSpec)
+begin
+Record IVCashVc IVCr;
+record PUVc PUr;
+row IVCashVc IVCrw;
+Record IVVc IVr;
+Record SMVc SMr;
+boolean TrHs,testf,testf1;
+val c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,of,stalldt,stall_oc,stall_ol,STALL_KGL,ivsum,sm1,sm2,sm3,sm4,sm5,sm6,sm7,sm8,sm9,sm10,smof,smstalldt,smstall_oc,smstall_ol,smSTALL_KGL,tot1,tot2,tot3,tot4;
+val c1u,c2u,c3u,c4u,c5u,c6u,c7u,c8u,c9u,c10u,ofu,stalldtu,stall_ocu,stall_olu,STALL_KGLu,ivsumu,sm1u,sm2u,sm3u,sm4u,sm5u,sm6u,sm7u,sm8u,sm9u,sm10u,smofu,smostalldt,smstall_ocu,smstall_olu,smstalldtu,smSTALL_KGLu,tot1u,tot2u,tot3u,tot4u;
+date dat1,dat2;
+record CUVc CUr;
+string 100 data,custcode;
+string 5 s1,s2,s3,s4;
+integer mtrw,i,invtype;
+val frrate,to1,to2,br1,br2;
+record POSCurncyBlock PCb;// Edit ************************** Wednesday, 13 April 2011 12:27:35
+  record LocalMachineAccBlock LMAb;// Edit ************************** Wednesday, 19 October 2011 10:59:48
+  row LocalMachineAccBlock LMArw;// Edit ************************** Wednesday, 19 October 2011 10:59:49
+  record LocalMachineBlock LMb;// Edit ************************** Wednesday, 19 October 2011 10:59:49
+  integer locmtrw,loci;// Edit ************************** Wednesday, 19 October 2011 10:59:50
+  val rate;
+  
+  //data = "01/" & getmonth(RepSpec.d2) & "/" getyear(RepSpec.d2);
+  s1 = "01/";
+  s2 = getmonth(addday(RepSpec.d2,-1));
+  s3 = "/";
+  s4 = getyear(addday(RepSpec.d2,-1));
+  data = s1 & s2 & s3 & s4;
+  //messageBox(0,s1 & "_" & s2 & "_" & s3 & "_" & s4);
+  dat1 = data;
+  dat2 = RepSpec.d2;
+  blockload(LMAb);
+  //messageBox(0,dat1 & "_" & dat2);
+  StartReportJob("RetailSales");
+
+  EndHeader;
+  
+  StartFormat(15);
+        OutString(0,0,"Store",false);
+        OutString(80,0,"Sum/Date(UAH)",false);
+        OutString(180,0,"Sum/Date(USD)",false);
+        OutString(270,0,"Sum/month(UAH)",false);
+        OutString(1,0,"SUM/Month(USD)",true);
+       
+      endformat;
+  sm1 = 0;
+  sm2 = 0;
+  sm3 = 0;
+  sm4 = 0;
+  sm5 = 0;
+  sm6 = 0;
+  sm7 = 0;
+  sm8 = 0;
+  sm9 = 0;
+  sm10 =0;
+  smof = 0;
+  smstalldt = 0;
+  smstall_oc = 0;
+  smstall_ol = 0;
+  smSTALL_KGL = 0;
+  
+  sm1u = 0;
+  sm2u = 0;
+  sm3u = 0;
+  sm4u = 0;
+  sm5u = 0;
+  sm6u = 0;
+  sm7u = 0;
+  sm8u = 0;
+  sm9u = 0;
+  sm10u =0;
+  smofu = 0;
+  smostalldt = 0;
+  smstall_ocu = 0;
+  smstall_olu = 0;
+  smSTALL_KGLu = 0;
+  TrHs = true;
+  While(TrHs) begin
+    if(dat1>=dat2)then begin TrHs =false; end;
+    if(TrHs) then begin
+      c1=0;
+      c2=0;
+      c3=0;
+      c4=0;
+      c5=0;
+      c6=0;
+      c7=0;
+      c8=0;
+      c9=0;
+      c10=0;
+      of = 0;
+      stalldt = 0;
+      stall_oc = 0;
+      stall_ol = 0;
+      STALL_KGL = 0;
+      c1u=0;
+      c2u=0;
+      c3u=0;
+      c4u=0;
+      c5u=0;
+      c6u=0;
+      c7u=0;
+      c8u=0;
+      c9u=0;
+      c10u=0;
+      ofu=0;
+      stalldtu = 0;
+      stall_ocu = 0;
+      stall_olu = 0;
+      STALL_KGLu = 0;
+      
+      tot1=0;
+      tot2=0;
+      tot3=0;
+      tot4=0;
+      tot1u=0;
+      tot2u=0;
+      tot3u=0;
+      tot4u=0;
+      
+      IVCr.InvDate=dat1;
+      testf = true;
+      while(loopkey("InvDate",IVCr,1,testf)) begin
+      testf1=true;
+        if(IVCr.InvDate!=dat1) then begin testf = false; testf1=false; end;
+        if(IVCr.OKFlag==0) then begin testf1=false; end;
+        if(IVCr.Invalid!=0) then begin testf1=false; end;
+        
+        if (testf1) then begin
+          mtrw = matrowcnt(IVCr);
+          for(i=0;i<mtrw;i=i+1)begin
+            matrowget(IVCr,i,IVCrw);
+            
+            
+            
+            if(setinset("UAH_PURCHASE",IVCrw.Objects))then begin
+              IVCr.CurncyCode = "UAH_P";
+            end else begin
+              if(setinset("UAH_APPLE",IVCrw.Objects))then begin
+                IVCr.CurncyCode = "UAH_A";
+              end else begin
+                blockLoad(PCb);// Edit ************************** Wednesday, 13 April 2011 12:25:34
+                IVCr.CurncyCode = PCb.CurncyCode;// Edit ************************** Wednesday, 13 April 2011 12:29:19
+                //IVCr.CurncyCode = "UAH";
+              end;
+            end;
+            
+            /*mtrw = MatRowCnt(IVr);
+            For(i=j;i<mtrw;i=i+1) begin
+				matRowGet(IVr,i,IVrw);
+				if(nonblank(IVrw.ArtCode)) then begin
+        
+            IHr.ArtCode = IVrw.ArtCode;
+            IHr.SerialNr = Serial;
+            IHr.FileName = "PUVc";
+            if(readfirstkey("ArtCodeSerialNr",IHr,3,true)) begin
+                PUr.SerNr = IHr.TransNr;
+                if(readFirstmain(PUr,1,true)) then begin*/
+            
+            GetFullCurncyRate(IVCr.CurncyCode,IVCr.InvDate,frrate,to1,to2,br1,br2);
+            //messagebox(frrate," - курс");
+            switch(IVCr.LocalMachineCode) begin
+              
+              case "O1":              c1=c1+IVCrw.Sum;
+                                      c1u=c1u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              
+              case "O2":              stall_ol=stall_ol+IVCrw.Sum;
+                                      stall_olu=stall_olu+round(IVCrw.Sum/frrate,defaultcurroundoff);
+                                      
+              case "KK":              c2=c2+IVCrw.Sum;
+                                      c2u=c2u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              
+              case "OSP":             c3=c3+IVCrw.Sum;
+                                      c3u=c3u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              
+              case "DD":              c4=c4+IVCrw.Sum;
+                                      c4u=c4u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              
+              case "KHK":          c5=c5+IVCrw.Sum;
+                                      c5u=c5u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              
+              case "KDT":             c6=c6+IVCrw.Sum;
+                                      c6u=c6u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              
+              case "KDN":             c7=c7+IVCrw.Sum;
+                                      c7u=c7u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              
+              case "LOP":             c8=c8+IVCrw.Sum;
+                                      c8u=c8u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+                                      
+              case "KOP":             c9=c9+IVCrw.Sum;
+                                      c9u=c9u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              
+              case "KG":             c10=c10+IVCrw.Sum;
+                                      c10u=c10u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              
+              case "KG2":             STALL_KGL=STALL_KGL+IVCrw.Sum;
+                                      STALL_KGLu=STALL_KGLu+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              
+			  case "AN":             stall_oc=stall_oc+IVCrw.Sum;
+                                      stall_ocu=stall_ocu+round(IVCrw.Sum/frrate,defaultcurroundoff);
+                                      
+              /*case "KOP":             c11=c11+IVCrw.Sum;
+                                      c11u=c11u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+                                      
+              case "KOP":             c12=c12+IVCrw.Sum;
+                                      c12u=c12u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+                                      
+              case "KOP":             c12=c12+IVCrw.Sum;	
+                                      c12u=c12u+round(IVCrw.Sum/frrate,defaultcurroundoff);   */                                   
+            end;
+          end;
+        end;
+      end;
+      resetLoop(IVCr);
+      
+      
+      
+      IVr.TransDate = dat1;
+      testf=true;
+      
+      while(loopkey("TransDate",IVr,1,testf)) begin
+        testf1=true;
+        if(IVr.TransDate!=dat1) then begin testf = false; testf1=false; end;
+        if(IVr.OKFlag==0) then begin testf1=false; end;
+        if(IVr.Invalid!=0) then begin testf1=false; end;
+        //if(IVr.InvType!=1) then begin testf1=false; end;
+        
+        rate = IVr.FrRate/IVr.ToRateB1;
+        if(rate==0)then begin rate = 1; end;
+        
+        switch(IVr.InvType) begin
+          case 1: invtype = 1;
+          case 3: invtype = -1;
+          otherwise begin
+            testf1 = false;
+          end;
+        end;
+        
+        if (testf1) then begin
+        ivsum = IVr.Sum4*invtype;// Edit ************************** Wednesday, 26 October 2011 09:54:20
+        if(IVr.CurncyCode=="USD")then begin
+          ivsum = round(ivsum*rate,defaultcurroundoff);
+        end;
+        if(IVr.CurncyCode!="USD")then begin
+          ivsumu = round(IVr.Sum4/rate*invtype,defaultcurroundoff);
+        end else begin
+          ivsumu = IVr.Sum4*invtype;
+        end;
+          custcode = "";
+          locmtrw = matrowcnt(LMAb);
+          for(loci=0;loci<locmtrw;loci=loci+1)begin
+            matrowGet(LMAb,loci,LMArw);
+            if(setinset(LMArw.Objects,IVr.Objects))then begin
+              IVr.CustCode = LMArw.CustCode;
+              custcode = LMArw.CustCode;
+            end;
+            
+          end;
+        
+          switch(custcode) begin
+            case "NONAME":c1=c1+ivsum;
+                          c1u=c1u+ivsumu;
+            case "STALL_OL":stall_ol= stall_ol + ivsum;
+            				stall_olu = stall_olu + ivsumu;            
+            case "KIEV_KARAVAN":c2=c2+ivsum;
+                                c2u=c2u+ivsumu;
+            case "OD_SADU_P":c3=c3+ivsum;
+                            c3u=c3u+ivsumu;
+            case "D_DEKOR_D":c4=c4+ivsum;
+                            c4u=c4u+ivsumu;
+            case "KH_KARAVAN":c5=c5+ivsum;
+                              c5u=c5u+ivsumu;
+            case "DREAM_TOWN":c6=c6+ivsum;
+                              c6u=c6u+ivsumu;
+            case "DN_KARAVAN":c7=c7+ivsum;
+                              c7u=c7u+ivsumu;
+            case "LV_OPERA_PASSAGE":c8=c8+ivsum;
+                              		c8u=c8u+ivsumu;
+            case "OCEAN_PLAZA":c9=c9+ivsum;
+                    			c9u=c9u+ivsumu;
+        	case "GULLIVER":c10=c10+ivsum;
+                              c10u=c10u+ivsumu;
+            case "STALL_KGL":STALL_KGL=STALL_KGL+ivsum;
+                              STALL_KGLu=STALL_KGLu+ivsumu;
+            /*case "STALL_DT":stalldt = stalldt + ivsum;
+            	stalldtu = stalldtu + ivsumu;*/
+            case "STALL_OC": stall_oc= stall_oc + ivsum;
+            				stall_ocu = stall_ocu + ivsumu;
+            
+            otherwise begin
+            	of = of + ivsum;
+            	ofu = ofu + ivsumu;
+            end;
+          end;
+        end;
+      end;
+      
+      sm1 = sm1 + c1;
+      sm2 = sm2 + c2;
+      sm3 = sm3 + c3;
+      sm4 = sm4 + c4;
+      sm5 = sm5 + c5;
+      sm6 = sm6 + c6;
+      sm7 = sm7 + c7;
+      sm8 = sm8 + c8;
+      sm9 = sm9 + c9;
+      sm10 = sm10 +c10;
+      smof = smof + of;
+      //smstalldt = smstalldt + stalldt;
+      smstall_oc = smstall_oc + stall_oc;
+      smstall_ol = smstall_ol + stall_ol;
+      smSTALL_KGL = smSTALL_KGL + STALL_KGL;
+      
+      sm1u = sm1u + c1u;
+      sm2u = sm2u + c2u;
+      sm3u = sm3u + c3u;
+      sm4u = sm4u + c4u;
+      sm5u = sm5u + c5u;
+      sm6u = sm6u + c6u;
+      sm7u = sm7u + c7u;
+      sm8u = sm8u + c8u;
+      sm9u = sm9u + c9u;
+      sm10u = sm10u + c10u;
+      smofu = smofu + ofu;
+      //smstalldtu = smstalldtu + stalldtu;
+      smstall_ocu = smstall_ocu + stall_ocu;
+      smstall_olu = smstall_olu + stall_olu;
+      smSTALL_KGLu = smSTALL_KGLu + STALL_KGLu;
+      
+      resetloop(IVr);
+      Gray_Divider(0,1);
+       StartFormat(15);
+        OutString(11,0,dat1,false);
+      endformat;
+
+      CUr.Code = "NONAME";
+      If(ReadfirstMain(CUr,1,true)) begin
+      StartFormat(15);
+        //OutString(0,0,CUr.Code,false);
+        OutString(0,0,"OLIMP",false);
+        OutString(80,0,c1,false);
+        OutString(180,0,c1u,false);
+        OutString(270,0,sm1,false);
+        OutString(1,0,sm1u,true);
+      endformat;
+      end;
+      
+      CUr.Code = "STALL_OL";
+      If(ReadfirstMain(CUr,1,true)) begin
+      StartFormat(15);
+        //OutString(0,0,CUr.Code,false);
+        OutString(0,0,"STALL_OL",false);
+        OutString(80,0,stall_ol,false);
+        OutString(180,0,stall_olu,false);
+        OutString(270,0,smstall_ol,false);
+        OutString(1,0,smstall_olu,true);
+      endformat;
+      end;
+      
+      CUr.Code = "KIEV_KARAVAN";
+      If(ReadfirstMain(CUr,1,true)) begin
+      StartFormat(15);
+        //OutString(0,0,CUr.Code,false);
+        OutString(0,0,"KIEV KARAVAN",false);
+        OutString(80,0,c2,false);
+        OutString(180,0,c2u,false);
+        OutString(270,0,sm2,false);
+        OutString(1,0,sm2u,true);
+      endformat;
+      end;
+      
+      CUr.Code = "OD_SADU_P";
+      If(ReadfirstMain(CUr,1,true)) begin
+      StartFormat(15);
+        //OutString(0,0,CUr.Code,false);
+        OutString(0,0,"ODESSA",false);
+        OutString(80,0,c3,false);
+        OutString(180,0,c3u,false);
+        OutString(270,0,sm3,false);
+        OutString(1,0,sm3u,true);
+      endformat;
+      end;
+      
+      CUr.Code = "D_DEKOR_D";
+      If(ReadfirstMain(CUr,1,true)) begin
+      StartFormat(15);
+        //OutString(0,0,CUr.Code,false);
+        OutString(0,0,"DONECK",false);
+        OutString(80,0,c4,false);
+        OutString(180,0,c4u,false);
+        OutString(270,0,sm4,false);
+        OutString(1,0,sm4u,true);
+      endformat;
+      end;
+      
+      CUr.Code = "KH_KARAVAN";
+      If(ReadfirstMain(CUr,1,true)) begin
+      StartFormat(15);
+        //OutString(0,0,CUr.Code,false);
+        OutString(0,0,"KHARKOV",false);
+        OutString(80,0,c5,false);
+        OutString(180,0,c5u,false);
+        OutString(270,0,sm5,false);
+        OutString(1,0,sm5u,true);
+      endformat;
+      end;
+        
+      
+      CUr.Code = "DREAM_TOWN";
+      If(ReadfirstMain(CUr,1,true)) begin
+      StartFormat(15);
+        //OutString(0,0,CUr.Code,false);
+        OutString(0,0,"DREAM TOWN",false);
+        OutString(80,0,c6,false);
+        OutString(180,0,c6u,false);
+        OutString(270,0,sm6,false);
+        OutString(1,0,sm6u,true);
+      endformat;
+      end;
+      
+      CUr.Code = "DN_KARAVAN";
+      If(ReadfirstMain(CUr,1,true)) begin
+      StartFormat(15);
+        //OutString(0,0,CUr.Code,false);
+        OutString(0,0,"DNEPROPETROVSK",false);
+        OutString(80,0,c7,false);
+        OutString(180,0,c7u,false);
+        OutString(270,0,sm7,false);
+        OutString(1,0,sm7u,true);
+      endformat;
+      end;
+      
+      CUr.Code = "LV_OPERA_PASSAGE";
+      If(ReadfirstMain(CUr,1,true)) begin
+      StartFormat(15);
+        //OutString(0,0,CUr.Code,false);
+        OutString(0,0,"LVIV",false);
+        OutString(80,0,c8,false);
+        OutString(180,0,c8u,false);
+        OutString(270,0,sm8,false);
+        OutString(1,0,sm8u,true);
+      endformat;
+      end;
+      
+      CUr.Code = "OCEAN_PLAZA";
+      If(ReadfirstMain(CUr,1,true)) begin
+      StartFormat(15);
+        //OutString(0,0,CUr.Code,false);
+        OutString(0,0,"OCEAN_PLAZA",false);
+        OutString(80,0,c9,false);
+        OutString(180,0,c9u,false);
+        OutString(270,0,sm9,false);
+        OutString(1,0,sm9u,true);
+      endformat;
+      end;
+      
+      CUr.Code = "STALL_OC";
+      If(ReadfirstMain(CUr,1,true)) begin
+      StartFormat(15);
+        //OutString(0,0,CUr.Code,false);
+        OutString(0,0,"STALL_OC",false);
+        OutString(80,0,stall_oc,false);
+        OutString(180,0,stall_ocu,false);
+        OutString(270,0,smstall_oc,false);
+        OutString(1,0,smstall_ocu,true);
+      endformat;
+      end;
+      
+      CUr.Code = "GULLIVER";
+      If(ReadfirstMain(CUr,1,true)) begin
+      StartFormat(15);
+        //OutString(0,0,CUr.Code,false);
+        OutString(0,0,"GULLIVER",false);
+        OutString(80,0,c10,false);
+        OutString(180,0,c10u,false);
+        OutString(270,0,sm10,false);
+        OutString(1,0,sm10u,true);
+      endformat;
+      end;
+      
+      CUr.Code = "STALL_KGL";
+      If(ReadfirstMain(CUr,1,true)) begin
+      StartFormat(15);
+        //OutString(0,0,CUr.Code,false);
+        OutString(0,0,"STALL_KGL",false);
+        OutString(80,0,STALL_KGL,false);
+        OutString(180,0,STALL_KGLu,false);
+        OutString(270,0,smSTALL_KGL,false);
+        OutString(1,0,smSTALL_KGLu,true);
+      endformat;
+      end;
+      
+      /*StartFormat(15);
+        //OutString(0,0,CUr.Code,false);
+        OutString(0,0,"STALL_DT",false);
+        OutString(80,0,stalldt,false);
+        OutString(180,0,stalldtu,false);
+        OutString(270,0,smstalldt,false);
+        OutString(1,0,smstalldtu,true);
+      endformat;*/
+            
+      StartFormat(15);
+        OutString(0,0,"Office",false);
+        OutString(80,0,of,false);
+        OutString(180,0,ofu,false);
+        OutString(270,0,smof,false);
+        OutString(1,0,smofu,true);
+      endformat;
+      Gray_Divider(0,1);
+     StartFormat(15);
+        OutString(0,0,"",false);
+    
+      endformat;
+      
+       StartFormat(15);
+        OutString(0,0,"SubTotal",false);
+        OutString(80,0,c1+c2+c3+c4+c5+c6+c7+c8+c9+c10+of+stall_oc+stall_ol+STALL_KGL,false);
+        OutString(180,0,c1u+c2u+c3u+c4u+c5u+c6u+c7u+c8u+c9u+c10u+ofu+stall_ocu+stall_olu+STALL_KGLu,false);
+        OutString(270,0,sm1+sm2+sm3+sm4+sm5+sm6+sm7+sm8+sm9+sm10+smof+smstall_oc+smstall_ol+smSTALL_KGL,false);
+        OutString(1,0,sm1u+sm2u+sm3u+sm4u+sm5u+sm6u+sm7u+sm8u+sm9u+sm10u+smofu+smstall_ocu+smstall_olu+smSTALL_KGLu,true);
+      endformat;
+
+    tot3 = sm1+sm2+sm3+sm4+sm5+sm6+sm7+sm8+sm9+sm10+smof+smstall_oc+smstall_ol+smSTALL_KGL;
+    tot4 = sm1u+sm2u+sm3u+sm4u+sm5u+sm6u+sm7u+sm8u+sm9u+sm10u+smofu+smstall_ocu+smstall_olu+smSTALL_KGLu;
+    
+     StartFormat(15);
+        OutString(0,0,"",false);
+      endformat;
+    
+    end;
+    dat1 = addday(dat1,1);
+  end; 
+  Black_divider(0,1);
+   StartFormat(15);
+        OutString(0,0,"Total",false);
+        OutString(80,0,"",false);
+        OutString(180,0,"",false);
+        OutString(270,0,tot3,false);
+        OutString(1,0,tot4,true);
+      endformat;
+  
+  endJob;
+  
+
+return;
+end;
+
+
+global updating procedure MyRetailSalesComputekRn(record RcVc RepSpec)// Edit ************************** Tuesday, 31 May 2011 13:55:38
+begin
+Record IVCashVc IVCr;
+row IVCashVc IVCrw;
+Record IVVc IVr;
+Record SMVc SMr;
+boolean TrHs,testf,testf1;
+val c1,c2,c3,c4,c5,c6,c7,of,ivsum,sm1,sm2,sm3,sm4,sm5,sm6,sm7,smof,tot1,tot2,tot3,tot4;
+val c1u,c2u,c3u,c4u,c5u,c6u,c7u,ofu,ivsumu,sm1u,sm2u,sm3u,sm4u,sm5u,sm6u,sm7u,smofu,tot1u,tot2u,tot3u,tot4u;
+date dat1,dat2;
+record CUVc CUr;
+string 100 data;
+string 5 s1,s2,s3,s4;
+integer mtrw,i,invtype;
+val frrate,to1,to2,br1,br2;
+record POSCurncyBlock PCb;// Edit ************************** Wednesday, 13 April 2011 12:27:35
+val rate;
+  
+  //data = "01/" & getmonth(RepSpec.d2) & "/" getyear(RepSpec.d2);
+  s1 = "01/";
+  s2 = getmonth(addday(RepSpec.d2,-1));
+  s3 = "/";
+  s4 = getyear(addday(RepSpec.d2,-1));
+  data = s1 & s2 & s3 & s4;
+  //messageBox(0,s1 & "_" & s2 & "_" & s3 & "_" & s4);
+  dat1 = data;
+  dat2 = RepSpec.d2;
+  
+  //messageBox(0,dat1 & "_" & dat2);
+  StartReportJob("RetailSales");
+
+  EndHeader;
+  
+  StartFormat(15);
+        OutString(0,0,"Store",false);
+        OutString(80,0,"Sum/Date(UAH)",false);
+        OutString(180,0,"Sum/Date(USD)",false);
+        OutString(270,0,"Sum/month(UAH)",false);
+        OutString(1,0,"SUM/Month(USD)",true);
+       
+      endformat;
+  sm1 = 0;
+  sm2 = 0;
+  sm3 = 0;
+  sm4 = 0;
+  sm5 = 0;
+  sm6 = 0;
+  sm7 = 0;
+  smof = 0;
+  
+  sm1u = 0;
+  sm2u = 0;
+  sm3u = 0;
+  sm4u = 0;
+  sm5u = 0;
+  sm6u = 0;
+  sm7u = 0;
+  smofu = 0;
+  TrHs = true;
+  While(TrHs) begin
+    if(dat1>=dat2)then begin TrHs =false; end;
+    if(TrHs) then begin
+      c1=0;
+      c2=0;
+      c3=0;
+      c4=0;
+      c5=0;
+      c6=0;
+      c7=0;
+      of = 0;
+      c1u=0;
+      c2u=0;
+      c3u=0;
+      c4u=0;
+      c5u=0;
+      c6u=0;
+      c7u=0;
+      ofu=0;
+      
+      tot1=0;
+      tot2=0;
+      tot3=0;
+      tot4=0;
+      tot1u=0;
+      tot2u=0;
+      tot3u=0;
+      tot4u=0;
+      
+      IVCr.InvDate=dat1;
+      testf = true;
+      while(loopkey("InvDate",IVCr,1,testf)) begin
+      testf1=true;
+        invtype = 1;
+        if(IVCr.InvDate!=dat1) then begin testf = false; testf1=false; end;
+        if(IVCr.OKFlag==0) then begin testf1=false; end;
+        if(IVCr.Invalid!=0) then begin testf1=false; end;
+        
+        if (testf1) then begin
+          mtrw = matrowcnt(IVCr);
+          for(i=0;i<mtrw;i=i+1)begin
+            matrowget(IVCr,i,IVCrw);
+            
+            
+            
+            if(setinset("UAH_PURCHASE",IVCrw.Objects))then begin
+              IVCr.CurncyCode = "UAH_P";
+            end else begin
+              if(setinset("UAH_APPLE",IVCrw.Objects))then begin
+                IVCr.CurncyCode = "UAH_A";
+              end else begin
+                blockLoad(PCb);// Edit ************************** Wednesday, 13 April 2011 12:25:34
+                IVCr.CurncyCode = PCb.CurncyCode;// Edit ************************** Wednesday, 13 April 2011 12:29:19
+                //IVCr.CurncyCode = "UAH";
+              end;
+            end;
+            GetFullCurncyRate(IVCr.CurncyCode,IVCr.InvDate,frrate,to1,to2,br1,br2);
+            
+            switch(IVCr.CustCode) begin
+              
+              case "IPOINT":          c1=c1+IVCrw.Sum;
+                                      c1u=c1u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              case "IPOINT_SM":       c2=c2+IVCrw.Sum;
+                                      c2u=c2u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              case "IPOINT_KH_MG":       c3=c3+IVCrw.Sum;
+                                      c3u=c3u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              case "SAMSUNG_OLYMP":       c4=c4+IVCrw.Sum;								// Change to SAMSUNG_OLYMP
+                                      c4u=c4u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              case "SAMSUNG_OLYMP2":       c5=c5+IVCrw.Sum;								// Change to SAMSUNG_OLYMP
+                                      c5u=c5u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              
+            end;
+          end;
+        end;
+      end;
+      resetLoop(IVCr);
+      
+      
+      
+      IVr.TransDate = dat1;
+      testf=true;
+      
+      while(loopkey("TransDate",IVr,1,testf)) begin
+        testf1=true;
+        if(IVr.TransDate!=dat1) then begin testf = false; testf1=false; end;
+        if(IVr.OKFlag==0) then begin testf1=false; end;
+        if(IVr.Invalid!=0) then begin testf1=false; end;
+        if(IVr.Invalid!=0) then begin testf1=false; end;
+        //if(IVr.InvType!=1) then begin testf1=false; end;
+        
+        rate = IVr.FrRate/IVr.ToRateB1;
+        if(rate==0)then begin rate = 1; end;
+        
+        switch(IVr.InvType) begin
+          case 1: invtype = 1;
+          case 3: invtype = -1;
+          otherwise begin
+            testf1 = false;
+          end;
+        end;
+        
+        if (testf1) then begin
+        ivsum = IVr.Sum4*invtype;// Edit ************************** Wednesday, 28 September 2011 13:50:57
+        if(IVr.CurncyCode=="USD")then begin
+          ivsum = round(ivsum*rate,defaultcurroundoff);
+        end;
+        if(IVr.CurncyCode!="USD")then begin
+          //GetFullCurncyRate(IVr.CurncyCode,IVr.TransDate,frrate,to1,to2,br1,br2);
+          //frrate = IVr.FrRate;
+          //to1 = IVr.ToRateB1;
+          //to2 = IVr.ToRateB2;
+          //br1 = IVr.BaseRate1;
+          //br2 = IVr.BaseRate2;
+          ivsumu = round(IVr.Sum4/rate*invtype,defaultcurroundoff);
+        end else begin
+          ivsumu = IVr.Sum4*invtype;
+        end;
+        
+          switch(IVr.CustCode) begin
+            case "IPOINT":c1=c1+ivsum;
+                          c1u=c1u+ivsumu;
+            case "IPOINT_SM":c2=c2+ivsum;
+                          c2u=c2u+ivsumu;
+            case "IPOINT_KH_MG":c3=c3+ivsum;
+                          c3u=c3u+ivsumu;
+            case "SAMSUNG_OLYMP":c4=c4+ivsum;		//**** Change for SAMSUNG_OLYMP
+                          c4u=c4u+ivsumu;
+        	case "SAMSUNG_OLYMP2":c5=c5+ivsum;		//**** Change for SAMSUNG_OLYMP
+                          c5u=c5u+ivsumu;
+            otherwise begin
+              of = of + ivsum;
+              ofu = ofu + ivsumu;
+            end;
+          end;
+        end;
+      end;
+      
+      sm1 = sm1 + c1;
+      sm2 = sm2 + c2;
+      sm3 = sm3 + c3;
+      sm4 = sm4 + c4;
+      sm5 = sm5 + c5;
+      sm6 = sm6 + c6;
+      sm7 = sm7 + c7;
+      smof = smof + of;
+      
+      sm1u = sm1u + c1u;
+      sm2u = sm2u + c2u;
+      sm3u = sm3u + c3u;
+      sm4u = sm4u + c4u;
+      sm5u = sm5u + c5u;
+      sm6u = sm6u + c6u;
+      sm7u = sm7u + c7u;
+      smofu = smofu + ofu;
+      
+      resetloop(IVr);
+      Gray_Divider(0,1);
+       StartFormat(15);
+        OutString(11,0,dat1,false);
+      endformat;
+
+      CUr.Code = "IPOINT";
+      If(ReadfirstMain(CUr,1,true)) begin
+      StartFormat(15);
+        OutString(0,0,CUr.Code,false);
+        OutString(80,0,c1,false);
+        OutString(180,0,c1u,false);
+        OutString(270,0,sm1,false);
+        OutString(1,0,sm1u,true);
+      endformat;
+      end;
+      
+      /*CUr.Code = "IPOINT_SM";
+      If(ReadfirstMain(CUr,1,true)) begin
+      StartFormat(15);
+        OutString(0,0,CUr.Code,false);
+        OutString(80,0,c2,false);
+        OutString(180,0,c2u,false);
+        OutString(270,0,sm2,false);
+        OutString(1,0,sm2u,true);
+      endformat;
+      end;
+      
+      CUr.Code = "IPOINT_KH_MG";
+      If(ReadfirstMain(CUr,1,true)) begin
+      StartFormat(15);
+        OutString(0,0,CUr.Code,false);
+        OutString(80,0,c3,false);
+        OutString(180,0,c3u,false);
+        OutString(270,0,sm3,false);
+        OutString(1,0,sm3u,true);
+      endformat;
+      end;*/
+      
+      CUr.Code = "SAMSUNG_OLYMP";		//*********** Change for SAMSUNG_OLYMP
+      If(ReadfirstMain(CUr,1,true)) begin
+      StartFormat(15);
+        OutString(0,0,CUr.Code,false);
+        OutString(80,0,c4,false);
+        OutString(180,0,c4u,false);
+        OutString(270,0,sm4,false);
+        OutString(1,0,sm4u,true);
+      endformat;
+      end;
+      
+      CUr.Code = "SAMSUNG_OLYMP2";		//*********** Change for SAMSUNG_OLYMP
+      If(ReadfirstMain(CUr,1,true)) begin
+      StartFormat(15);
+        OutString(0,0,CUr.Code,false);
+        OutString(80,0,c5,false);
+        OutString(180,0,c5u,false);
+        OutString(270,0,sm5,false);
+        OutString(1,0,sm5u,true);
+      endformat;
+      end;
+      
+      StartFormat(15);
+        OutString(0,0,"Office",false);
+        OutString(80,0,of,false);
+        OutString(180,0,ofu,false);
+        OutString(270,0,smof,false);
+        OutString(1,0,smofu,true);
+      endformat;
+      Gray_Divider(0,1);
+     StartFormat(15);
+        OutString(0,0,"",false);
+    
+      endformat;
+      
+       StartFormat(15);
+        OutString(0,0,"SubTotal",false);
+        OutString(80,0,c1+c2+c3+c4+c5+c6+c7+of,false);
+        OutString(180,0,c1u+c2u+c3u+c4u+c5u+c6u+c7u+ofu,false);
+        OutString(270,0,sm1+sm2+sm3+sm4+sm5+sm6+sm7+smof,false);
+        OutString(1,0,sm1u+sm2u+sm3u+sm4u+sm5u+sm6u+sm7u+smofu,true);
+      endformat;
+
+    tot3 = sm1+sm2+sm3+sm4+sm5+sm6+sm7+smof;
+    tot4 = sm1u+sm2u+sm3u+sm4u+sm5u+sm6u+sm7u+smofu;
+    
+     StartFormat(15);
+        OutString(0,0,"",false);
+      endformat;
+    
+    end;
+    dat1 = addday(dat1,1);
+  end; 
+  Black_divider(0,1);
+   StartFormat(15);
+        OutString(0,0,"Total",false);
+        OutString(80,0,"",false);
+        OutString(180,0,"",false);
+        OutString(270,0,tot3,false);
+        OutString(1,0,tot4,true);
+      endformat;
+  
+  endJob;
+  
+
+return;
+end;
+
+global updating procedure MyRetailSalesMMRRn(record RcVc RepSpec)
+begin
+Record IVCashVc IVCr;
+row IVCashVc IVCrw;
+Record IVVc IVr;
+Record SMVc SMr;
+boolean TrHs,testf,testf1;
+val c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,of,stalldt,stall_oc,ivsum,sm1,sm2,sm3,sm4,sm5,sm6,sm7,sm8,sm9,sm10,smof,smstalldt,smstall_oc,tot1,tot2,tot3,tot4;
+val c1u,c2u,c3u,c4u,c5u,c6u,c7u,c8u,c9u,c10u,ofu,stalldtu,stall_ocu,ivsumu,sm1u,sm2u,sm3u,sm4u,sm5u,sm6u,sm7u,sm8u,sm9u,sm10u,smofu,smostalldt,smstall_ocu,smstalldtu,tot1u,tot2u,tot3u,tot4u;
+date dat1,dat2;
+record CUVc CUr;
+string 100 data,custcode;
+string 5 s1,s2,s3,s4;
+integer mtrw,i,invtype;
+val frrate,to1,to2,br1,br2;
+record POSCurncyBlock PCb;
+  record LocalMachineAccBlock LMAb;
+  row LocalMachineAccBlock LMArw;
+  record LocalMachineBlock LMb;
+  integer locmtrw,loci;
+  val rate;
+  
+  //data = "01/" & getmonth(RepSpec.d2) & "/" getyear(RepSpec.d2);
+  s1 = "01/";
+  s2 = getmonth(addday(RepSpec.d2,-1));
+  s3 = "/";
+  s4 = getyear(addday(RepSpec.d2,-1));
+  data = s1 & s2 & s3 & s4;
+  //messageBox(0,s1 & "_" & s2 & "_" & s3 & "_" & s4);
+  dat1 = data;
+  dat2 = RepSpec.d2;
+  blockload(LMAb);
+  //messageBox(0,dat1 & "_" & dat2);
+  StartReportJob("RetailSales");
+
+  EndHeader;
+  
+  StartFormat(15);
+        OutString(0,0,"Store",false);
+        OutString(80,0,"Sum/Date(UAH)",false);
+        OutString(180,0,"Sum/Date(USD)",false);
+        OutString(270,0,"Sum/month(UAH)",false);
+        OutString(1,0,"SUM/Month(USD)",true);
+       
+      endformat;
+  sm1 = 0;
+  sm2 = 0;
+  sm3 = 0;
+  sm4 = 0;
+  sm5 = 0;
+  sm6 = 0;
+  sm7 = 0;
+  sm8 = 0;
+  sm9 = 0;
+  sm10 =0;
+  smof = 0;
+  smstalldt = 0;
+  smstall_oc = 0;
+  
+  sm1u = 0;
+  sm2u = 0;
+  sm3u = 0;
+  sm4u = 0;
+  sm5u = 0;
+  sm6u = 0;
+  sm7u = 0;
+  sm8u = 0;
+  sm9u = 0;
+  sm10u =0;
+  smofu = 0;
+  smostalldt = 0;
+  smstall_ocu = 0;
+  TrHs = true;
+  While(TrHs) begin
+    if(dat1>=dat2)then begin TrHs =false; end;
+    if(TrHs) then begin
+      c1=0;
+      c2=0;
+      c3=0;
+      c4=0;
+      c5=0;
+      c6=0;
+      c7=0;
+      c8=0;
+      c9=0;
+      c10=0;
+      of = 0;
+      stalldt = 0;
+      stall_oc = 0;
+      c1u=0;
+      c2u=0;
+      c3u=0;
+      c4u=0;
+      c5u=0;
+      c6u=0;
+      c7u=0;
+      c8u=0;
+      c9u=0;
+      c10u=0;
+      ofu=0;
+      stalldtu = 0;
+      stall_ocu = 0;
+      
+      tot1=0;
+      tot2=0;
+      tot3=0;
+      tot4=0;
+      tot1u=0;
+      tot2u=0;
+      tot3u=0;
+      tot4u=0;
+      
+      IVCr.InvDate=dat1;
+      testf = true;
+      while(loopkey("InvDate",IVCr,1,testf)) begin
+      testf1=true;
+        if(IVCr.InvDate!=dat1) then begin testf = false; testf1=false; end;
+        if(IVCr.OKFlag==0) then begin testf1=false; end;
+        if(IVCr.Invalid!=0) then begin testf1=false; end;
+        
+        if (testf1) then begin
+          mtrw = matrowcnt(IVCr);
+          for(i=0;i<mtrw;i=i+1)begin
+            matrowget(IVCr,i,IVCrw);
+            
+            
+            
+            if(setinset("UAH_PURCHASE2",IVCrw.Objects))then begin
+              IVCr.CurncyCode = "UAH_T";
+            end else begin
+				  if(setinset("UAH_APPLE",IVCrw.Objects))then begin
+					IVCr.CurncyCode = "UAH_A";
+				  end else begin
+				  	  if(setinset("UAH_JBL",IVCrw.Objects))then begin
+					  IVCr.CurncyCode = "UAH_J";
+				  	  end else begin
+						  if(setinset("UAH_E",IVCrw.Objects))then begin
+							IVCr.CurncyCode = "UAH_E";
+						  end else begin
+							blockLoad(PCb);// Edit ************************** Wednesday, 13 April 2011 12:25:34
+							IVCr.CurncyCode = PCb.CurncyCode;// Edit ************************** Wednesday, 13 April 2011 12:29:19
+							//IVCr.CurncyCode = "UAH";
+						end;
+					end;
+				end;
+            end;
+            GetFullCurncyRate(IVCr.CurncyCode,IVCr.InvDate,frrate,to1,to2,br1,br2);
+            
+            switch(IVCr.LocalMachineCode) begin
+              
+              case "S1":              c1=c1+IVCrw.Sum;
+                                      c1u=c1u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              
+              case "A1":              c2=c2+IVCrw.Sum;
+                                      c2u=c2u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              
+              /*case "A2":             c3=c3+IVCrw.Sum;
+                                      c3u=c3u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              
+              case "DD":              c4=c4+IVCrw.Sum;
+                                      c4u=c4u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              
+              case "KHK":          c5=c5+IVCrw.Sum;
+                                      c5u=c5u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              
+              case "KDT":             c6=c6+IVCrw.Sum;
+                                      c6u=c6u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              
+              case "KDN":             c7=c7+IVCrw.Sum;
+                                      c7u=c7u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              
+              case "LOP":             c8=c8+IVCrw.Sum;
+                                      c8u=c8u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+                                      
+              case "KOP":             c9=c9+IVCrw.Sum;
+                                      c9u=c9u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              
+              case "KG":             c10=c10+IVCrw.Sum;
+                                      c10u=c10u+round(IVCrw.Sum/frrate,defaultcurroundoff);*/
+                                      
+			  case "A2":             stall_oc=stall_oc+IVCrw.Sum;
+                                      stall_ocu=stall_ocu+round(IVCrw.Sum/frrate,defaultcurroundoff);       
+                                               
+            end;
+          end;
+        end;
+      end;
+      resetLoop(IVCr);
+      
+      
+      
+      IVr.TransDate = dat1;
+      testf=true;
+      
+      while(loopkey("TransDate",IVr,1,testf)) begin
+        testf1=true;
+        if(IVr.TransDate!=dat1) then begin testf = false; testf1=false; end;
+        if(IVr.OKFlag==0) then begin testf1=false; end;
+        if(IVr.Invalid!=0) then begin testf1=false; end;
+        //if(IVr.InvType!=1) then begin testf1=false; end;
+        
+        rate = IVr.FrRate/IVr.ToRateB1;
+        if(rate==0)then begin rate = 1; end;
+        
+        switch(IVr.InvType) begin
+          case 1: invtype = 1;
+          case 3: invtype = -1;
+          otherwise begin
+            testf1 = false;
+          end;
+        end;
+        
+        if (testf1) then begin
+        ivsum = IVr.Sum4*invtype;// Edit ************************** Wednesday, 26 October 2011 09:54:20
+        if(IVr.CurncyCode=="USD")then begin
+          ivsum = round(ivsum*rate,defaultcurroundoff);
+        end;
+        if(IVr.CurncyCode!="USD")then begin
+          ivsumu = round(IVr.Sum4/rate*invtype,defaultcurroundoff);
+        end else begin
+          ivsumu = IVr.Sum4*invtype;
+        end;
+          custcode = "";
+          locmtrw = matrowcnt(LMAb);
+          for(loci=0;loci<locmtrw;loci=loci+1)begin
+            matrowGet(LMAb,loci,LMArw);
+            if(setinset(LMArw.Objects,IVr.Objects))then begin
+              IVr.CustCode = LMArw.CustCode;
+              custcode = LMArw.CustCode;
+            end;
+            
+          end;
+        
+          switch(custcode) begin
+            case "S_K_OL":c1=c1+ivsum;
+                          c1u=c1u+ivsumu;
+            case "A_K_OP":c2=c2+ivsum;
+                                c2u=c2u+ivsumu;
+            /*case "OD_SADU_P":c3=c3+ivsum;
+                            c3u=c3u+ivsumu;
+            case "D_DEKOR_D":c4=c4+ivsum;
+                            c4u=c4u+ivsumu;
+            case "KH_KARAVAN":c5=c5+ivsum;
+                              c5u=c5u+ivsumu;
+            case "DREAM_TOWN":c6=c6+ivsum;
+                              c6u=c6u+ivsumu;
+            case "DN_KARAVAN":c7=c7+ivsum;
+                              c7u=c7u+ivsumu;
+            case "LV_OPERA_PASSAGE":c8=c8+ivsum;
+                              c8u=c8u+ivsumu;
+            case "OCEAN_PLAZA":c9=c9+ivsum;
+                              c9u=c9u+ivsumu;
+        	case "GULLIVER":c10=c10+ivsum;
+                              c10u=c10u+ivsumu;*/
+            /*case "STALL_DT":stalldt = stalldt + ivsum;
+            	stalldtu = stalldtu + ivsumu;*/
+            case "A_K_ST_OP": stall_oc= stall_oc + ivsum;
+            	stall_ocu = stall_ocu + ivsumu;
+            
+            otherwise begin
+            	of = of + ivsum;
+            	ofu = ofu + ivsumu;
+            end;
+          end;
+        end;
+      end;
+      
+      sm1 = sm1 + c1;
+      sm2 = sm2 + c2;
+      sm3 = sm3 + c3;
+      sm4 = sm4 + c4;
+      sm5 = sm5 + c5;
+      sm6 = sm6 + c6;
+      sm7 = sm7 + c7;
+      sm8 = sm8 + c8;
+      sm9 = sm9 + c9;
+      sm10 = sm10 +c10;
+      smof = smof + of;
+      //smstalldt = smstalldt + stalldt;
+      smstall_oc = smstall_oc + stall_oc;
+      
+      sm1u = sm1u + c1u;
+      sm2u = sm2u + c2u;
+      sm3u = sm3u + c3u;
+      sm4u = sm4u + c4u;
+      sm5u = sm5u + c5u;
+      sm6u = sm6u + c6u;
+      sm7u = sm7u + c7u;
+      sm8u = sm8u + c8u;
+      sm9u = sm9u + c9u;
+      sm10u = sm10u + c10u;
+      smofu = smofu + ofu;
+      //smstalldtu = smstalldtu + stalldtu;
+      smstall_ocu = smstall_ocu + stall_ocu;
+      
+      resetloop(IVr);
+      Gray_Divider(0,1);
+       StartFormat(15);
+        OutString(11,0,dat1,false);
+      endformat;
+
+      CUr.Code = "S_K_OL";
+      If(ReadfirstMain(CUr,1,true)) begin
+      StartFormat(15);
+        //OutString(0,0,CUr.Code,false);
+        OutString(0,0,"Samsung",false);
+        OutString(80,0,c1,false);
+        OutString(180,0,c1u,false);
+        OutString(270,0,sm1,false);
+        OutString(1,0,sm1u,true);
+      endformat;
+      end;
+      
+      CUr.Code = "A_K_OP";
+      If(ReadfirstMain(CUr,1,true)) begin
+      StartFormat(15);
+        //OutString(0,0,CUr.Code,false);
+        OutString(0,0,"Ocean Plaza",false);
+        OutString(80,0,c2,false);
+        OutString(180,0,c2u,false);
+        OutString(270,0,sm2,false);
+        OutString(1,0,sm2u,true);
+      endformat;
+      end;
+      
+      
+      CUr.Code = "A_K_ST_OP";
+      If(ReadfirstMain(CUr,1,true)) begin
+      StartFormat(15);
+        //OutString(0,0,CUr.Code,false);
+        OutString(0,0,"STALL_OC",false);
+        OutString(80,0,stall_oc,false);
+        OutString(180,0,stall_ocu,false);
+        OutString(270,0,smstall_oc,false);
+        OutString(1,0,smstall_ocu,true);
+      endformat;
+      end;
+    
+            
+      StartFormat(15);
+        OutString(0,0,"Office",false);
+        OutString(80,0,of,false);
+        OutString(180,0,ofu,false);
+        OutString(270,0,smof,false);
+        OutString(1,0,smofu,true);
+      endformat;
+      Gray_Divider(0,1);
+     StartFormat(15);
+        OutString(0,0,"",false);
+    
+      endformat;
+      
+       StartFormat(15);
+        OutString(0,0,"SubTotal",false);
+        OutString(80,0,c1+c2/*+c3+c4+c5+c6+c7+c8+c9+c10+*/of+stall_oc,false);
+        OutString(180,0,c1u+c2u+/*c3u+c4u+c5u+c6u+c7u+c8u+c9u+c10u+ofu+*/stall_ocu,false);
+        OutString(270,0,sm1+sm2+/*sm3+sm4+sm5+sm6+sm7+sm8+sm9+sm10+*/smof+smstall_oc,false);
+        OutString(1,0,sm1u+sm2u+/*sm3u+sm4u+sm5u+sm6u+sm7u+sm8u+sm9u+sm10u+*/smofu+smstall_ocu,true);
+      endformat;
+
+    tot3 = sm1+sm2+/*sm3+sm4+sm5+sm6+sm7+sm8+sm9+sm10+*/smof+smstall_oc;
+    tot4 = sm1u+sm2u+/*sm3u+sm4u+sm5u+sm6u+sm7u+sm8u+sm9u+sm10u+*/smofu+smstall_ocu;
+    
+     StartFormat(15);
+        OutString(0,0,"",false);
+      endformat;
+    
+    end;
+    dat1 = addday(dat1,1);
+  end; 
+  Black_divider(0,1);
+   StartFormat(15);
+        OutString(0,0,"Total",false);
+        OutString(80,0,"",false);
+        OutString(180,0,"",false);
+        OutString(270,0,tot3,false);
+        OutString(1,0,tot4,true);
+      endformat;
+  
+  endJob;
+  
+
+return;
+end;
+
+global procedure MyRetailSalesSamsungRn(record RcVc RepSpec)
+begin
+Record IVCashVc IVCr;
+row IVCashVc IVCrw;
+Record IVVc IVr;
+Record SMVc SMr;
+boolean TrHs,testf,testf1;
+val c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,of,stalldt,stall_oc,ivsum,sm1,sm2,sm3,sm4,sm5,sm6,sm7,sm8,sm9,sm10,smof,smstalldt,smstall_oc,tot1,tot2,tot3,tot4;
+val c1u,c2u,c3u,c4u,c5u,c6u,c7u,c8u,c9u,c10u,ofu,stalldtu,stall_ocu,ivsumu,sm1u,sm2u,sm3u,sm4u,sm5u,sm6u,sm7u,sm8u,sm9u,sm10u,smofu,smostalldt,smstall_ocu,smstalldtu,tot1u,tot2u,tot3u,tot4u;
+date dat1,dat2;
+record CUVc CUr;
+string 100 data,custcode;
+string 5 s1,s2,s3,s4;
+integer mtrw,i,invtype;
+val frrate,to1,to2,br1,br2;
+record POSCurncyBlock PCb;
+  record LocalMachineAccBlock LMAb;
+  row LocalMachineAccBlock LMArw;
+  record LocalMachineBlock LMb;
+  integer locmtrw,loci;
+  val rate;
+  
+  //data = "01/" & getmonth(RepSpec.d2) & "/" getyear(RepSpec.d2);
+  s1 = "01/";
+  s2 = getmonth(addday(RepSpec.d2,-1));
+  s3 = "/";
+  s4 = getyear(addday(RepSpec.d2,-1));
+  data = s1 & s2 & s3 & s4;
+  //messageBox(0,s1 & "_" & s2 & "_" & s3 & "_" & s4);
+  dat1 = data;
+  dat2 = RepSpec.d2;
+  blockload(LMAb);
+  //messageBox(0,dat1 & "_" & dat2);
+  StartReportJob("RetailSales");
+
+  EndHeader;
+  
+  StartFormat(15);
+        OutString(0,0,"Store",false);
+        OutString(80,0,"Sum/Date(UAH)",false);
+        OutString(180,0,"Sum/Date(USD)",false);
+        OutString(270,0,"Sum/month(UAH)",false);
+        OutString(1,0,"SUM/Month(USD)",true);
+       
+      endformat;
+  sm1 = 0;
+  sm2 = 0;
+  sm3 = 0;
+  sm4 = 0;
+  sm5 = 0;
+  sm6 = 0;
+  sm7 = 0;
+  sm8 = 0;
+  sm9 = 0;
+  sm10 =0;
+  smof = 0;
+  smstalldt = 0;
+  smstall_oc = 0;
+  
+  sm1u = 0;
+  sm2u = 0;
+  sm3u = 0;
+  sm4u = 0;
+  sm5u = 0;
+  sm6u = 0;
+  sm7u = 0;
+  sm8u = 0;
+  sm9u = 0;
+  sm10u =0;
+  smofu = 0;
+  smostalldt = 0;
+  smstall_ocu = 0;
+  TrHs = true;
+  While(TrHs) begin
+    if(dat1>=dat2)then begin TrHs =false; end;
+    if(TrHs) then begin
+      c1=0;
+      c2=0;
+      c3=0;
+      
+      of = 0;
+      stalldt = 0;
+      stall_oc = 0;
+      c1u=0;
+      c2u=0;
+      c3u=0;
+      
+      ofu=0;
+      stalldtu = 0;
+      stall_ocu = 0;
+      
+      tot1=0;
+      tot2=0;
+      tot3=0;
+      tot4=0;
+      tot1u=0;
+      tot2u=0;
+      tot3u=0;
+      tot4u=0;
+      
+      IVCr.InvDate=dat1;
+      testf = true;
+      while(loopkey("InvDate",IVCr,1,testf)) begin
+      testf1=true;
+        if(IVCr.InvDate!=dat1) then begin testf = false; testf1=false; end;
+        if(IVCr.OKFlag==0) then begin testf1=false; end;
+        if(IVCr.Invalid!=0) then begin testf1=false; end;
+        
+        if (testf1) then begin
+          mtrw = matrowcnt(IVCr);
+          for(i=0;i<mtrw;i=i+1)begin
+            matrowget(IVCr,i,IVCrw);
+            
+            
+            
+            if(setinset("UAH_PURCHASE2",IVCrw.Objects))then begin
+              IVCr.CurncyCode = "UAH_T";
+            end else begin
+				  if(setinset("UAH_APPLE",IVCrw.Objects))then begin
+					IVCr.CurncyCode = "UAH_A";
+				  end else begin
+				  	  if(setinset("UAH_JBL",IVCrw.Objects))then begin
+					  IVCr.CurncyCode = "UAH_J";
+				  	  end else begin
+						  if(setinset("UAH_E",IVCrw.Objects))then begin
+							IVCr.CurncyCode = "UAH_E";
+						  end else begin
+							blockLoad(PCb);// Edit ************************** Wednesday, 13 April 2011 12:25:34
+							IVCr.CurncyCode = PCb.CurncyCode;// Edit ************************** Wednesday, 13 April 2011 12:29:19
+							//IVCr.CurncyCode = "UAH";
+						end;
+					end;
+				end;
+            end;
+            GetFullCurncyRate(IVCr.CurncyCode,IVCr.InvDate,frrate,to1,to2,br1,br2);
+            
+            switch(IVCr.LocalMachineCode) begin
+              
+              case "S1":              c1=c1+IVCrw.Sum;
+                                      c1u=c1u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+                                                                             
+            end;
+          end;
+        end;
+      end;
+      resetLoop(IVCr);
+      
+      
+      
+      IVr.TransDate = dat1;
+      testf=true;
+      
+      while(loopkey("TransDate",IVr,1,testf)) begin
+        testf1=true;
+        if(IVr.TransDate!=dat1) then begin testf = false; testf1=false; end;
+        if(IVr.OKFlag==0) then begin testf1=false; end;
+        if(IVr.Invalid!=0) then begin testf1=false; end;
+        //if(IVr.InvType!=1) then begin testf1=false; end;
+        
+        rate = IVr.FrRate/IVr.ToRateB1;
+        if(rate==0)then begin rate = 1; end;
+        
+        switch(IVr.InvType) begin
+          case 1: invtype = 1;
+          case 3: invtype = -1;
+          otherwise begin
+            testf1 = false;
+          end;
+        end;
+        
+        if (testf1) then begin
+        ivsum = IVr.Sum4*invtype;// Edit ************************** Wednesday, 26 October 2011 09:54:20
+        if(IVr.CurncyCode=="USD")then begin
+          ivsum = round(ivsum*rate,defaultcurroundoff);
+        end;
+        if(IVr.CurncyCode!="USD")then begin
+          ivsumu = round(IVr.Sum4/rate*invtype,defaultcurroundoff);
+        end else begin
+          ivsumu = IVr.Sum4*invtype;
+        end;
+          custcode = "";
+          locmtrw = matrowcnt(LMAb);
+          for(loci=0;loci<locmtrw;loci=loci+1)begin
+            matrowGet(LMAb,loci,LMArw);
+            if(setinset(LMArw.Objects,IVr.Objects))then begin
+              IVr.CustCode = LMArw.CustCode;
+              custcode = LMArw.CustCode;
+            end;
+            
+          end;
+        
+          switch(custcode) begin
+            case "S_K_OL":c1=c1+ivsum;
+                          c1u=c1u+ivsumu;
+            /*case "A_K_OP":c2=c2+ivsum;
+                                c2u=c2u+ivsumu;
+            case "OD_SADU_P":c3=c3+ivsum;
+                            c3u=c3u+ivsumu;
+            case "D_DEKOR_D":c4=c4+ivsum;
+                            c4u=c4u+ivsumu;
+            case "KH_KARAVAN":c5=c5+ivsum;
+                              c5u=c5u+ivsumu;
+            case "DREAM_TOWN":c6=c6+ivsum;
+                              c6u=c6u+ivsumu;
+            case "DN_KARAVAN":c7=c7+ivsum;
+                              c7u=c7u+ivsumu;
+            case "LV_OPERA_PASSAGE":c8=c8+ivsum;
+                              c8u=c8u+ivsumu;
+            case "OCEAN_PLAZA":c9=c9+ivsum;
+                              c9u=c9u+ivsumu;
+        	case "GULLIVER":c10=c10+ivsum;
+                              c10u=c10u+ivsumu;
+            case "STALL_DT":stalldt = stalldt + ivsum;
+            	stalldtu = stalldtu + ivsumu;
+            case "A_K_ST_OP": stall_oc= stall_oc + ivsum;
+            	stall_ocu = stall_ocu + ivsumu;*/
+            
+            otherwise begin
+            	of = of + ivsum;
+            	ofu = ofu + ivsumu;
+            end;
+          end;
+        end;
+      end;
+      
+      sm1 = sm1 + c1;
+      sm2 = sm2 + c2;
+      sm3 = sm3 + c3;
+      
+      smof = smof + of;
+      //smstalldt = smstalldt + stalldt;
+      smstall_oc = smstall_oc + stall_oc;
+      
+      sm1u = sm1u + c1u;
+      sm2u = sm2u + c2u;
+      sm3u = sm3u + c3u;
+      
+      smofu = smofu + ofu;
+      //smstalldtu = smstalldtu + stalldtu;
+      smstall_ocu = smstall_ocu + stall_ocu;
+      
+      resetloop(IVr);
+      Gray_Divider(0,1);
+       StartFormat(15);
+        OutString(11,0,dat1,false);
+      endformat;
+
+      CUr.Code = "S_K_OL";
+      If(ReadfirstMain(CUr,1,true)) begin
+      StartFormat(15);
+        //OutString(0,0,CUr.Code,false);
+        OutString(0,0,"Samsung",false);
+        OutString(80,0,c1,false);
+        OutString(180,0,c1u,false);
+        OutString(270,0,sm1,false);
+        OutString(1,0,sm1u,true);
+      endformat;
+      end;
+      
+                 
+      StartFormat(15);
+        OutString(0,0,"Office",false);
+        OutString(80,0,of,false);
+        OutString(180,0,ofu,false);
+        OutString(270,0,smof,false);
+        OutString(1,0,smofu,true);
+      endformat;
+      Gray_Divider(0,1);
+     StartFormat(15);
+        OutString(0,0,"",false);
+    
+      endformat;
+      
+       StartFormat(15);
+        OutString(0,0,"SubTotal",false);
+        OutString(80,0,c1+/*c2+c3+c4+c5+c6+c7+c8+c9+c10+*/of/*+stall_oc*/,false);
+        OutString(180,0,c1u+/*c3u+c4u+c5u+c6u+c7u+c8u+c9u+c10u+*/ofu,false);
+        OutString(270,0,sm1+/*sm3+sm4+sm5+sm6+sm7+sm8+sm9+sm10+*/smof+/*smstall_oc*/,false);
+        OutString(1,0,sm1u+/*sm2u+sm3u+sm4u+sm5u+sm6u+sm7u+sm8u+sm9u+sm10u+*/smofu/*+smstall_ocu*/,true);
+      endformat;
+
+    tot3 = sm1+/*sm2+sm3+sm4+sm5+sm6+sm7+sm8+sm9+sm10+*/smof/*+smstall_oc*/;
+    tot4 = sm1u+/*sm2u+sm3u+sm4u+sm5u+sm6u+sm7u+sm8u+sm9u+sm10u+*/smofu/*+smstall_ocu*/;
+    
+     StartFormat(15);
+        OutString(0,0,"",false);
+      endformat;
+    
+    end;
+    dat1 = addday(dat1,1);
+  end; 
+  Black_divider(0,1);
+   StartFormat(15);
+        OutString(0,0,"Total",false);
+        OutString(80,0,"",false);
+        OutString(180,0,"",false);
+        OutString(270,0,tot3,false);
+        OutString(1,0,tot4,true);
+      endformat;
+  
+  endJob;
+  
+
+return;
+end;
+
+global procedure MyRetailSalesOPRn(record RcVc RepSpec)
+begin
+Record IVCashVc IVCr;
+row IVCashVc IVCrw;
+Record IVVc IVr;
+Record SMVc SMr;
+boolean TrHs,testf,testf1;
+val c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,of,stalldt,stall_oc,ivsum,sm1,sm2,sm3,sm4,sm5,sm6,sm7,sm8,sm9,sm10,smof,smstalldt,smstall_oc,tot1,tot2,tot3,tot4;
+val c1u,c2u,c3u,c4u,c5u,c6u,c7u,c8u,c9u,c10u,ofu,stalldtu,stall_ocu,ivsumu,sm1u,sm2u,sm3u,sm4u,sm5u,sm6u,sm7u,sm8u,sm9u,sm10u,smofu,smostalldt,smstall_ocu,smstalldtu,tot1u,tot2u,tot3u,tot4u;
+date dat1,dat2;
+record CUVc CUr;
+string 100 data,custcode;
+string 5 s1,s2,s3,s4;
+integer mtrw,i,invtype;
+val frrate,to1,to2,br1,br2;
+record POSCurncyBlock PCb;
+  record LocalMachineAccBlock LMAb;
+  row LocalMachineAccBlock LMArw;
+  record LocalMachineBlock LMb;
+  integer locmtrw,loci;
+  val rate;
+  
+  //data = "01/" & getmonth(RepSpec.d2) & "/" getyear(RepSpec.d2);
+  s1 = "01/";
+  s2 = getmonth(addday(RepSpec.d2,-1));
+  s3 = "/";
+  s4 = getyear(addday(RepSpec.d2,-1));
+  data = s1 & s2 & s3 & s4;
+  //messageBox(0,s1 & "_" & s2 & "_" & s3 & "_" & s4);
+  dat1 = data;
+  dat2 = RepSpec.d2;
+  blockload(LMAb);
+  //messageBox(0,dat1 & "_" & dat2);
+  StartReportJob("RetailSales");
+
+  EndHeader;
+  
+  StartFormat(15);
+        OutString(0,0,"Store",false);
+        OutString(80,0,"Sum/Date(UAH)",false);
+        OutString(180,0,"Sum/Date(USD)",false);
+        OutString(270,0,"Sum/month(UAH)",false);
+        OutString(1,0,"SUM/Month(USD)",true);
+       
+      endformat;
+  sm1 = 0;
+  sm2 = 0;
+  sm3 = 0;
+  sm4 = 0;
+  sm5 = 0;
+  sm6 = 0;
+  sm7 = 0;
+  sm8 = 0;
+  sm9 = 0;
+  sm10 =0;
+  smof = 0;
+  smstalldt = 0;
+  smstall_oc = 0;
+  
+  sm1u = 0;
+  sm2u = 0;
+  sm3u = 0;
+  sm4u = 0;
+  sm5u = 0;
+  sm6u = 0;
+  sm7u = 0;
+  sm8u = 0;
+  sm9u = 0;
+  sm10u =0;
+  smofu = 0;
+  smostalldt = 0;
+  smstall_ocu = 0;
+  TrHs = true;
+  While(TrHs) begin
+    if(dat1>=dat2)then begin TrHs =false; end;
+    if(TrHs) then begin
+      c1=0;
+      c2=0;
+      c3=0;
+      c4=0;
+      c5=0;
+      c6=0;
+      c7=0;
+      c8=0;
+      c9=0;
+      c10=0;
+      of = 0;
+      stalldt = 0;
+      stall_oc = 0;
+      c1u=0;
+      c2u=0;
+      c3u=0;
+      c4u=0;
+      c5u=0;
+      c6u=0;
+      c7u=0;
+      c8u=0;
+      c9u=0;
+      c10u=0;
+      ofu=0;
+      stalldtu = 0;
+      stall_ocu = 0;
+      
+      tot1=0;
+      tot2=0;
+      tot3=0;
+      tot4=0;
+      tot1u=0;
+      tot2u=0;
+      tot3u=0;
+      tot4u=0;
+      
+      IVCr.InvDate=dat1;
+      testf = true;
+      while(loopkey("InvDate",IVCr,1,testf)) begin
+      testf1=true;
+        if(IVCr.InvDate!=dat1) then begin testf = false; testf1=false; end;
+        if(IVCr.OKFlag==0) then begin testf1=false; end;
+        if(IVCr.Invalid!=0) then begin testf1=false; end;
+        
+        if (testf1) then begin
+          mtrw = matrowcnt(IVCr);
+          for(i=0;i<mtrw;i=i+1)begin
+            matrowget(IVCr,i,IVCrw);
+            
+            
+            
+            if(setinset("UAH_PURCHASE2",IVCrw.Objects))then begin
+              IVCr.CurncyCode = "UAH_T";
+            end else begin
+				  if(setinset("UAH_APPLE",IVCrw.Objects))then begin
+					IVCr.CurncyCode = "UAH_A";
+				  end else begin
+				  	  if(setinset("UAH_JBL",IVCrw.Objects))then begin
+					  IVCr.CurncyCode = "UAH_J";
+				  	  end else begin
+						  if(setinset("UAH_E",IVCrw.Objects))then begin
+							IVCr.CurncyCode = "UAH_E";
+						  end else begin
+							blockLoad(PCb);// Edit ************************** Wednesday, 13 April 2011 12:25:34
+							IVCr.CurncyCode = PCb.CurncyCode;// Edit ************************** Wednesday, 13 April 2011 12:29:19
+							//IVCr.CurncyCode = "UAH";
+						end;
+					end;
+				end;
+            end;
+            GetFullCurncyRate(IVCr.CurncyCode,IVCr.InvDate,frrate,to1,to2,br1,br2);
+            
+            switch(IVCr.LocalMachineCode) begin
+              
+              /*case "S1":              c1=c1+IVCrw.Sum;
+                                      c1u=c1u+round(IVCrw.Sum/frrate,defaultcurroundoff);*/
+              
+              case "A1":              c2=c2+IVCrw.Sum;
+                                      c2u=c2u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              
+              /*case "A2":             c3=c3+IVCrw.Sum;
+                                      c3u=c3u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              
+              case "DD":              c4=c4+IVCrw.Sum;
+                                      c4u=c4u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              
+              case "KHK":          c5=c5+IVCrw.Sum;
+                                      c5u=c5u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              
+              case "KDT":             c6=c6+IVCrw.Sum;
+                                      c6u=c6u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              
+              case "KDN":             c7=c7+IVCrw.Sum;
+                                      c7u=c7u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              
+              case "LOP":             c8=c8+IVCrw.Sum;
+                                      c8u=c8u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+                                      
+              case "KOP":             c9=c9+IVCrw.Sum;
+                                      c9u=c9u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              
+              case "KG":             c10=c10+IVCrw.Sum;
+                                      c10u=c10u+round(IVCrw.Sum/frrate,defaultcurroundoff);*/
+                                      
+			  case "A2":             stall_oc=stall_oc+IVCrw.Sum;
+                                      stall_ocu=stall_ocu+round(IVCrw.Sum/frrate,defaultcurroundoff);       
+                                               
+            end;
+          end;
+        end;
+      end;
+      resetLoop(IVCr);
+      
+      
+      
+      IVr.TransDate = dat1;
+      testf=true;
+      
+      while(loopkey("TransDate",IVr,1,testf)) begin
+        testf1=true;
+        if(IVr.TransDate!=dat1) then begin testf = false; testf1=false; end;
+        if(IVr.OKFlag==0) then begin testf1=false; end;
+        if(IVr.Invalid!=0) then begin testf1=false; end;
+        //if(IVr.InvType!=1) then begin testf1=false; end;
+        
+        rate = IVr.FrRate/IVr.ToRateB1;
+        if(rate==0)then begin rate = 1; end;
+        
+        switch(IVr.InvType) begin
+          case 1: invtype = 1;
+          case 3: invtype = -1;
+          otherwise begin
+            testf1 = false;
+          end;
+        end;
+        
+        if (testf1) then begin
+        ivsum = IVr.Sum4*invtype;// Edit ************************** Wednesday, 26 October 2011 09:54:20
+        if(IVr.CurncyCode=="USD")then begin
+          ivsum = round(ivsum*rate,defaultcurroundoff);
+        end;
+        if(IVr.CurncyCode!="USD")then begin
+          ivsumu = round(IVr.Sum4/rate*invtype,defaultcurroundoff);
+        end else begin
+          ivsumu = IVr.Sum4*invtype;
+        end;
+          custcode = "";
+          locmtrw = matrowcnt(LMAb);
+          for(loci=0;loci<locmtrw;loci=loci+1)begin
+            matrowGet(LMAb,loci,LMArw);
+            if(setinset(LMArw.Objects,IVr.Objects))then begin
+              IVr.CustCode = LMArw.CustCode;
+              custcode = LMArw.CustCode;
+            end;
+            
+          end;
+        
+          switch(custcode) begin
+            /*case "S_K_OL":c1=c1+ivsum;
+                          c1u=c1u+ivsumu;*/
+            case "A_K_OP":c2=c2+ivsum;
+                                c2u=c2u+ivsumu;
+            /*case "OD_SADU_P":c3=c3+ivsum;
+                            c3u=c3u+ivsumu;
+            case "D_DEKOR_D":c4=c4+ivsum;
+                            c4u=c4u+ivsumu;
+            case "KH_KARAVAN":c5=c5+ivsum;
+                              c5u=c5u+ivsumu;
+            case "DREAM_TOWN":c6=c6+ivsum;
+                              c6u=c6u+ivsumu;
+            case "DN_KARAVAN":c7=c7+ivsum;
+                              c7u=c7u+ivsumu;
+            case "LV_OPERA_PASSAGE":c8=c8+ivsum;
+                              c8u=c8u+ivsumu;
+            case "OCEAN_PLAZA":c9=c9+ivsum;
+                              c9u=c9u+ivsumu;
+        	case "GULLIVER":c10=c10+ivsum;
+                              c10u=c10u+ivsumu;*/
+            /*case "STALL_DT":stalldt = stalldt + ivsum;
+            	stalldtu = stalldtu + ivsumu;*/
+            case "A_K_ST_OP": stall_oc= stall_oc + ivsum;
+            	stall_ocu = stall_ocu + ivsumu;
+            
+            otherwise begin
+            	of = of + ivsum;
+            	ofu = ofu + ivsumu;
+            end;
+          end;
+        end;
+      end;
+      
+      sm1 = sm1 + c1;
+      sm2 = sm2 + c2;
+      sm3 = sm3 + c3;
+      sm4 = sm4 + c4;
+      sm5 = sm5 + c5;
+      sm6 = sm6 + c6;
+      sm7 = sm7 + c7;
+      sm8 = sm8 + c8;
+      sm9 = sm9 + c9;
+      sm10 = sm10 +c10;
+      smof = smof + of;
+      //smstalldt = smstalldt + stalldt;
+      smstall_oc = smstall_oc + stall_oc;
+      
+      sm1u = sm1u + c1u;
+      sm2u = sm2u + c2u;
+      sm3u = sm3u + c3u;
+      sm4u = sm4u + c4u;
+      sm5u = sm5u + c5u;
+      sm6u = sm6u + c6u;
+      sm7u = sm7u + c7u;
+      sm8u = sm8u + c8u;
+      sm9u = sm9u + c9u;
+      sm10u = sm10u + c10u;
+      smofu = smofu + ofu;
+      //smstalldtu = smstalldtu + stalldtu;
+      smstall_ocu = smstall_ocu + stall_ocu;
+      
+      resetloop(IVr);
+      Gray_Divider(0,1);
+       StartFormat(15);
+        OutString(11,0,dat1,false);
+      endformat;
+
+      /*CUr.Code = "S_K_OL";
+      If(ReadfirstMain(CUr,1,true)) begin
+      StartFormat(15);
+        //OutString(0,0,CUr.Code,false);
+        OutString(0,0,"Samsung",false);
+        OutString(80,0,c1,false);
+        OutString(180,0,c1u,false);
+        OutString(270,0,sm1,false);
+        OutString(1,0,sm1u,true);
+      endformat;
+      end;*/
+      
+      CUr.Code = "A_K_OP";
+      If(ReadfirstMain(CUr,1,true)) begin
+      StartFormat(15);
+        //OutString(0,0,CUr.Code,false);
+        OutString(0,0,"Ocean Plaza",false);
+        OutString(80,0,c2,false);
+        OutString(180,0,c2u,false);
+        OutString(270,0,sm2,false);
+        OutString(1,0,sm2u,true);
+      endformat;
+      end;
+      
+      
+      CUr.Code = "A_K_ST_OP";
+      If(ReadfirstMain(CUr,1,true)) begin
+      StartFormat(15);
+        //OutString(0,0,CUr.Code,false);
+        OutString(0,0,"STALL_OC",false);
+        OutString(80,0,stall_oc,false);
+        OutString(180,0,stall_ocu,false);
+        OutString(270,0,smstall_oc,false);
+        OutString(1,0,smstall_ocu,true);
+      endformat;
+      end;
+    
+            
+      StartFormat(15);
+        OutString(0,0,"Office",false);
+        OutString(80,0,of,false);
+        OutString(180,0,ofu,false);
+        OutString(270,0,smof,false);
+        OutString(1,0,smofu,true);
+      endformat;
+      Gray_Divider(0,1);
+     StartFormat(15);
+        OutString(0,0,"",false);
+    
+      endformat;
+      
+       StartFormat(15);
+        OutString(0,0,"SubTotal",false);
+        OutString(80,0,c1+c2/*+c3+c4+c5+c6+c7+c8+c9+c10+*/of+stall_oc,false);
+        OutString(180,0,c1u+c2u+/*c3u+c4u+c5u+c6u+c7u+c8u+c9u+c10u+ofu+*/stall_ocu,false);
+        OutString(270,0,sm1+sm2+/*sm3+sm4+sm5+sm6+sm7+sm8+sm9+sm10+*/smof+smstall_oc,false);
+        OutString(1,0,sm1u+sm2u+/*sm3u+sm4u+sm5u+sm6u+sm7u+sm8u+sm9u+sm10u+*/smofu+smstall_ocu,true);
+      endformat;
+
+    tot3 = sm1+sm2+/*sm3+sm4+sm5+sm6+sm7+sm8+sm9+sm10+*/smof+smstall_oc;
+    tot4 = sm1u+sm2u+/*sm3u+sm4u+sm5u+sm6u+sm7u+sm8u+sm9u+sm10u+*/smofu+smstall_ocu;
+    
+     StartFormat(15);
+        OutString(0,0,"",false);
+      endformat;
+    
+    end;
+    dat1 = addday(dat1,1);
+  end; 
+  Black_divider(0,1);
+   StartFormat(15);
+        OutString(0,0,"Total",false);
+        OutString(80,0,"",false);
+        OutString(180,0,"",false);
+        OutString(270,0,tot3,false);
+        OutString(1,0,tot4,true);
+      endformat;
+  
+  endJob;
+  
+
+return;
+end;
+
+global procedure MyRetailSalesEn()
+begin
+record RcVc RepSpec;
+integer compno;
+  compno = CurrentCompany;
+      switch (compno) begin
+      /*case 1: CreateFile("Stock/iStoreStockFull.xls");
+              closefile;
+              logtext(0,"1");
+              millisleep(100);
+              openexportfile("Stock/iStoreStockFull.xls",true);
+              MyItemReportRn(RepSpec);
+              RunProgram("Stock/iStoreStockFull.sh", "");
+	      millisleep(100);
+	      //RunProgram("Stock/iStoreStockFullHidden.sh", "");
+      
+      /*case 2: CreateFile("Stock/CUAStockFull.xls");
+              closefile;
+              openexportfile("Stock/CUAStockFull.xls",true);
+              RepSpec.f1 = ",INV#1,INV#2,EXHIBITION,STORE,STORE_DEMO,STORE_SM,STORE_SM_D,TRWH,DEMO,INV#1/ADJ,EXHIB/ADJ,EX_OUT,SRV_OUT,";//***Edit by Victor add DEMO
+              MyItemReportRn(RepSpec);
+               millisleep(100);
+              RunProgram("Stock/CUAStockFull.sh", "");
+              
+              CreateFile("Stock/CUAStockFull2.xls");
+              closefile;
+              openexportfile("Stock/CUAStockFull2.xls",true);
+              RepSpec.f1 = ",INV#1/ADJ,INV#2/ADJ,INV#2/ADJS,EXHIBITION/ADJ,INV#1/E,SRV_OUT,INV#2/RTN,TRANSIT#2,";
+              MyItemReportRn(RepSpec);
+               millisleep(100);
+              RunProgram("Stock/CUAStockFull2.sh", "");
+              
+              /*CreateFile("Stock/SamsungStockFull.xls");
+              closefile;
+              openexportfile("Stock/SamsungStockFull.xls",true);
+              RepSpec.f1 = ",STORE_OLMP,STORE_OL_D,";
+              MyItemReportRn(RepSpec);
+              millisleep(100);
+              RunProgram("Stock/SamsungStockFull.sh", "");*/
+              
+     /* case 5: CreateFile("Stock/TXTStockFull.xls");
+              closefile;
+              openexportfile("Stock/TXTStockFull.xls",true);
+              MyItemReportRn(RepSpec);
+              RunProgram("Stock/TXTStockFull.sh", "");
+              
+*/
+      case 6: CreateFile("Stock/RetailSalesSMG.xls");
+              closefile;
+              openexportfile("Stock/RetailSalesSMG.xls",true);
+              RepSpec.d2 = currentdate;
+              MyRetailSalesSamsungRn(RepSpec);
+              millisleep(100);
+              RunProgram("Stock/RetailSalesSMG.sh", "");
+              
+              millisleep(200);
+              CreateFile("Stock/RetailSalesOP.xls");
+              closefile;
+              openexportfile("Stock/RetailSalesOP.xls",true);
+              RepSpec.d2 = currentdate;
+              MyRetailSalesOPRn(RepSpec);
+              millisleep(100);
+              RunProgram("Stock/RetailSalesOP.sh", "");
+      
+      /*case 7: CreateFile("Stock/TNMStockFull.xls");
+              closefile;
+              openexportfile("Stock/TNMStockFull.xls",true);
+              MyItemReportRn(RepSpec);
+              RunProgram("Stock/TNMStockFull.sh", "");
+      
+      case 8: CreateFile("Stock/AServiceStockFull.xls");
+              closefile;
+              openexportfile("Stock/AServiceStockFull.xls",true);
+              MyItemReportRn(RepSpec);
+              RunProgram("Stock/AServiceStockFull.sh", "");*/
+  end;
+  closefile;
+return;
+end;
+
+
+global procedure  MyNotSearchSVORn(record RcVc RepSpec)
+begin
+string 255 search;  
+record NotepadVc NRr;
+record RLinkVc RLr;
+string 255 rlink;
+record SVOVc SVOr;
+integer cnt;
+boolean TrHs,Testf;
+
+  search = RepSpec.f1;
+  StartReportnoheaderJob("Report");
+  NRr.SerNr = -1;
+  StartFormat(15);
+    OutString(200,0,Search,false);
+  endFormat;
+  Gray_Divider(0,1);
+  while(loopmain(NRr,1,true))begin
+    if(NRr.CompanyNr==currentcompany)then begin
+      if (stringintext(search,NRr))begin
+      cnt = 1;   
+        while (ReadRecordtoLink(NRr,cnt,SVOr,RLr)) begin
+          StartFormat(15)
+            OutString(0,"DBLSVOVc",SVOr.SerNr,false);
+            OutString(50,0,SVOr.Addr0,false);
+            OutString(200,0,SVOr.Vlastnik,false);
+          endFormat;
+          cnt = cnt+1;
+        end;   
+      end;
+    end;
+  end;
+  endjob;
+return;
+end;
+
+global procedure  MyReservStstRn(record RcVc RepSpec)
+begin
+record ORVc ORr;
+row ORVc ORrw;
+string 255 client;
+boolean TrHs,testf,TrHs1;
+integer i,mtrw,mtrw1,j;
+record RetVc Retr;
+row RetVc Retrw;
+integer quant;
+
+  client="";
+  if(nonblank(RepSpec.f1))then begin
+    client = RepSpec.f1;
+  end;
+  StartReportnoheaderJob("Report");
+  
+  StartFormat(15)
+    OutString(0,0,USetStr(7815),false);//Client
+    OutString(0,0,USetStr(3523),false);//ArtCode
+    OutString(0,0,USetStr(4063),false);//Name
+    OutString(140,0,USetStr(3524),false);//Order #
+    OutString(190,0,USetStr(3543),false);//Ord. date
+    OutString(250,0,USetStr(5510),false);//In reserv
+    OutString(310,0,USetStr(2634),false);//In Invoice
+    OutString(370,0,USetStr(4045),false);//Days in reserv
+    OutString(1,0,USetStr(2765),true);//Stock
+  endformat;
+  
+  ORr.Reserved = 1;
+  TrHs = true;
+  while(loopkey("Reserved",ORr,1,TrHs))begin
+    testf = true;
+    if(nonblank(client) and ORr.CustCode!=client)then begin testf = false; end;
+    if(ORr.Reserved==0)then begin testf = false; TrHs = false; end;
+    if(ORr.Closed!=0)then begin testf = false; end;
+    if(ORr.ShipFlag!=0)then begin testf = false; end;
+    
+    if(testf)then begin
+      mtrw = matrowcnt(ORr);
+      For(i=0;i<mtrw;i=i+1) begin
+        Matrowget(ORr,i,ORrw);
+        
+        quant = ORrw.Quant - ORrw.Shipd2;
+        Retr.OrdNr = ORr.SerNr;
+        TrHs1 = true;
+        while(loopkey("OrdNr",Retr,1,TrHs1))begin
+          if(Retr.OrdNr!=ORr.SerNr)then begin TrHs1=false; end;
+          if(TrHs1)then begin
+            mtrw1 = matrowcnt(Retr);
+            for(j=0;j<mtrw1;j=j+1)begin
+              matrowget(Retr,j,Retrw);
+              if(Retrw.ArtCode==ORrw.ArtCode and Retrw.OrdRow==i)then begin
+                quant = quant - Retrw.Quant;
+              end;
+            end;
+          end;
+        end;
+        resetloop(Retr);
+        
+        if(quant>0)then begin
+          StartFormat(15)
+            OutString(0,0,ORr.CustCode,false);//Client
+            OutString(0,0,ORrw.ArtCode,false);//ArtCode
+            OutString(0,0,ORrw.Spec,false);//Name
+            OutString(140,"DblORVc",ORr.SerNr,false);//Order #
+            OutString(190,0,ORr.OrdDate,false);//Ord. date
+            OutString(250,0,quant,false);//In reserv
+            OutString(310,0,ORrw.Invd - ORrw.Shipd2,false);//In Invoice
+            OutString(370,0,DateDiff(currentDate,ORr.OrdDate),false);//Days in reserv
+            if(nonblank(ORrw.Location))then begin
+              OutString(1,0,ORrw.Location,true);//Stock
+            end else begin
+              OutString(1,0,ORr.Location,true);//Stock
+            end;
+            
+            
+            
+          endformat;
+        end;
+      end; 
+    
+    end;    
+  end;
+  endjob;
+return;
+end;
+
+
+global procedure  MyReservStstEn()
+begin
+record RcVc RepSpec;
+string 50 filename;
+date repdate;
+integer compnr;
+      
+      if(GetDateID(currentdate)==5)then begin
+        compnr = currentcompany;
+      
+        switch(compnr)begin
+          case 1: filename = "Reports/1/ISTORReserves.xls";
+          case 2: filename = "Reports/2/ITEKUAReserves.xls";
+          case 3: filename = "Reports/3/WDReserves.xls";
+          case 5: filename = "Reports/5/TXTReserves.xls";
+          case 6: filename = "Reports/6/MMRReserves.xls";
+          case 7: filename = "Reports/7/TNMReserves.xls";
+          case 8: filename = "Reports/8/A-SRVReserves.xls";
+        end;
+        
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        
+        MyReservStstRn(RepSpec);
+        
+        closefile;
+        
+        switch(compnr)begin
+          case 1: RunProgram("Reports/1/ISTORReserves.sh","");
+          case 2: RunProgram("Reports/2/ITEKUAReserves.sh","");
+          case 3: RunProgram("Reports/3/WDReserves.sh","");
+          case 5: RunProgram("Reports/5/TXTReserves.sh","");
+          case 6: RunProgram("Reports/6/MMRReserves.sh","");
+          case 7: RunProgram("Reports/7/TNMReserves.sh","");
+          case 8: RunProgram("Reports/8/A-SRVReserves.sh","");
+        end;
+      end;
+return;
+end;
+
+global updating procedure MyRetailSalesRn(record RcVc RepSpec)
+begin
+
+  switch(CurrentCompany)begin
+    case 1:MyRetailSalesIstoreRn(RepSpec);
+    case 2:MyRetailSalesComputekRn(RepSpec);//ITec
+    case 6:MyRetailSalesMMRRn(RepSpec);//MMR
+  end;
+
+return;
+end;
+
+
+global procedure ManagersSalesReportRn()
+begin
+record ORVc ORr;
+row ORVc ORrw;
+integer i,mtrw;
+integer j,mtrw1,k;
+date sdate,edate;
+boolean TrHs,testf,findsh,TrHs1;
+record BaseCurBlock BCb;
+val rate,gp,gpp;
+record UserVc USr;
+record INVc INr;
+record SHVc SHr;
+row SHVc SHrw;
+record StockMovVc SMr;
+row StockMovVc SMrw;
+
+	blockload(BCb);
+	
+	edate = currentdate;
+	
+	startreportnoheaderjob("Отчет по продажам (Менеджерский)");
+		
+		startformat(15);
+			outstring(0,0,"Товар",false);//ArtCode
+			outstring(0,0,"Назва",false);//Name
+			outstring(0,0,"Група",false);//Group
+			outstring(0,0,"Дата",false);//Date
+			outstring(0,0,"Рахунок",false);//OrdSerNr
+			outstring(0,0,"Кіл-ть",false);//Qty
+			outstring(0,0,"Ціна",false);//Price
+			outstring(0,0,"Знижка",false);//Rebate
+			outstring(0,0,"Сума",false);//SUM
+			outstring(0,0,"Клієнт",false);//CustCode
+			outstring(0,0,"Назва",false);//Custname
+			outstring(0,0,"Продавець",false);//Salesman
+			outstring(0,0,"",false);//Salesman
+			outstring(0,0,"Маржа %",false);//Salesman		
+		endformat;
+	
+		if(getday(currentdate)==1)then begin
+			if(getmonth(currentdate)==1)then begin
+				sdate = stringtodate("1/12" & "/" & getyear(currentdate));
+			end else begin
+				sdate = stringtodate("1/" & getmonth(currentdate)-1 & "/" & getyear(currentdate));
+			end;
+		end else begin
+			sdate = stringtodate("1/" & getmonth(currentdate) & "/" & getyear(currentdate));
+		end;
+	
+		ORr.OrdDate = sdate;
+		TrHs = true;
+		while(loopkey("OrdDate",ORr,1,TrHs))begin
+			testf = true;
+			if(ORr.OrdDate>edate)then begin TrHs = false; testf = false; end;
+			if(ORr.OKFlag==0)then begin testf = false; end;
+			if(ORr.CustCode=="IPOINT" or ORr.CustCode=="IPOINT_SM")then begin testf = false; end;
+			
+			if(testf)then begin
+				if(ORr.CurncyCode==BCb.BaseCur1)then begin
+					rate = 1;
+				end else begin
+					rate = ORr.ToRateB1/ORr.FrRate;
+				end;
+				USr.Code = ORr.SalesMan;
+				
+				recordnew(SMr);
+				SHr.OrderNr = ORr.SerNr;
+				TrHs1 = true;
+				k=0;
+				if(loopkey("OrderKey",SHr,1,TrHs1))then begin
+					findsh = true;
+					if(SHr.OrderNr!=ORr.SerNr)then begin TrHs1 = false; findsh = false; end;
+					
+					if(findsh)then begin
+						mtrw1 = matrowcnt(SHr);
+						For(j=0;j<mtrw1;j=j+1) begin
+							matrowget(SHr,j,SHrw);
+							SMrw.ArtCode =  SHrw.ArtCode;
+							SMrw.IntORRow =  SHrw.OrdRow;
+							SMrw.FIFORowVal =  SHrw.FIFORowVal;
+							matrowinsert(SMr,k,SMrw);
+							k=k+1;
+						end; 
+					end;
+				end;
+				resetloop(SHr);
+				readfirstmain(USr,1,true);
+				mtrw = matrowcnt(ORr);
+				For(i=0;i<mtrw;i=i+1) begin
+					matrowget(ORr,i,ORrw);
+					if(nonblank(ORrw.ArtCode)and ORrw.Shipd2>0)then begin
+						startformat(15);
+							outstring(0,0,ORrw.ArtCode,false);//ArtCode
+							outstring(0,0,ORrw.Spec,false);//Name
+							INr.Code = ORrw.ArtCode;
+							readfirstmain(INr,1,true);
+							outstring(0,0,INr.Group,false);//Group
+							outstring(0,0,ORr.OrdDate,false);//Date
+							outstring(0,0,ORr.SerNr,false);//OrdSerNr
+							outstring(0,0,ORrw.Shipd2,false);//Qty
+							outstring(0,0,ORrw.Price*rate,false);//Price
+							outstring(0,0,ORrw.vRebate,false);//Rebate
+							outstring(0,0,ORrw.Sum/ORrw.Quant*ORrw.Shipd2*rate,false);//SUM
+							outstring(0,0,ORr.CustCode,false);//CustCode
+							outstring(0,0,ORr.Addr0,false);//Custname
+							outstring(0,0,ORr.SalesMan,false);//Salesman			
+							outstring(0,0,USr.Name,false);//Salesman	
+							gp=0;
+							For(j=0;j<k;j=j+1) begin
+	  							matrowget(SMr,j,SMrw);
+	  							if(SMrw.ArtCode==ORrw.ArtCode and SMrw.IntORRow==i)then begin
+	  								gp = gp + SMrw.FIFORowVal;
+	  							end;
+							end; 	
+							gpp = round((1-gp/(ORrw.Sum*rate))*100,2);
+							outstring(0,0,gpp,false);//Salesman (marge %)	
+						endformat;
+					end;					
+				end; 
+			end;
+		end;
+		
+	endjob;
+	
+return;
+end;
+
+global updating procedure DellZerroWebSyncRegMn(record RcVc repspec)
+begin
+integer lenth,k,i;
+string 200 available,aval,newaval;
+string 5 achar,char;
+record WebSyncRegVc WSr;
+	
+	
+	
+	WSr.ArtCode = "";
+	aval = "0";
+	while(loopmain(WSr,1,true)) begin
+		if(setinset(aval,WSr.Available))then begin
+			lenth = len(WSr.Available);
+			achar = "";
+			char = "";
+			newaval = "";
+			
+			for(i=0;i<lenth;i=i+1)begin
+				char = mid(WSr.Available,i,1);
+				if(char!=",")then begin
+					achar = achar & char;
+				end else begin
+					if(achar!=aval)then begin
+						if(nonblank(newaval))then begin
+							newaval = newaval & "," & achar;
+						end else begin
+							newaval = achar;
+						end;
+					end;
+					achar = "";
+				end;
+			end;
+			if(achar!=aval)then begin
+				if(nonblank(newaval))then begin
+					newaval = newaval & "," & achar;
+				end else begin
+					newaval = achar;
+				end;
+			end;
+		WSr.Available = newaval;
+		recordstore(WSr,true);
+		end;
+	end;
+	
+return;
+end;
+
+global procedure WebSyncRegRn(record RcVc RepSpec)
+begin
+	record WebSyncRegVc WSr;
+	
+	
+	startreportnoheaderjob("Звіт по віртуальнім товарам на веб-магазині");
+	
+	WSr.ArtCode = "";
+	while(loopmain(WSr,1,true)) begin
+		
+		if(setinset(0,WSr.Available))then begin
+			startformat(15);
+				outstring(0,"DblWebSyncReg",WSr.ArtCode,false);
+			endformat;
+		end;
+	end;
+	
+	endjob;
+	
+return;
+end;
+
+
+global procedure MidSaleCheckRn(record RcVc RepSpec)
+begin
+	array val midCval,midTval;
+	array integer ccnt,tcnt;
+	array string 50 cloc;
+	integer arcnt;
+	record IVVc IVr;
+	record IVCashVc IVCr;
+	date sd,ed;
+	boolean TrHs,testf;
+	record LocalMachineAccBlock LMAb;
+	row LocalMachineAccBlock LMArw;
+	integer i,mtrw,j;
+	record CUVc CUr;
+	string 255 tstr;
+	
+	sd = RepSpec.sStartDate;
+	ed = RepSpec.sEndDate;
+	
+	blockload(LMAb);
+	mtrw = matrowcnt(LMAb);
+	if(nonblank(RepSpec.f1))then begin
+		For(i=0;i<mtrw;i=i+1) begin
+	  		matrowget(LMAb,i,LMArw);
+	  		if(LMArw.LocalMachine==RepSpec.f1)then begin
+	  			cloc[0] = LMArw.DefLoc;
+	  			arcnt = 0;
+	  			midCval[0] = 0;
+	  			midTval[0] = 0;
+	  			ccnt[0] = 0;
+	  			tcnt[0] = 0;
+	  		end;
+		end; 
+	end else begin
+		For(i=0;i<mtrw;i=i+1) begin
+	  		matrowget(LMAb,i,LMArw);
+	  		cloc[i] = LMArw.DefLoc;
+	  		arcnt = i;
+	  		midCval[i] = 0;
+			midTval[i] = 0;
+			ccnt[i] = 0;
+			tcnt[i] = 0;
+		end;
+	end;
+	arcnt = arcnt + 1;
+	
+	if(RepSpec.flags[1]==0)then begin
+		IVCr.InvDate = sd;
+		TrHs = true;
+		while(loopkey("InvDate",IVCr,1,TrHs))begin
+			testf = true;
+			if(IVCr.InvDate>ed)then begin TrHs = false; testf = false; end;
+			if(IVCr.OKFlag==0)then begin testf = false; end;
+			if(IVCr.Sum4<0)then begin testf = false; end;
+			
+			if(testf)then begin
+				For(i=0;i<arcnt;i=i+1) begin
+	  				if(IVCr.Location==cloc[i])then begin
+	  					midCval[i] = midCval[i] + IVCr.Sum4;
+						ccnt[i] = ccnt[i] + 1;
+	  				end;
+				end; 
+			end;
+		end;
+	end;
+	
+	if(RepSpec.flags[2]==0)then begin
+		IVr.InvDate = sd;
+		TrHs = true;
+		while(loopkey("InvDate",IVr,1,TrHs))begin
+			testf = true;
+			if(IVr.InvDate>ed)then begin TrHs = false; testf = false; end;
+			if(IVr.OKFlag==0)then begin testf = false; end;
+			if(IVr.Invalid>0)then begin testf = false; end;
+			if(IVr.CustCode=="INTERNET-STORE")then begin testf = false; end;
+			if(IVr.InvType>1)then begin testf = false; end;
+			
+			if(testf)then begin
+				For(i=0;i<arcnt;i=i+1) begin
+	  				if(IVr.Location==cloc[i])then begin
+	  					midTval[i] = midTval[i] + IVr.Sum4;
+						tcnt[i] = tcnt[i] + 1;
+	  				end;
+				end; 
+			end;
+		end;
+	end;
+	
+	startreportnoheaderjob("Звіт по середьому чеку по магазинам");
+		
+		StartFormat(15);
+	  		OutString(0,0,"Магазин",false);	
+	  		OutString(120,0,"Кіл-ть чеків:",false);
+	  		OutString(220,0,"Гот-ка",false);
+	  		OutString(220,0,"Безг-ка",false);
+	  		OutString(300,0,"Середня сума чека:",false);
+	  		OutString(1,0,"Гот-ка",true);
+	  		OutString(1,0,"Безг-ка",true);
+	  	EndFormat;
+		
+	For(i=0;i<arcnt;i=i+1) begin
+	  	StartFormat(15);
+	  		For(j=0;j<mtrw;j=j+1) begin
+	  			matrowget(LMAb,j,LMArw);
+	  			if(LMArw.DefLoc==cloc[i])then begin
+	  				CUr.Code = LMArw.CustCode;
+	  				readfirstmain(CUr,1,true);
+	  				tstr = CUr.Name;
+	  			end;
+	  		end;
+	  		OutString(0,0,tstr,false);	
+	  		OutString(120,0,ccnt[i]+tcnt[i],false);
+	  		OutString(220,0,ccnt[i],false);
+	  		OutString(220,0,tcnt[i],false);
+	  		OutString(300,0,(midCval[i]+midTval[i])/(ccnt[i]+tcnt[i]),false);
+	  		OutString(1,0,midCval[i]/ccnt[i],true);
+	  		OutString(1,0,midTval[i]/tcnt[i],true);
+	  	EndFormat;
+	  	Gray_Divider(0,1);
+	end; 
+	
+	endjob;
+	
+return;
+end;
+
+
+
+global procedure StoresStockRn(record RcVc RepSpec)
+begin
+	record ItemStatusVc ISr;
+	record INVc INr;
+	boolean TrHs,testf;
+	record LocationVc Locationr;
+	longint i,qty;
+	
+	startreportnoheaderjob("Отчет по продажам (Менеджерский)");
+	
+	i=1;
+	qty = 0;
+	if(nonblank(RepSpec.f1))then begin
+		Locationr.Code = RepSpec.f1;
+		if(readfirstmain(Locationr,1,true))then begin
+			ISr.Location = Locationr.Code;
+			startformat(15);
+				outstring(0,0,"Відомість (опис) товарних залишків по магазину",false);
+			endformat;	
+			startformat(15);
+				outstring(0,0,Locationr.Name,false);
+			endformat;
+			startformat(15);
+				outstring(0,0,"",false);
+			endformat;
+			startformat(15);
+				outstring(0,0,"На " & currentdate,false);
+			endformat;
+			startformat(15);
+				outstring(0,0,"",false);
+			endformat;
+			startformat(15);
+				outstring(0,0,"№ з/п",false);
+				outstring(0,0,"Артикул",false);
+				outstring(0,0,"Найменування",false);
+				outstring(0,0,"Кількість",false);
+			endformat;
+			TrHs = true;
+			while(loopkey("Location",ISr,1,TrHs)) begin
+				testf = true;
+				if(ISr.Location!=RepSpec.f1)then begin TrHs = false; testf = false; end;
+				if(ISr.Instock<=0)then begin testf = false; end;
+				
+				if(testf)then begin
+					INr.Code = ISr.Code;
+					readfirstmain(INr,1,true);
+					startformat(15);
+						outstring(0,0,i,false);
+						outstring(0,0,ISr.Code,false);
+						outstring(0,0,INr.Name,false);
+						outstring(0,0,ISr.Instock,false);
+					endformat;
+					qty = qty + ISr.Instock;
+					i=i+1;
+				end;
+			end;
+			startformat(15);
+				outstring(0,0,"Всього",false);
+				outstring(0,0,"",false);
+				outstring(0,0,"",false);
+				outstring(0,0,qty,false);
+			endformat;
+			startformat(15);
+				outstring(0,0,"",false);
+			endformat;
+			startformat(15);
+				outstring(0,0,"",false);
+			endformat;
+			startformat(15);
+				outstring(0,0,"",false);
+			endformat;
+			startformat(15);
+				outstring(0,0,"Підтвердженно",false);
+				outstring(0,0,"",false);
+				outstring(0,0,"",false);
+				outstring(0,0,"Директор магазина",false);
+			endformat;
+			startformat(15);
+				outstring(0,0,"",false);
+			endformat;
+			startformat(15);
+				outstring(0,0,"",false);
+				outstring(0,0,"",false);
+				outstring(0,0,"",false);
+				outstring(0,0,currentdate,false);
+			endformat;
+			
+			endjob;
+		end;
+	end;
+	
+return;
+end;
+
+
+global procedure  StoresStockEn()
+begin
+record RcVc RepSpec;
+string 50 filename;
+date repdate;
+integer compnr;
+      
+        compnr = currentcompany;
+      
+        switch(compnr)begin
+          case 1: filename = "Reports/1/Stock_D_DEKOR_SR.xls";
+									CreateFile(filename);
+									closefile;
+									millisleep(100);
+									openexportfile(filename,true);
+									RepSpec.f1 = "D_DEKOR_SR";
+									StoresStockRn(RepSpec);
+									closefile;
+									RunProgram("Reports/1/Stock_D_DEKOR_SR.sh","");
+									
+									filename = "Reports/1/Stock_DREAM_TOWN.xls";
+									CreateFile(filename);
+									closefile;
+									millisleep(100);
+									openexportfile(filename,true);
+									RepSpec.f1 = "DREAM_TOWN";
+									StoresStockRn(RepSpec);
+									closefile;
+									RunProgram("Reports/1/Stock_DREAM_TOWN.sh","");
+									
+									filename = "Reports/1/Stock_K_KARAVAN.xls";
+									CreateFile(filename);
+									closefile;
+									millisleep(100);
+									openexportfile(filename,true);
+									RepSpec.f1 = "K_KARAVAN";
+									StoresStockRn(RepSpec);
+									closefile;
+									RunProgram("Reports/1/Stock_K_KARAVAN.sh","");
+									
+									filename = "Reports/1/Stock_K_TC_OLIMP.xls";
+									CreateFile(filename);
+									closefile;
+									millisleep(100);
+									openexportfile(filename,true);
+									RepSpec.f1 = "K_TC_OLIMP";
+									StoresStockRn(RepSpec);
+									closefile;
+									RunProgram("Reports/1/Stock_K_TC_OLIMP.sh","");
+									
+									/*filename = "Reports/1/Stock_KH_KRV.xls";
+									CreateFile(filename);
+									closefile;
+									millisleep(100);
+									openexportfile(filename,true);
+									RepSpec.f1 = "KH_KRV";
+									StoresStockRn(RepSpec);
+									closefile;
+									RunProgram("Reports/1/Stock_KH_KRV.sh","");*/
+									
+									/*filename = "Reports/1/Stock_STAND_2.xls";
+									CreateFile(filename);
+									closefile;
+									millisleep(100);
+									openexportfile(filename,true);
+									RepSpec.f1 = "STAND_2";
+									StoresStockRn(RepSpec);
+									closefile;
+									RunProgram("Reports/1/Stock_STAND_2.sh","");*/
+									
+									filename = "Reports/1/Stock_LV_O_PASS.xls";
+									CreateFile(filename);
+									closefile;
+									millisleep(100);
+									openexportfile(filename,true);
+									RepSpec.f1 = "LV_O_PASS";
+									StoresStockRn(RepSpec);
+									closefile;
+									RunProgram("Reports/1/Stock_LV_O_PASS.sh","");
+									
+									/*filename = "Reports/1/Stock_O_SADI.xls";
+									CreateFile(filename);
+									closefile;
+									millisleep(100);
+									openexportfile(filename,true);
+									RepSpec.f1 = "O_SADI";
+									StoresStockRn(RepSpec);
+									closefile;
+									RunProgram("Reports/1/Stock_O_SADI.sh","");*/
+									
+									filename = "Reports/1/Stock_OCEANPLAZA.xls";
+									CreateFile(filename);
+									closefile;
+									millisleep(100);
+									openexportfile(filename,true);
+									RepSpec.f1 = "OCEANPLAZA";
+									StoresStockRn(RepSpec);
+									closefile;
+									RunProgram("Reports/1/Stock_OCEANPLAZA.sh","");	
+									
+									filename = "Reports/1/Stock_GULLIVER.xls";
+									CreateFile(filename);
+									closefile;
+									millisleep(100);
+									openexportfile(filename,true);
+									RepSpec.f1 = "K_TC_GLLV";
+									StoresStockRn(RepSpec);
+									closefile;
+									RunProgram("Reports/1/Stock_GULLIVER.sh","");	
+									
+        end;
+return;
+end;

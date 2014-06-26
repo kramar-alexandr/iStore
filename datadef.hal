@@ -1,0 +1,1523 @@
+SourceFile("halcust\\halpatch",0);
+SourceFile("halcust\\Import",0);
+SourceFile("halcust\\Export",0);
+SourceFile("halcust\\Clear",0);
+SourceFile("halcust\\FPrinter",0);
+SourceFile("halcust\\DatecsPrint",0);
+SourceFile("halcust\\IKCPrint",0);
+SourceFile("halcust\\Report",0);
+SourceFile("halcust\\RepBal",0);
+SourceFile("halcust\\ReportStock",3);
+SourceFile("halcust\\Print",0);
+SourceFile("halcust\\LabelPrint",0);
+SourceFile("halcust\\WebShop",0);
+SourceFile("halcust\\TEST",0);
+SourceFile("halcust\\FinPlan",3);
+
+procedure XXDEFBLOCK
+begin
+  RecordField(Math,M4Matrix,0,0);
+  ArrayBegin(Math,-,1);
+  ArrayField(LangCode,M4Code,5,0);
+  ArrayField(UserGroup,M4Code,5,0);
+  ArrayField(SerNr,M4Long,0,0);
+  ArrayField(FPCode,M4Str,20,0);
+  ArrayField(PrintGroupCode,M4Code,20,0);
+  ArrayField(intdocnr,M4Long,0,0);
+  ArrayField(EformCode,M4Str,20,0);
+  ArrayField(Typ,M4Set,99,0);
+  EndArray;
+  EndBlock;
+  return;
+end;
+
+	 RecordBegin(POCQStatVc,-,"");
+  RecordField(SerNr,M4Long,0,0);
+  SerialNoBlock(POCQStatSerBlock);  
+  RecordField(Comment,M4Str,60,0);
+  RecordField(POClass,M4Code,5,0);
+  RecordField(Tender,M4Code,5,0);
+  RecordField(VECode,M4Code,20,VEVc);
+  RecordField(Name,M4Str,60,0);
+  RecordField(ExprIntPl,M4Date,0,0);
+  FieldIsTransDate(ExprIntPl);
+  RecordField(ExprIntAct,M4Date,0,0);
+  RecordField(PreQualSentPl,M4Date,0,0);
+  RecordField(PreQualSentAct,M4Date,0,0);
+  RecordField(PreQualNoObjPl,M4Date,0,0);
+  RecordField(PreQualNoObjAct,M4Date,0,0);
+  RecordField(BidDocSentPl,M4Date,0,0);
+  RecordField(BidDocSentAct,M4Date,0,0);
+  RecordField(BidDocNoObjPl,M4Date,0,0);
+  RecordField(BidDocNoObjAct,M4Date,0,0);
+  RecordField(BidPackAvPl,M4Date,0,0);
+  RecordField(BidPackAvAct,M4Date,0,0);
+  RecordField(BidOpenPl,M4Date,0,0);
+  RecordField(BidOpenAct,M4Date,0,0);
+  RecordField(ContrNoObjPl,M4Date,0,0);
+  RecordField(ContrNoObjAct,M4Date,0,0);
+  RecordField(ContrSignPl,M4Date,0,0);
+  RecordField(ContrSignAct,M4Date,0,0);
+  RecordField(ContrEndAct,M4Date,0,0);
+  RecordField(ContrEndPl,M4Date,0,0);
+  RecordField(Closed,M4Mark,0,0);
+  RecordField(OKFlag,M4Mark,0,0);
+  RecordField(CurncyCode,M4Code,5,CurncyCodeVc);
+  RecordField(Sum,M4Val,0,0);
+  RecordField(Person,M4Code,10,UserVc);
+  RecordField(Object,M4Code,20,ObjVc);
+  RecordField(CustText1,M4Str,100,0);//used
+  RecordField(CustText2,M4Str,100,0);//Location
+  RecordField(CustText3,M4Str,100,0);
+  RecordField(CustText4,M4Str,100,0);
+  RecordField(CustText5,M4Str,100,0);
+  RecordField(CustText6,M4Str,100,0);
+  RecordField(CustText7,M4Str,100,0);
+  RecordField(CustText8,M4Str,100,0);
+  RecordField(CustText9,M4Str,100,0);
+  RecordField(CustVal1,M4Val,0,0);
+  RecordField(CustVal2,M4Val,0,0);
+  RecordField(CustVal3,M4Val,0,0);
+  RecordField(CustVal4,M4Val,0,0);
+  RecordField(CustVal5,M4Val,0,0);
+  RecordField(CustVal6,M4Val,0,0);
+  RecordField(CustVal7,M4Val,0,0);
+  RecordField(CustVal8,M4Val,0,0);
+  RecordField(CustVal9,M4Val,0,0);
+  RecordField(CustData01,M4Date,0,0);
+  RecordField(CustData02,M4Date,0,0);
+  RecordField(CustData03,M4Date,0,0);
+  RecordField(CustData04,M4Date,0,0);
+  RecordField(CustData05,M4Date,0,0);
+  RecordField(CustData06,M4Date,0,0);
+  RecordField(CustData07,M4Date,0,0);
+  RecordField(CustData08,M4Date,0,0);
+  RecordField(CustData09,M4Date,0,0);
+  RecordField(CustData10,M4Date,0,0);
+  RecordField(CustData11,M4Date,0,0);
+  RecordField(CustData12,M4Date,0,0);
+  RecordField(CustData13,M4Date,0,0);
+  RecordField(CustData14,M4Date,0,0);
+  RecordField(CustData15,M4Date,0,0);
+  RecordField(CustData16,M4Date,0,0);
+  RecordField(CustData17,M4Date,0,0);
+  RecordField(CustData18,M4Date,0,0);
+  RecordField(CustData19,M4Date,0,0);
+  RecordField(CustData20,M4Date,0,0);
+  MainKeyBegin(SerNr,0);
+  KeySegment(SerNr);
+  KeyBegin(VECode);
+  KeySegment(VECode);
+  KeySegment(SerNr);
+  KeyBegin(Tender);
+  KeySegment(Tender);
+  KeySegment(VECode);
+  KeySegment(SerNr);
+  KeyBegin(OKFlag);
+  KeySegment(OKFlag);  
+  KeySegment(SerNr);
+  KeyBegin(Object);
+  KeySegment(Object);
+  KeySegment(SerNr);
+  KeyBegin(Comment);
+  KeySegment(Comment);
+  KeySegment(SerNr);
+  KeyBegin(ActSerNr);
+  KeySegment(SerNr);
+  KeySegment(Closed);
+  KeyBegin(ActVECode);
+  KeySegment(VECode);
+  KeySegment(SerNr);
+  KeySegment(Closed);
+  KeyBegin(ActTender);
+  KeySegment(Tender);
+  KeySegment(SerNr);
+  KeySegment(Closed);
+  KeyBegin(ActOKFlag);
+  KeySegment(OKFlag);
+  KeySegment(SerNr);
+  KeySegment(Closed);
+  KeyBegin(ActComment);
+  KeySegment(Comment);
+  KeySegment(SerNr);
+  KeySegment(Closed);
+  KeyBegin(PreQualSentPl);// Edit ************************** Monday, 8 November 2010 11:56:09
+  KeySegment(PreQualSentPl);
+  KeySegment(SerNr);
+  
+  EndRecord;
+  
+  RecordBegin(IssueVc,-,"");
+  //RecordField(IssueCode,M4Code,20,Vc);
+  RecordField(IssueName,M4Str,60,IssueVc);
+  MainKeyBegin(IssueName,0);
+  //KeySegment(IssueCode);
+  //KeyBegin(IssueName);
+  KeySegment(IssueName);
+  
+  EndRecord;
+
+ RecordBegin(DefectVc,-,"");
+  //RecordField(DefectCode,M4Code,20,DefectVc);
+  RecordField(DefectName,M4Str,60,DefectVc);
+  MainKeyBegin(DefectName,0);
+  //KeySegment(DefectCode);
+  //KeyBegin(DefectName);
+  KeySegment(DefectName);
+  
+  EndRecord;
+
+
+		
+  RecordBegin(SVOVc,-,"");
+  RecordField(SerNr,M4Long,0,0);
+  SerialNoBlock(SVOSerBlock);
+  RecordField(TransDate,M4Date,0,0);
+  FieldIsTransDate(TransDate);
+  RecordField(PlanShip,M4Str,10,0);
+  RecordField(CustCode,M4Code,20,CUVc);
+  RecordField(Addr0,M4Str,60,0);
+  RecordField(Addr1,M4Str,60,0);
+  RecordField(Addr2,M4Str,60,0);
+  RecordField(Addr3,M4Str,60,0);
+  RecordField(OurContact,M4Str,20,0);
+  RecordField(CustContact,M4Str,60,0);
+  RecordField(ExportFlag,M4Int,0,0);
+  RecordField(PayDeal,M4Code,2,0);
+  RecordField(Objects,M4UStr,60,ObjVc);
+  RecordField(ShipMode,M4Code,5,0);
+  RecordField(Sign,M4Code,10,UserVc);
+  RecordField(ShipDeal,M4Code,5,0);
+  RecordField(ShipAddr0,M4Str,60,0);
+  RecordField(ShipAddr1,M4Str,60,0);
+  RecordField(ShipAddr2,M4Str,60,0);
+  RecordField(ShipAddr3,M4Str,60,0);
+  RecordField(LangCode,M4Code,5,0);
+  RecordField(InvoiceToCode,M4Code,20,CUVc);
+  RecordField(Comment1,M4Str,100,IssueVc);
+  RecordField(Comment2,M4Str,100,0);
+  RecordField(Comment3,M4Str,100,0);
+  RecordField(Comment4,M4Str,100,0);
+  RecordField(OrderClass,M4Code,5,0);
+  RecordField(CustOrdNr,M4Str,60,0);
+  RecordField(InclVAT,M4Int,0,0);
+  RecordField(TotCost,M4Val,0,0); 
+  RecordField(TotPrice,M4Val,0,0);
+  RecordField(CustVATCode,M4Code,2,VATCodeBlock);
+  RecordField(VATNr,M4Str,20,0);
+  RecordField(Phone,M4Str,20,0);
+  RecordField(Fax,M4Str,20,0);
+  RecordField(DoneMark,M4Mark,0,0);
+  RecordField(InvFlag,M4Int,0,0);
+  RecordField(InvMark,M4Mark,0,0);
+  RecordField(SalesMan,M4Code,10,UserVc);
+  FieldIsUser(SalesMan);
+  RecordField(CustCat,M4Code,5,0);
+  RecordField(PriceList,M4Code,5,0);
+  RecordField(RebCode,M4Code,5,0);
+  RecordField(WOMark,M4Mark,0,0);
+  RecordField(WSMark,M4Mark,0,0);
+  RecordField(Math,M4Matrix,0,0);
+  RecordField(InvAddr3,M4Str,60,0);
+  RecordField(InvAddr4,M4Str,60,0);
+  RecordField(DelAddr3,M4Str,60,0);
+  RecordField(DelAddr4,M4Str,60,0);
+  RecordField(SalesGroup,M4Code,5,SalesGroupVc);
+  FieldIsGroup(SalesGroup);
+  RecordField(CurncyCode,M4Code,5,CurncyCodeVc);
+  RecordField(FrRate,M4Rate,0,0); 
+  RecordField(ToRateB1,M4Rate,0,0);
+  RecordField(ToRateB2,M4Rate,0,0); 
+  RecordField(BaseRate1,M4Rate,0,0); 
+  RecordField(BaseRate2,M4Rate,0,0); 
+  RecordField(QualConSerNr,M4Long,0,QualConVc);
+  RecordField(PlanShipDate,M4Date,0,0);
+  RecordField(DelAddrCode,M4Code,20,0);
+  RecordField(Region,M4Code,20,RegionVc);
+  RecordField(BranchID,M4Code,20,CUVc);
+  RecordField(ServLocation,M4UStr,10,0);
+  RecordField(RegDate,M4Date,0,0);
+  RecordField(RegTime,M4Time,0,0);
+  //----------Begin Custom
+  RecordField(Vlastnik,M4Str,255,0);
+  RecordField(Priynato,M4Str,255,0);
+  RecordField(Kontinfo1,M4Str,255,0);
+  RecordField(Kontinfo2,M4Str,255,0);
+  RecordField(Kontinfo3,M4Str,255,0);
+  RecordField(Batary,M4Str,255,0);
+  RecordField(Zaryadka,M4Str,255,0);
+  RecordField(Scarga,M4Str,255,0);
+  RecordField(Inshe,M4Str,255,0);
+  RecordField(Defects,M4Str,255,0);
+  RecordField(Garanty,M4Str,255,0);
+  RecordField(GarNo,M4Str,255,0);
+  RecordField(GarDate,M4Str,255,0);
+  RecordField(CustomField1,M4Str,255,0);
+  RecordField(CustomField2,M4Str,255,0);
+  RecordField(CustomField3,M4Str,255,0);
+  RecordField(CustomField4,M4Str,255,0);
+  RecordField(CustomField5,M4Str,255,0);
+  RecordField(CustomField6,M4Str,255,0);
+  RecordField(CustomField7,M4Str,255,0);
+  
+  RecordField(CustomField8,M4Str,255,0);// Edit ************************** Friday, 27 December 2013 12:21:47
+  RecordField(CustomField9,M4Str,255,0);// Edit ************************** Friday, 27 December 2013 12:21:47
+  RecordField(CustomField10,M4Str,255,0);// Edit ************************** Friday, 27 December 2013 12:21:48
+  RecordField(CustomField11,M4Str,255,0);// Edit ************************** Friday, 27 December 2013 12:21:49
+  RecordField(CustomField12,M4Str,255,0);// Edit ************************** Friday, 27 December 2013 12:21:49
+  RecordField(CustomField13,M4Str,255,0);// Edit ************************** Friday, 27 December 2013 12:21:50
+  RecordField(CustomField14,M4Str,255,0);// Edit ************************** Friday, 27 December 2013 12:21:51
+  //----------End Custom
+  ArrayBegin(Math,-,1);
+  ArrayField(stp,M4Int,0,0);
+  ArrayField(ArtCode,M4Code,20,INVc);
+  ArrayField(Quant,M4UVal,0,0);
+  ArrayField(Cost,M423Val,0,0);
+  ArrayField(Price,M4Val,0,0);
+  ArrayField(SalesAcc,M4Code,10,AccVc);
+  ArrayField(WOSerNr,M4Long,0,0);
+  ArrayField(WOEnum,M4Long,0,0);
+  ArrayField(Objects,M4UStr,60,ObjVc);
+  ArrayField(Spec,M4Str,100,0);
+  ArrayField(VATCode,M4Code,2,VATCodeBlock);
+  ArrayField(SerialNr,M4Str,30,0);
+  ArrayField(WOMade,M4UVal,0,0);
+  ArrayField(Invd,M4UVal,0,0);
+  ArrayField(MaxCost,M423Val,0,0);
+  ArrayField(ItemType,M4Set,31,0);
+  ArrayField(PlanShiprw,M4Str,10,0);
+  ArrayField(StandProblem,M4Code,20,0);
+  ArrayField(MotherNr,M4Str,30,0);
+  ArrayField(ContractNr,M4Long,0,0);
+  EndArray;
+  MainKeyBegin(SerNr,1);
+  StoreInBaseKey;
+  AppendFieldToKeyName(SalesGroup);
+  AppendFieldToKeyName(SalesMan);
+  KeySegment(SerNr);
+  SubsetKeyBegin2(CustCode);
+  StoreInBaseKey;
+  AppendFieldToKeyName(SalesGroup);
+  AppendFieldToKeyName(SalesMan);
+  KeySegment(CustCode);
+  KeySegment(SerNr);
+  SubsetKeyBegin2(InvFlag);
+  StoreInBaseKey;
+  AppendFieldToKeyName(SalesGroup);
+  AppendFieldToKeyName(SalesMan);
+  KeySegment(InvFlag);
+  KeySegment(SerNr);
+  SubsetKeyBegin2(Name);
+  StoreInBaseKey;
+  AppendFieldToKeyName(SalesGroup);
+  AppendFieldToKeyName(SalesMan);
+  KeySegment(Addr0);
+  KeySegment(SerNr);
+  SubsetKeyBegin2(OrderClass);
+  StoreInBaseKey;
+  AppendFieldToKeyName(SalesGroup);
+  AppendFieldToKeyName(SalesMan);
+  KeySegment(OrderClass);
+  KeySegment(SerNr);
+  SubsetKeyBegin2(TransDate);
+  StoreInBaseKey;
+  AppendFieldToKeyName(SalesGroup);
+  AppendFieldToKeyName(SalesMan);
+  KeySegment(TransDate);
+  KeySegment(SerNr);
+  SubsetKeyBegin2(CustOrdNr);
+  StoreInBaseKey;
+  AppendFieldToKeyName(SalesGroup);
+  AppendFieldToKeyName(SalesMan);
+  KeySegment(CustOrdNr);
+  KeySegment(SerNr);
+  SubsetKeyBegin2(WOMark);
+  StoreInBaseKey;
+  AppendFieldToKeyName(SalesGroup);
+  AppendFieldToKeyName(SalesMan);
+  KeySegment(WOMark);
+  KeySegment(SerNr);
+  SubsetKeyBegin2(PlanShip);
+  StoreInBaseKey;
+  AppendFieldToKeyName(SalesGroup);
+  AppendFieldToKeyName(SalesMan);
+  KeySegment(PlanShip);
+  KeySegment(SerNr);
+  SubsetKeyBegin2(WSMark);
+  StoreInBaseKey;
+  AppendFieldToKeyName(SalesGroup);
+  AppendFieldToKeyName(SalesMan);
+  KeySegment(WSMark);
+  KeySegment(SerNr);
+  SubsetKeyBegin2(SalesMan);
+  StoreInBaseKey;
+  AppendFieldToKeyName(SalesGroup);
+  AppendFieldToKeyName(SalesMan);
+  KeySegment(SalesMan);
+  KeySegment(SerNr);
+
+  SubsetKeyBegin2(PlanShipDate);
+  StoreInBaseKey;
+  AppendFieldToKeyName(SalesGroup);
+  AppendFieldToKeyName(SalesMan);
+  KeySegment(PlanShipDate);
+  KeySegment(SerNr);
+  EndRecord;
+
+	//----------------------------------------------------------------------------------------------------
+RecordBegin(ORFROMFILEVc,-,"");
+	RecordField(SerNr,M4Long,0,0);
+  RecordField(CustCode,M4Code,20,CUVc);
+  RecordField(Math,M4Matrix,0,0);
+	ArrayBegin(Math,-,1);
+  ArrayField(ArtCode,M4Code,20,INVc);
+  ArrayField(Quant,M4UVal,0,0);
+  ArrayField(Price,M423Val,0,0);
+  ArrayField(vRebate,M41Val,0,0);
+  EndArray;
+	MainKeyBegin(SerNr,0);
+	KeySegment(SerNr);
+	
+EndRecord;
+	
+	//----------------------------------------------------------------------------------------------------
+
+RecordBegin(ERVc,-,"er1");
+  RecordField(CurncyCode,M4Code,5,CurncyCodeVc);
+  RecordField(Date,M4Date,0,0);
+  RecordField(ToRate1,M4Rate,0,0);
+  RecordField(ToRate2,M4Rate,0,0);
+  RecordField(FrRate,M4Rate,0,0);
+  MainKeyBegin(CDKey,0);
+  KeySegment(CurncyCode);
+  KeySegment(Date);
+  SynchronizationIndex;// Edit ************************** Monday, 28 May 2012 10:38:09
+  KeyBegin(DCKey);
+  KeySegment(Date);
+  KeySegment(CurncyCode);
+  EndRecord;
+
+RecordBegin(SerBalVc,-,"");
+  ImpExpLevel(0);
+  RecordField(Quant,M4UVal,0,0);
+  RecordField(Item,M4Code,20,INVc);
+  RecordField(Serial,M4Str,30,0);
+  RecordField(Location,M4Code,10,0);
+  FieldIsLocation(Location);
+  RecordField(CostPrice,M45Val,0,0);
+  RecordField(NewBestBefore,M4Date,0,0);
+  MainKeyBegin(MainKey,0);
+  KeySegment(Item);
+  KeySegment(Location);
+  KeySegment(Serial);
+  SynchronizationIndex;// Edit ************************** Monday, 28 May 2012 10:38:15
+  KeyBegin(Serial);
+  KeySegment(Serial);
+  KeySegment(Location);
+  KeySegment(Item);
+  KeyBegin(ItemSerial);
+  KeySegment(Item);
+  KeySegment(Serial);
+  KeySegment(Location);  
+  KeyBegin(ItemBestBefore);
+  KeySegment(Item);
+  KeySegment(Location);
+  KeySegment(NewBestBefore);
+  KeySegment(Serial);
+  
+  KeyBegin(ItemQuant);
+  KeySegment(Item);
+  KeySegment(Location);
+  KeySegment(Quant);
+  KeySegment(Serial);
+  EndRecord;
+	
+		//----------------------------------------------------------------------------------------------------
+
+BlockBegin(MySyncDateBlock,-,"");
+	RecordField(SyncDate,M4Date,0,0);
+EndBlock;
+	
+	//----------------------------------------------------------------------------------------------------
+	
+RecordBegin(SuppVc,-,"suppy");
+  ImpExpLevel(0);
+	RecordField(Code,M4Code,20,0);
+	RecordField(flag1,M4Int,0,0);
+	RecordField(flag2,M4Int,0,0);
+	RecordField(flag3,M4Int,0,0);
+	RecordField(flag4,M4Int,0,0);
+	RecordField(flag5,M4Int,0,0);
+	RecordField(flag6,M4Int,0,0);
+	RecordField(flag7,M4Int,0,0);
+	RecordField(flag8,M4Int,0,0);
+	RecordField(flag9,M4Int,0,0);
+	RecordField(flag10,M4Int,0,0);
+	RecordField(flag11,M4Int,0,0);
+	RecordField(flag12,M4Int,0,0);
+	RecordField(flag13,M4Int,0,0);
+	RecordField(flag14,M4Int,0,0);
+	RecordField(flag15,M4Int,0,0);
+	RecordField(flag16,M4Int,0,0);
+	RecordField(flag17,M4Int,0,0);
+	RecordField(flag18,M4Int,0,0);
+	RecordField(flag19,M4Int,0,0);
+	RecordField(flag20,M4Int,0,0);
+	
+	MainKeyBegin(Code,0);
+	KeySegment(Code);
+EndRecord;
+	
+	//----------------------------------------------------------------------------------------------------
+	
+BlockBegin(TestBlock,-,"");
+  ImpExpLevel(0);
+	RecordField(FL1,M4Int,0,0);
+	RecordField(FL2,M4Int,0,0);
+EndBlock;
+	
+	//----------------------------------------------------------------------------------------------------
+		
+RecordBegin(IOSUPALLVc,-,"");
+  ImpExpLevel(0);
+	RegisterForAllCompanies(true);
+	RecordField(Art,M4Int,0,0);
+	RecordField(VATCOD,M4Str,10,0);
+	RecordField(ItemName,M4Str,70,0);
+	RecordField(ItemNo,M4Str,20,0);
+	
+	MainKeyBegin(Art,0);
+	KeySegment(Art);
+	KeyBegin(ItemNo);
+	KeySegment(ItemNo);
+EndRecord;
+
+RecordBegin(IOSUPALL1Vc,-,"");
+  ImpExpLevel(0);
+	RegisterForAllCompanies(true);
+	RecordField(Art,M4Int,0,0);
+	RecordField(VATCOD,M4Str,10,0);
+	RecordField(ItemName,M4Str,100,0);
+	RecordField(ItemNo,M4Str,20,0);
+	
+	MainKeyBegin(Art,0);
+	KeySegment(Art);
+	KeyBegin(ItemNo);
+	KeySegment(ItemNo);
+	KeySegment(ItemName);
+	KeySegment(Art);
+EndRecord;
+////------------------------------------------------PRICE ETICETKA
+RecordBegin(MyLabelItemVc,-,"");
+	RecordField(ArtCode,M4Code,20,INVc);
+	RecordField(PriceList,M4Code,5,0);
+	RecordField(Name,M4Str,200,0);
+	RecordField(DefFormCode,M4Code,20,0);
+	RecordField(Comment,M4Str,200,0);
+	RecordField(CurncyCode,M4Code,5,CurncyCodeVc);
+	RecordField(Size,M4Int,0,0);
+	RecordField(Cust1,M4Str,200,0);//custcode
+	RecordField(Cust2,M4Str,200,0);
+	RecordField(Cust3,M4Str,200,0);
+	RecordField(Cust4,M4Str,200,0);
+	RecordField(Cust5,M4Str,200,0);
+	RecordField(CustInt1,M4Int,0,0);
+	RecordField(CustInt2,M4Int,0,0);
+	RecordField(CustInt3,M4Int,0,0);
+	RecordField(CustInt4,M4Int,0,0);
+	RecordField(CustInt5,M4Int,0,0);
+	RecordField(Math,M4Matrix,0,0);
+	ArrayBegin(Math,-,1);
+	ArrayField(Param,M4Str,200,0);
+	ArrayField(Name,M4Str,200,0);
+	ArrayField(Comment1,M4Str,200,0);
+	ArrayField(Comment2,M4Str,200,0);
+	ArrayField(Comment3,M4Str,200,0);
+	ArrayField(Comment4,M4Str,200,0);
+	ArrayField(Comment5,M4Str,200,0);
+	ArrayField(Comment6,M4Str,200,0);
+	ArrayField(Comment7,M4Str,200,0);
+	ArrayField(Comment8,M4Str,200,0);
+	ArrayField(ArInt1,M4int,0,0);
+	ArrayField(ArInt2,M4int,0,0);
+	ArrayField(ArInt3,M4int,0,0);
+	ArrayField(ArInt4,M4int,0,0);
+	EndArray;
+	MainKeyBegin(ArtCode,0);
+	KeySegment(ArtCode);
+	KeySegment(PriceList);
+	KeySegment(DefFormCode);
+EndRecord;
+
+RecordBegin(MyRepricingVc,-,"");
+	RecordField(SerNr,M4Long,0,0);
+	RecordField(TransDate,M4Date,0,0);
+	RecordField(Comment,M4Str,200,0);
+	RecordField(SalesMan,M4Code,10,UserVc);
+	RecordField(Location,M4Code,10,0);
+	RecordField(OKFlag,M4Int,0,0);
+	RecordField(Closed,M4Int,0,0);
+	RecordField(DefFormCode,M4Code,20,0);
+	RecordField(DefFormName,M4Str,60,0);
+	RecordField(DefPriceCode,M4Code,5,0);
+	RecordField(Size,M4Int,0,0);
+	RecordField(Cust1,M4Str,200,0);//custcode
+	RecordField(Cust2,M4Str,200,0);//localmachine
+	RecordField(Cust3,M4Str,200,0);
+	RecordField(Cust4,M4Str,200,0);
+	RecordField(Cust5,M4Str,200,0);
+	RecordField(CustInt1,M4Int,0,0);
+	RecordField(CustInt2,M4Int,0,0);
+	RecordField(CustInt3,M4Int,0,0);
+	RecordField(CustInt4,M4Int,0,0);
+	RecordField(CustInt5,M4Int,0,0);
+	RecordField(Math,M4Matrix,0,0);
+	ArrayBegin(Math,-,1);
+	ArrayField(ArtCode,M4Code,20,INVc);
+	ArrayField(PriceList,M4Code,5,0);
+	ArrayField(Spec,M4Str,100,0);
+	ArrayField(Quant,M4UVal,0,0);
+	ArrayField(FormCode,M4Code,20,0);
+	ArrayField(Size,M4int,0,0);
+	ArrayField(Price,M4val,0,0);
+	ArrayField(Comment1,M4Str,200,0);
+	ArrayField(Comment2,M4Str,200,0);
+	ArrayField(Comment3,M4Str,200,0);
+	ArrayField(Comment4,M4Str,200,0);
+	ArrayField(ArInt1,M4int,0,0);
+	ArrayField(ArInt2,M4int,0,0);
+	ArrayField(ArInt3,M4int,0,0);
+	ArrayField(ArInt4,M4int,0,0);
+	EndArray;
+	MainKeyBegin(SerNr,0);
+	KeySegment(SerNr);
+EndRecord;
+
+ BlockBegin(AdditionalAccBlock,-,"");
+  RecordField(ServiceType1Acc,M4Code,10,AccVc);
+  RecordField(ServiceType2Acc,M4Code,10,AccVc);
+  RecordField(ServiceType3Acc,M4Code,10,AccVc);
+  RecordField(ServiceType4Acc,M4Code,10,AccVc);
+  RecordField(Addition1Acc,M4Code,10,AccVc);
+  RecordField(Addition2Acc,M4Code,10,AccVc);
+  RecordField(Addition3Acc,M4Code,10,AccVc);
+  RecordField(Addition4Acc,M4Code,10,AccVc);
+  RecordField(Addition5Acc,M4Code,10,AccVc);
+  RecordField(Addition6Acc,M4Code,10,AccVc);
+  RecordField(Addition7Acc,M4Code,10,AccVc);
+  RecordField(Addition8Acc,M4Code,10,AccVc);
+  RecordField(Addition9Acc,M4Code,10,AccVc);
+  RecordField(Addition10Acc,M4Code,10,AccVc);
+  EndBlock;
+  
+  BlockBegin(ObjectsAccBlock,-,"");
+		RecordField(Math,M4Matrix,0,0);
+		ArrayBegin(Math,-,1);
+		ArrayField(Objects,M4UStr,60,ObjVc);
+		ArrayField(AccCode,M4Code,10,AccVc);
+		ArrayField(SaleAccCode,M4Code,10,AccVc);
+		EndArray;
+	EndBlock;
+	
+	BlockBegin(POSCurncyBlock,-,"");
+  RecordField(CurncyCode,M4Code,5,CurncyCodeVc);
+  EndBlock;
+  
+  BlockBegin(LocalMachineAccBlock,-,"");
+		RecordField(Math,M4Matrix,0,0);
+		ArrayBegin(Math,-,1);
+		ArrayField(LocalMachine,M4Code,20,0);
+		ArrayField(Name,M4Str,200,0);
+		ArrayField(CustCode,M4UStr,60,CUVc);
+		ArrayField(SaleAcc,M4Code,10,AccVc);
+		ArrayField(RecAcc,M4Code,10,AccVc);
+		ArrayField(RetAcc,M4Code,10,AccVc);
+		ArrayField(StockAcc,M4Code,10,AccVc);
+		ArrayField(ServAcc,M4Code,10,AccVc);
+		ArrayField(CurDiffCred,M4Code,10,AccVc);
+		ArrayField(CurDiffDeb,M4Code,10,AccVc);
+		ArrayField(Objects,M4UStr,60,ObjVc);
+		ArrayField(PayDeal,M4Code,2,0);
+		ArrayField(Acc01,M4Code,10,AccVc);
+		ArrayField(Acc02,M4Code,10,AccVc);
+		ArrayField(Acc03,M4Code,10,AccVc);
+		ArrayField(Acc04,M4Code,10,AccVc);
+		ArrayField(Acc05,M4Code,10,AccVc);
+		ArrayField(Str01,M4Str,100,0);//PriceCurant
+		ArrayField(Str02,M4Str,100,0);
+		ArrayField(Str03,M4Str,100,0);
+		ArrayField(Str04,M4Str,100,0);
+		ArrayField(Str05,M4Str,100,0);
+    ArrayField(ArInt1,M4int,0,0);
+    ArrayField(ArInt2,M4int,0,0);
+    ArrayField(ArInt3,M4int,0,0);
+    ArrayField(ArInt4,M4int,0,0);
+		ArrayField(ArInt5,M4int,0,0);
+		ArrayField(UserCode,M4Str,50,0);// Edit ************************** Wednesday, 6 June 2012 14:34:32
+		ArrayField(DefLoc,M4Str,50,0);
+		ArrayField(DefLocRet,M4Str,50,0);
+		ArrayField(Drawer,M4Str,10,0);
+		ArrayField(CashID,M4Str,10,0);
+		ArrayField(TermID,M4Str,10,0);
+		ArrayField(SertID,M4Str,10,0);
+		ArrayField(Oth01ID,M4Str,10,0);
+		ArrayField(Oth02ID,M4Str,10,0);
+		ArrayField(Oth03ID,M4Str,10,0);
+		ArrayField(Oth04ID,M4Str,10,0);
+		ArrayField(Oth05ID,M4Str,10,0);
+		EndArray;
+	EndBlock;
+
+  BlockBegin(ItemLabFormBlock,-,"");
+  XXDEFBLOCK;
+  
+  BlockBegin(LPPUFormBlock,-,"");
+  XXDEFBLOCK;
+  
+  BlockBegin(LPSMFormBlock,-,"");
+  XXDEFBLOCK;
+  
+  BlockBegin(GigieneTextFormBlock,-,"");
+  XXDEFBLOCK;
+  
+  RecordBegin(PFormVc,-,"pform1");
+  RecordField(Code,M4Code,5,0);
+  RecordField(Comment,M4Str,60,0);
+  RecordField(SelBase,M4Int,0,0);
+  RecordField(Perc,M4Qty,0,0);
+  RecordField(Add1Val,M4Qty,0,0);
+  RecordField(RndTo,M4Set,70,0);
+  RecordField(Add2Val,M4Qty,0,0);
+  // Edit ************************** Tuesday, 7 June 2011 10:28:03
+  RecordField(BasePriceList,M4Str,5,PLDefVc);
+  RecordField(BasePriceListOption,M4Int,0,0);
+  RecordField(BasePriceListAltFormula,M4Str,5,PFormVc);
+  RecordField(CurncyCode,M4Code,5,CurncyCodeVc);// Edit ************************** Tuesday, 7 June 2011 10:28:54
+  MainKeyBegin(Code,0);
+  KeySegment(Code);
+  EndRecord;
+  
+  BlockBegin(GasObjectsAccBlock,-,"");
+		RecordField(Math,M4Matrix,0,0);
+		ArrayBegin(Math,-,1);
+		ArrayField(Objects,M4UStr,60,ObjVc);
+		ArrayField(AccCode,M4Code,10,AccVc);
+		EndArray;
+	EndBlock;
+	
+	
+  RecordBegin(SVOHistSerialVc,-,"");
+  ImpExpLevel(0);
+	RecordField(SerialNr,M4Str,30,0);
+	RecordField(ArtCode,M4Code,20,INVc);
+	RecordField(Qty,M4Int,0,0);
+	RecordField(TransNr,M4Long,0,0);
+	RecordField(FileName,M4Str,20,0);
+	RecordField(OKFlag,M4Int,0,0);
+	RecordField(Type,M4Int,0,0);
+	RecordField(TransDate,M4Date,0,0);
+	RecordField(OkDate,M4Date,0,0);
+	RecordField(ReturnDate,M4Date,0,0);
+	RecordField(SalesMan,M4Code,10,UserVc);
+	RecordField(Client,M4Code,50,CUVc);
+	RecordField(Vlastnik,M4Str,200,CUVc);
+	MainKeyBegin(SerialNr,0);
+	KeySegment(SerialNr);
+	KeySegment(TransNr);
+	KeyBegin(OKFlag);
+	KeySegment(OKFlag);
+	KeySegment(SerialNr);
+	KeySegment(TransNr);
+	KeyBegin(Type);
+	KeySegment(Type);
+	KeySegment(SerialNr);
+	KeySegment(TransNr);
+	KeyBegin(TransDate);
+	KeySegment(TransDate);
+	KeySegment(SerialNr);
+	KeySegment(TransNr);
+	KeyBegin(Vlastnik);
+	KeySegment(Vlastnik);
+	KeySegment(SerialNr);
+	KeySegment(TransNr);
+	KeyBegin(Client);
+	KeySegment(Client);
+	KeySegment(SerialNr);
+	KeySegment(TransNr);
+	KeyBegin(FileName);
+	KeySegment(FileName);
+	KeySegment(SerialNr);
+	KeySegment(TransNr);
+EndRecord;
+
+
+  BlockBegin(MyCashFlowBlock,-,"");
+		RecordField(Math,M4Matrix,0,0);
+		ArrayBegin(Math,-,1);
+		ArrayField(SerNr,M4Long,0,0);
+    ArrayField(FrAcc,M4Code,20,AccVc);
+    ArrayField(ToAcc,M4Code,20,AccVc);
+    ArrayField(DebCred,M4Int,0,0);
+    ArrayField(TurnBal,M4Int,0,0);
+    ArrayField(Comment,M4Str,200,0);
+    ArrayField(SumUp,M4Int,0,0);
+    ArrayField(CalcStr,M4Str,200,0);
+    ArrayField(ComCoord,M4Int,0,0);
+    ArrayField(ComAlign,M4Int,0,0);
+		EndArray;
+	EndBlock;
+	
+	BlockBegin(MyCashFlowDRBlock,-,"");
+		RecordField(Math,M4Matrix,0,0);
+		ArrayBegin(Math,-,1);
+		ArrayField(SerNr,M4Long,0,0);
+    ArrayField(FrAcc,M4Code,20,AccVc);
+    ArrayField(ToAcc,M4Code,20,AccVc);
+    ArrayField(DebCred,M4Int,0,0);
+    ArrayField(TurnBal,M4Int,0,0);
+    ArrayField(Comment,M4Str,200,0);
+    ArrayField(SumUp,M4Int,0,0);
+    ArrayField(CalcStr,M4Str,200,0);
+    ArrayField(ComCoord,M4Int,0,0);
+    ArrayField(ComAlign,M4Int,0,0);
+		EndArray;
+	EndBlock;
+
+RecordBegin(GigieneTextVc,-,"");
+	RecordField(ArtCode,M4Code,20,INVc);
+	RecordField(Math,M4Matrix,0,0);
+	ArrayBegin(Math,-,1);
+		ArrayField(Str1,M4Str,200,0);
+    ArrayField(Str2,M4Str,200,0);
+    ArrayField(Str3,M4Str,200,0);
+    ArrayField(Str4,M4Str,200,0);
+  EndArray;
+	MainKeyBegin(ArtCode,0);
+	KeySegment(ArtCode);	
+EndRecord;
+
+BlockBegin(ZebraPrinterBlock,-,"");
+  BlockForAllCompanies;
+  RecordField(PrinterName,M4Str,200,0);
+  RecordField(ParamIn1,M4Int,0,0);
+  RecordField(ParamIn2,M4Int,0,0);
+  RecordField(ParamStr1,M4Str,200,0);
+  RecordField(ParamStr2,M4Str,200,0);
+  RecordField(ParamVal1,M4Val,0,0);
+  RecordField(ParamVal2,M4Val,0,0);
+EndBlock;
+
+RecordBegin(WebSyncRegVc,-,"");
+  RecordField(ArtCode,M4Code,20,INVc);
+  RecordField(Price,M4Val,0,0);
+  RecordField(Available,M4Str,100,0);
+  RecordField(DateChange,M4Date,0,0);
+  RecordField(ParamInt1,M4Int,0,0);
+  RecordField(ParamInt2,M4Int,0,0);
+  RecordField(ParamStr1,M4Str,200,0);
+  RecordField(ParamStr2,M4Str,200,0);
+  RecordField(ParamVal1,M4Val,0,0);
+  RecordField(ParamVal2,M4Val,0,0);
+  RecordField(Math,M4Matrix,0,0);
+  ArrayBegin(Math,-,1);
+		ArrayField(Location,M4Str,200,0);
+    ArrayField(Qty,M4Int,0,0);
+    ArrayField(ID,M4Int,0,0);
+    ArrayField(Price,M4Val,0,0);
+    ArrayField(MyVal,M4Val,0,0);
+    ArrayField(MyInt,M4Int,0,0);
+    ArrayField(MyStr,M4Str,200,0);
+  EndArray;
+  MainKeyBegin(ArtCode,0);
+	KeySegment(ArtCode);
+	KeyBegin(DateChange);
+	KeySegment(DateChange);
+	KeySegment(ArtCode);
+EndRecord;
+
+BlockBegin(WebSyncBlock,-,"");
+  RecordField(DateLastTime,M4Date,0,0);
+  RecordField(DefPriceList,M4Str,10,0);
+  RecordField(ParamIn1,M4Int,0,0);
+  RecordField(ParamIn2,M4Int,0,0);
+  RecordField(ParamStr1,M4Str,200,0);
+  RecordField(ParamStr2,M4Str,200,0);
+  RecordField(ParamVal1,M4Val,0,0);
+  RecordField(ParamVal2,M4Val,0,0);
+EndBlock;
+
+BlockBegin(WebSyncMatBlock,-,"");
+  RecordField(Math,M4Matrix,0,0);
+  ArrayBegin(Math,-,1);
+		ArrayField(Location,M4Str,200,0);
+    ArrayField(ID,M4INt,0,0);
+    ArrayField(LocPrice,M4Val,0,0);
+    ArrayField(MyVal,M4Val,0,0);
+    ArrayField(MyInt,M4Int,0,0);
+    ArrayField(MyStr,M4Str,200,0);
+  EndArray;
+EndBlock;
+
+RecordBegin(OtherOutPlanVc,-,"");
+  RecordField(SerNr,M4Long,0,OtherOutPlanVc);
+  RecordField(SalesMan,M4Code,10,UserVc);
+  RecordField(Name,M4Str,100,0);
+  RecordField(Comment,M4Str,200,0);
+  RecordField(TransDate,M4Date,0,0);
+  RecordField(OKFlag,M4Int,0,0);
+  RecordField(BaseSum4,M4Val,0,0);
+  RecordField(Sum4,M4Val,0,0);
+  RecordField(CurncyCode,M4Code,5,CurncyCodeVc);// Edit ************************** Friday, 27 July 2012 11:06:59
+  RecordField(FrRate,M4Rate,0,0);// Edit ************************** Friday, 27 July 2012 11:12:16
+  RecordField(ToRateB1,M4Rate,0,0);// Edit ************************** Friday, 27 July 2012 11:12:15
+  RecordField(ToRateB2,M4Rate,0,0);// Edit ************************** Friday, 27 July 2012 11:12:15
+  RecordField(BaseRate1,M4Rate,0,0); // Edit ************************** Friday, 27 July 2012 11:12:14
+  RecordField(BaseRate2,M4Rate,0,0); // Edit ************************** Friday, 27 July 2012 11:12:13
+
+  RecordField(Math,M4Matrix,0,0);
+  ArrayBegin(Math,-,1);
+  ArrayField(CorspCode,M4Code,20,CLCorspVc);
+  ArrayField(Name,M4Str,100,0);
+  ArrayField(PlanVal,M4Val,0,0);
+  ArrayField(PlanValB1,M4Val,0,0);
+  ArrayField(CurncyCode,M4Code,20,0);
+  ArrayField(PayMode,M4Code,2,0);
+  ArrayField(Comment,M4Str,200,0);
+  ArrayField(FrRate,M4Rate,0,0);// Edit ************************** Friday, 27 July 2012 11:12:16
+  ArrayField(ToRateB1,M4Rate,0,0);// Edit ************************** Friday, 27 July 2012 11:12:15
+  ArrayField(ToRateB2,M4Rate,0,0);// Edit ************************** Friday, 27 July 2012 11:12:15
+  ArrayField(BaseRate1,M4Rate,0,0); // Edit ************************** Friday, 27 July 2012 11:12:14
+  ArrayField(BaseRate2,M4Rate,0,0); // Edit ************************** Friday, 27 July 2012 11:12:13
+  EndArray;  
+  MainKeyBegin(SerNr,0);
+	KeySegment(SerNr);
+	KeyBegin(TransDate);
+	KeySegment(TransDate);
+	KeySegment(SerNr);
+	KeyBegin(CurncyCode);
+	KeySegment(CurncyCode);
+	KeySegment(TransDate);
+	KeySegment(SerNr);
+  
+  EndRecord;
+  
+  RecordBegin(OtherInPlanVc,-,"");
+  RecordField(SerNr,M4Long,0,OtherInPlanVc);
+  RecordField(SalesMan,M4Code,10,UserVc);
+  RecordField(Name,M4Str,100,0);
+  RecordField(Comment,M4Str,200,0);
+  RecordField(TransDate,M4Date,0,0);
+  RecordField(OKFlag,M4Int,0,0);
+  RecordField(BaseSum4,M4Val,0,0);
+  RecordField(Sum4,M4Val,0,0);
+  RecordField(CurncyCode,M4Code,5,CurncyCodeVc);// Edit ************************** Friday, 27 July 2012 11:06:59
+  RecordField(FrRate,M4Rate,0,0);// Edit ************************** Friday, 27 July 2012 11:12:16
+  RecordField(ToRateB1,M4Rate,0,0);// Edit ************************** Friday, 27 July 2012 11:12:15
+  RecordField(ToRateB2,M4Rate,0,0);// Edit ************************** Friday, 27 July 2012 11:12:15
+  RecordField(BaseRate1,M4Rate,0,0); // Edit ************************** Friday, 27 July 2012 11:12:14
+  RecordField(BaseRate2,M4Rate,0,0); // Edit ************************** Friday, 27 July 2012 11:12:13
+
+  RecordField(Math,M4Matrix,0,0);
+  ArrayBegin(Math,-,1);
+  ArrayField(CorspCode,M4Code,20,CLCorspVc);
+  ArrayField(Name,M4Str,100,0);
+  ArrayField(PlanVal,M4Val,0,0);
+  ArrayField(PlanValB1,M4Val,0,0);
+  ArrayField(CurncyCode,M4Code,20,0);
+  ArrayField(PayMode,M4Code,2,0);
+  ArrayField(Comment,M4Str,200,0);
+  ArrayField(FrRate,M4Rate,0,0);// Edit ************************** Friday, 27 July 2012 11:12:16
+  ArrayField(ToRateB1,M4Rate,0,0);// Edit ************************** Friday, 27 July 2012 11:12:15
+  ArrayField(ToRateB2,M4Rate,0,0);// Edit ************************** Friday, 27 July 2012 11:12:15
+  ArrayField(BaseRate1,M4Rate,0,0); // Edit ************************** Friday, 27 July 2012 11:12:14
+  ArrayField(BaseRate2,M4Rate,0,0); // Edit ************************** Friday, 27 July 2012 11:12:13
+  EndArray;  
+  MainKeyBegin(SerNr,0);
+	KeySegment(SerNr);
+	KeyBegin(TransDate);
+	KeySegment(TransDate);
+	KeySegment(SerNr);
+  EndRecord;
+  
+	RecordBegin(RHistVc,RHistView,"");
+  ImpExpLevel(0);
+  RegisterForAllCompanies(false);
+  RecordField(SerNr,M4Long,0,0,);
+  RecordField(TransDate,M4Date,0,0);
+  RecordField(TransTime,M4Time,0,0);
+  RecordField(User,M4Code,10,UserVc);
+  RecordField(accode,M4Int,0,0);
+  RecordField(RecidStr,M4RLink,200,0);
+  RecordField(Math,M4Blob,0,0);
+  MainKeyBegin(MainKey,0);
+  KeySegment(SerNr);
+  KeyBegin(RecidStr);
+  KeySegment(RecidStr);
+  KeySegment(SerNr);
+  EndRecord;
+  
+  RecordBegin(ItemHistVc,-,"");
+  RecordField(SerNr,M4Long,0,ItemHistVc);
+  RecordField(ArtCode,M4Code,20,INVc);
+  RecordField(Variety,M4Code,20,0);
+  RecordField(Location,M4Code,10,0);
+  FieldIsLocation(Location);
+  RecordField(FileName,M4Str,20,0);
+  RecordField(TransNr,M4Long,0,0);
+  RecordField(Row,M4Int,0,0);
+  RecordField(TransDate,M4Date,0,0);
+  RecordField(StockAffectf,M4Int,0,0);
+  RecordField(Qty,M4Qty,0,0);
+  RecordField(Qty2,M4Qty,0,0);
+  RecordField(RemQty,M4Qty,0,0);
+  RecordField(Source,M4Long,0,ItemHistVc);
+  RecordField(TotCostPrice,M45Val,0,0);
+  RecordField(SerialNr,M4Str,30,0);
+  RecordField(RemCostPrice,M45Val,0,0);
+  RecordField(FIFODate,M4Date,0,0);
+  RecordField(WATotCost,M45Val,0,0);
+  RecordField(CPTotCost,M45Val,0,0);
+  RecordField(BPTotCost,M45Val,0,0);
+  RecordField(WATotCostPerLoc,M45Val,0,0);
+  RecordField(CPTotCostPerLoc,M45Val,0,0);
+  RecordField(BPTotCostPerLoc,M45Val,0,0);
+  RecordField(Position,M4Code,20,PosVc);
+  RecordField(Invalid,M4Int,0,0);
+  FieldIsInvalid(Invalid);
+  RecordField(SerNrPerLoc,M4Qty,0,0);
+  RecordField(VECode,M4Code,20,CUVc);
+  RecordField(ConsigStock,M4Int,0,0);
+  RecordField(WillBePurged,M4Mark,0,0);
+  MainKeyBegin(SerNr,0);
+  KeySegment(SerNr);
+  KeyBegin(ActiveQty);
+  KeySegment(ArtCode);
+  KeySegment(FIFODate);
+  KeySegment(SerNr);
+  KeyBegin(ActiveLocQty);
+  KeySegment(ArtCode);
+  KeySegment(Location);
+  KeySegment(FIFODate);
+  KeySegment(SerNr);
+  KeyBegin(ArtCode);
+  KeySegment(ArtCode);
+  KeySegment(TransDate);
+  KeySegment(SerNr);
+  KeyBegin(ArtCodeVariety); // KJELL
+  KeySegment(ArtCode);
+  KeySegment(Variety);
+  KeySegment(TransDate);
+  KeySegment(SerNr);
+  KeyBegin(FNTransNr);
+  KeySegment(FileName);
+  KeySegment(TransNr);
+  KeySegment(Row);
+  KeySegment(SerNr);
+  KeyBegin(ArtCodeLoc);
+  KeySegment(ArtCode);
+  KeySegment(Location);
+  KeySegment(TransDate);
+  KeySegment(SerNr);
+  KeyBegin(ArtCodeSN);
+  KeySegment(ArtCode);
+  KeySegment(SerNr);
+  KeyBegin(ArtCodeLocSN);
+  KeySegment(ArtCode);
+  KeySegment(Location);
+  KeySegment(SerNr);
+  KeyBegin(ArtCodeFD);
+  KeySegment(ArtCode);
+  KeySegment(FIFODate);
+  KeySegment(SerNr);
+  KeyBegin(ArtCodeLocFD);
+  KeySegment(ArtCode);
+  KeySegment(Location);
+  KeySegment(FIFODate);
+  KeySegment(SerNr);
+  KeyBegin(FNArtCode);
+  KeySegment(FileName);
+  KeySegment(ArtCode);
+  KeySegment(TransDate);
+  KeySegment(SerNr);
+  KeyBegin(Source);
+  KeySegment(Source);
+  KeySegment(SerNr);
+  KeyBegin(ArtCodeSerialNr);
+  KeySegment(ArtCode);
+  KeySegment(SerialNr);
+  KeySegment(FileName);
+  KeySegment(SerNr);
+  KeyBegin(Position);
+  KeySegment(Position);
+  KeySegment(ArtCode);
+  KeySegment(SerNr);
+  KeyBegin(FutArtFile);
+  KeySegment(ArtCode);
+  KeySegment(TransDate);
+  KeySegment(FileName);
+  KeySegment(SerNr);
+  KeyBegin(SerNrPerLoc);
+  KeySegment(Location);
+  KeySegment(SerNrPerLoc);
+  KeySegment(SerNr); 
+  KeyBegin(TransDate);
+  KeySegment(TransDate);
+  KeySegment(SerNr);
+  KeyBegin(FNTransDate);
+  KeySegment(FileName);
+  KeySegment(TransDate);
+  KeySegment(ArtCode);
+  KeySegment(SerNr);
+
+  KeyBegin(FNLocation);
+  KeySegment(FileName);
+  KeySegment(Location);
+  KeySegment(TransDate);
+  KeySegment(SerNr);
+  
+  KeyBegin(CodeSerialNrArtCode);
+  KeySegment(SerialNr);
+  KeySegment(ArtCode);
+  KeySegment(TransDate);
+  KeySegment(SerNr);
+  EndRecord;
+	
+	RecordBegin(IVCashVc,-,"");
+  RecordField(SerNr,M4Long,0,0);
+  SerialNoBlock(IVCashSerBlock);
+  RecordField(InvDate,M4Date,0,0);
+  RecordField(CustCode,M4Code,20,CUVc);
+  RecordField(Addr0,M4Str,60,0);
+  RecordField(Addr1,M4Str,60,0);
+  RecordField(Addr2,M4Str,60,0);
+  RecordField(Addr3,M4Str,60,0);
+  RecordField(CustCat,M4Code,5,0);
+  RecordField(OKFlag,M4Mark,0,0);
+  RecordField(ARonTR,M4Int,0,0);
+  RecordField(UpdStockFlag,M4Int,0,0);
+  RecordField(ExportedFlag,M4Int,0,0);
+  RecordField(InclVAT,M4Int,0,0);
+  RecordField(PayDate,M4Date,0,0);
+  RecordField(TransDate,M4Date,0,0);
+  FieldIsTransDate(TransDate);
+  RecordField(OurContact,M4Str,20,0);
+  RecordField(ClientContact,M4Str,60,0);
+  RecordField(SalesMan,M4Code,10,UserVc);
+  RecordField(PayDeal,M4Code,2,0);
+  RecordField(RecValue,M4Val,0,0);
+  RecordField(RetValue,M4Val,0,0);
+  RecordField(Sum0,M4Val,0,0);
+  RecordField(Sum1,M4Val,0,0);
+  RecordField(Sum2,M4Val,0,0);
+  RecordField(Sum3,M4Val,0,0);
+  RecordField(Sum4,M4Val,0,0);
+  RecordField(VATNr,M4Str,20,0);
+  RecordField(BaseSum4,M4Val,0,0);
+  RecordField(FrRate,M4Rate,0,0); 
+  RecordField(ToRateB1,M4Rate,0,0); 
+  RecordField(ToRateB2,M4Rate,0,0); 
+  RecordField(BaseRate1,M4Rate,0,0); 
+  RecordField(BaseRate2,M4Rate,0,0); 
+  RecordField(CurncyCode,M4Code,5,CurncyCodeVc);
+  RecordField(LangCode,M4Code,5,0);
+  RecordField(CustOrdNr,M4Str,60,0);
+  RecordField(PriceList,M4Code,5,0);
+  RecordField(CustVATCode,M4Code,2,VATCodeBlock);
+  RecordField(RebCode,M4Code,5,0);
+  RecordField(CreditCard,M4UStr,20,CreditCardVc);
+  RecordField(AuthorizationCode,M4UStr,10,0);
+  RecordField(InvComment,M4Str,60,0);
+  RecordField(LocOKNr,M4Qty,0,0);
+  RecordField(Invalid,M4Int,0,0);
+  FieldIsInvalid(Invalid);
+  RecordField(Prntdf,M4Int,0,0);
+  RecordField(pdays,M4Long,0,0);
+  RecordField(pdvrebt,M4Qty,0,0);
+  RecordField(pdrdays,M4Long,0,0);
+  RecordField(TotGP,M4Val,0,0);
+  RecordField(Objects,M4UStr,60,ObjVc);
+  RecordField(Location,M4Code,10,0);
+  FieldIsLocation(Location);
+  RecordField(ARAcc,M4Code,10,AccVc);
+  RecordField(POSNr,M4Long,0,0);
+  RecordField(TransTime,M4STime,0,0);
+  RecordField(NLFlag,M4Mark,0,0);
+  RecordField(CashValue,M4Val,0,0);
+  RecordField(PayDeal2,M4Code,2,0);
+  RecordField(RecValue2,M4Val,0,0);
+  RecordField(CreditCard2,M4UStr,20,CreditCardVc);
+  RecordField(AuthorizationCode2,M4UStr,10,0);
+  RecordField(TotQty,M4Qty,0,0);
+  RecordField(TotWeight,M4Qty,0,0);
+  RecordField(TotVolume,M4Qty,0,0);
+  RecordField(LocalMachineCode,M4Code,5,0);
+  RecordField(Math,M4Matrix,0,0);
+  RecordField(InvAddr3,M4Str,60,0);
+  RecordField(InvAddr4,M4Str,60,0);
+  RecordField(DelAddrCode,M4Code,20,0);
+  RecordField(CashValueB2,M4Val,0,0);
+  RecordField(RetValueB2,M4Val,0,0);
+  RecordField(CashValueCur,M4Val,0,0);
+  RecordField(RetValueCur,M4Val,0,0);
+  RecordField(POSCurncyCode,M4Code,5,CurncyCodeVc);
+  RecordField(TAX1Sum,M4Val,0,0);
+  RecordField(FiscalFlag,M4Mark,0,0);
+  RecordField(OrderNr,M4Long,0,0);
+  RecordField(StatVal,M4Val,0,0);
+  RecordField(DrawerCode,M4Code,5,0);
+  RecordField(Region,M4Code,20,RegionVc);
+  RecordField(TAX2Sum,M4Val,0,0);
+  RecordField(pdvrebt2,M4Qty,0,0);
+  RecordField(pdrdays2,M4Long,0,0);
+  RecordField(POSSalesNo,M4Long,0,0);
+  RecordField(NoTAXonVAT,M4Long,0,0);
+  RecordField(TotalwoTAX,M4Int,0,0);
+  RecordField(RegDate,M4Date,0,0);
+  RecordField(RegTime,M4Time,0,0);
+  RecordField(PayDeal3,M4Code,2,0);// Edit ************************** Monday, 15 April 2013 16:51:49
+  RecordField(RecValue3,M4Val,0,0);// Edit ************************** Monday, 15 April 2013 16:51:49
+  RecordField(CreditCard3,M4UStr,20,CreditCardVc);// Edit ************************** Monday, 15 April 2013 16:51:48
+  RecordField(AuthorizationCode3,M4UStr,10,0);// Edit ************************** Monday, 15 April 2013 16:51:47
+  ArrayBegin(Math,-,1);
+  ArrayField(stp,M4Int,0,0);
+  ArrayField(ArtCode,M4Code,20,INVc);
+  ArrayField(Quant,M4UVal,0,0);
+  ArrayField(Price,M423Val,0,0);
+  ArrayField(Sum,M4Val,0,0);
+  ArrayField(vRebate,M41Val,0,0);
+  ArrayField(SalesAcc,M4Code,10,AccVc);
+  ArrayField(Objects,M4UStr,60,ObjVc);
+  ArrayField(BasePrice,M4Val,0,0);
+  ArrayField(rowGP,M4Val,0,0);
+  ArrayField(FIFO,M45Val,0,0);
+  ArrayField(Spec,M4Str,100,0);
+  ArrayField(VATCode,M4Code,2,VATCodeBlock);
+  ArrayField(Recepy,M4Code,20,RecVc);
+  ArrayField(SerialNr,M4Str,30,0);
+  ArrayField(PriceFactor,M45Val,0,0);
+  ArrayField(FIFORowVal,M45Val,0,0);
+  ArrayField(Coefficient,M45Val,0,0);
+  ArrayField(ExciseNr,M4Str,20,0);
+  ArrayField(UnitCode,M4Code,5,0);
+  ArrayField(UnitFactQuant,M4UVal,0,0);
+  ArrayField(UnitFactPrice,M423Val,0,0);
+  ArrayField(UnitXval,M4UVal,0,0);
+  ArrayField(UnitYval,M4UVal,0,0);
+  ArrayField(UnitZval,M4UVal,0,0);
+  ArrayField(OrdQuant,M4UVal,0,0);
+  ArrayField(DownPaidSum,M4Val,0,0);
+  ArrayField(OrdRow,M4Long,0,0);
+  ArrayField(PosCode,M4Code,20,0);
+  ArrayField(TAX2Code,M4Code,5,0);
+  ArrayField(TAX2Prc,M4Val,0,0);
+  ArrayField(TAX2Reb,M4Val,0,0);
+  ArrayField(TAX1Reb,M4Val,0,0);
+  ArrayField(TAX2Acc,M4Code,10,AccVc);
+  EndArray;
+  MainKeyBegin(SerNr,0);
+  KeySegment(SerNr);
+  SynchronizationIndex;
+  KeyBegin(ExportedFlag);
+  KeySegment(ExportedFlag);
+  KeySegment(SerNr);
+  KeyBegin(CustCode);
+  KeySegment(CustCode);
+  KeySegment(SerNr);
+  KeyBegin(OKFlag);
+  KeySegment(OKFlag);
+  KeySegment(SerNr);
+  KeyBegin(InvDate);
+  KeySegment(InvDate);
+  KeySegment(SerNr);
+  KeyBegin(Name);
+  KeySegment(Addr0);
+  KeySegment(SerNr);
+  KeyBegin(TransDate);
+  KeySegment(TransDate);
+  KeySegment(SerNr);
+  KeyBegin(Sum4);
+  KeySegment(Sum4);
+  KeySegment(SerNr);
+  KeyBegin(SalesMan);
+  KeySegment(SalesMan);
+  KeySegment(InvDate);
+  KeySegment(SerNr);
+  KeyBegin(Location);
+  KeySegment(Location);
+  KeySegment(SerNr);
+  KeySegment(TransDate);
+  KeyBegin(LocOK);
+  KeySegment(Location);
+  KeySegment(OKFlag);
+  KeySegment(UpdStockFlag);
+  KeySegment(TransDate);
+  KeySegment(SerNr);
+  KeyBegin(NLFlag);
+  KeySegment(NLFlag);
+  KeySegment(SerNr);
+  KeyBegin(DelAddrCode);
+  KeySegment(DelAddrCode);
+  KeySegment(SerNr);
+  KeyBegin(Cashup);
+  KeySegment(LocalMachineCode);
+  KeySegment(DrawerCode);
+  KeySegment(TransDate);
+  KeySegment(TransTime);
+  KeySegment(SerNr);
+  KeyBegin(Region);
+  KeySegment(Region);
+  KeySegment(SerNr);
+/* Not used ?
+  SubsetKeyBegin2(ArtCode);
+  StoreInBaseKey;
+  AppendMatrixFieldToKeyName(ArtCode,0);
+  KeySegment(TransDate);  
+  KeySegment(SerNr);
+*/
+  KeyBegin(POSSalesNo);
+  KeySegment(POSSalesNo);
+  KeySegment(SerNr);
+  EndRecord;
+  
+  RecordBegin(SalesGroupVc,-,"");
+  RecordField(SGroupCode,M4Code,5,0);
+  RecordField(SGroupName,M4Str,100,0);
+  RecordField(SGroupSeries,M4Long,0,0);// Edit ************************** Friday, 22 November 2013 13:51:41
+  MainKeyBegin(SGroupCode,0);
+  KeySegment(SGroupCode);
+  KeyBegin(SGroupName);
+  KeySegment(SGroupName);
+  KeySegment(SGroupCode);
+  EndRecord;
+  
+  
+  /*RecordBegin(INVc,-,"artikel3");
+  ImpExpLevel(1);
+  RecordField(Code,M4Code,20,INVc);
+  RecordField(Name,M4Str,100,0);
+  RecordField(Unittext,M4Str,10,0);
+  RecordField(MinLevel,M4Val,0,0);
+  RecordField(Objects,M4UStr,60,ObjVc);
+  RecordField(SalesAcc,M4Code,10,AccVc);
+  RecordField(UPrice1,M423Val,0,0);
+  RecordField(ItemType,M4Int,0,0);
+  RecordField(Group,M4Code,5,0);
+  RecordField(x1,M4Dummy,0,0);
+  RecordField(x2,M4Dummy,0,0);
+  RecordField(InPrice,M45Val,0,0);
+  RecordField(InvCode,M4Code,10,0);
+  RecordField(ExtraCost,M4Val,0,0);
+  RecordField(SerNrf,M4Int,0,0);
+  RecordField(Department,M4Code,10,0);
+  RecordField(Weight,M45Val,0,0);
+  RecordField(Volume,M45Val,0,0);
+  RecordField(EUCodex,M4Code,20,0);
+  RecordField(InCurncyCode,M4Code,5,CurncyCodeVc);
+  RecordField(Bonus,M4Qty,0,0);
+  RecordField(Recepy,M4Code,20,RecVc);
+  RecordField(Markup,M4Qty,0,0);
+  RecordField(x3,M4Dummy,0,0);
+  RecordField(BarCode,M4Code,20,0);
+  RecordField(UpdateCost,M4Int,0,0);
+  RecordField(LastPriceChange,M4Date,0,0);
+  RecordField(CalcPrice,M4Code,5,0);
+  RecordField(VATCode,M4Code,2,VATCodeBlock);
+  RecordField(PriceFactor,M45Val,0,0);
+  RecordField(Terminated,M4Int,0,0);
+  RecordField(AvgMarkup,M4Val,0,0);
+  RecordField(LastPurchPrice,M45Val,0,0); 
+  RecordField(LastPurchCurncyCode,M4Code,5,CurncyCodeVc);
+  RecordField(WeighedAvPrice,M45Val,0,0);  
+  RecordField(Conversion1,M45Val,0,0);
+  RecordField(Conversion2,M45Val,0,0);
+  RecordField(WarrantyLength,M4Qty,0,0);
+  RecordField(Math,M4Matrix,0,0);
+  RecordField(InvRecepy,M4Code,20,RecVc);
+  RecordField(EUSalesAcc,M4Code,10,AccVc);
+  RecordField(ExpSalesAcc,M4Code,10,AccVc);
+  RecordField(VATCodeEU,M4Code,2,VATCodeBlock);
+  RecordField(VATCodeExp,M4Code,2,VATCodeBlock);
+  RecordField(ChangePrice,M4Int,0,0);
+  RecordField(RebCode,M4Code,5,0);
+  RecordField(ExplodeRec,M4Int,0,0);
+  RecordField(Unittext2,M4Str,10,0);
+  RecordField(UnitCoefficient,M45Val,0,0);
+  RecordField(WarnText1,M4Str,60,0);
+  RecordField(VARList,M4UStr,30,0);
+  RecordField(ItemMaterial,M4Int,0,0);
+  RecordField(AlcPrc,M4UVal,0,0);
+  RecordField(DefaultSource,M4Code,10,0);
+  RecordField(AlternativeCode,M4Str,40,0);
+  RecordField(CostAcc,M4Code,10,AccVc); 
+  RecordField(DefLocation,M4Code,10,0);
+  RecordField(LastBasePriceChange,M4Date,0,0);
+  RecordField(MaxLevel,M4Qty,0,0);
+  RecordField(LastPurchPrice2,M45Val,0,0);
+  RecordField(Width,M4UVal,0,0);
+  RecordField(Height,M4UVal,0,0);
+  RecordField(Depth,M4UVal,0,0);
+  RecordField(ContractItem,M4Code,20,INVc);
+  RecordField(Internal,M4Int,0,0);
+  RecordField(InclItemFreight,M4Int,0,0);
+  RecordField(FixedFreight,M4Val,0,0);
+  RecordField(DispGroups,M4UStr,200,DIVc);
+  RecordField(HazLevCode,M4Code,5,HazLevVc);
+  RecordField(Density,M45Val,0,0);
+  RecordField(xClassification,M4UStr,200,0);
+  RecordField(CredSalesAcc,M4Code,10,AccVc);
+  RecordField(CredEUSalesAcc,M4Code,10,AccVc);
+  RecordField(CredExpSalesAcc,M4Code,10,AccVc);
+  RecordField(CredVATCode,M4Code,2,VATCodeBlock);
+  RecordField(CredVATCodeEU,M4Code,2,VATCodeBlock);
+  RecordField(CredVATCodeExp,M4Code,2,VATCodeBlock);
+  RecordField(RentalItem,M4Code,20,INVc);
+  RecordField(CompUsage,M4Code,10,AccVc);
+  RecordField(colnr,M4Set,46,0);
+  RecordField(VARMask,M4UStr,60,0);
+  RecordField(VARRepOrder,M4UStr,60,0);
+  RecordField(VARSubsets,M4UStr,200,0);
+  RecordField(LocArea,M4Code,20,0);
+  RecordField(EKNCode,M4Code,20,0);
+  RecordField(DefPalletItem,M4Code,20,INVc);
+  RecordField(QtyonPallet,M4UVal,0,0);
+  RecordField(PalletWidth,M4UVal,0,0);
+  RecordField(PalletHeight,M4UVal,0,0);
+  RecordField(PalletDepth,M4UVal,0,0);
+  RecordField(Brand,M4Str,60,0);
+  RecordField(BrandType,M4Str,60,0);
+  RecordField(PickArea,M4Code,20,0);
+  RecordField(SWWCode,M4Str,60,0);
+  RecordField(RepaPricePerWeight,M4Val,0,0);
+  RecordField(PalletsInPickArea,M4UVal,0,0);
+  RecordField(DefPosWidth,M4UVal,0,0);
+  RecordField(DefPosHeight,M4UVal,0,0);
+  RecordField(DefPosDepth,M4UVal,0,0);
+  RecordField(InPriceB2,M45Val,0,0);
+  RecordField(WeighedAvPriceB2,M45Val,0,0);
+  RecordField(EUCostAcc,M4Code,10,AccVc); 
+  RecordField(ExpCostAcc,M4Code,10,AccVc); 
+  RecordField(PalletLayers,M4UVal,0,0);
+  RecordField(QtyonPalletLayer,M4UVal,0,0);
+  RecordField(UserStr1,M4Str,255,0);
+  RecordField(UserStr2,M4Str,255,0);
+  RecordField(UserStr3,M4Str,255,0);
+  RecordField(UserStr4,M4Str,255,0);
+  RecordField(UserStr5,M4Str,255,0);
+  RecordField(UserVal1,M4UVal,0,0);
+  RecordField(UserVal2,M4UVal,0,0);
+  RecordField(UserVal3,M4UVal,0,0);
+  RecordField(UserDate1,M4Date,0,0);
+  RecordField(UserDate2,M4Date,0,0);
+  RecordField(UserDate3,M4Date,0,0);
+  RecordField(RentGroup,M4Code,5,0);
+  RecordField(FAGroup,M4Code,5,0);
+  RecordField(NetWeight,M45Val,0,0);
+  RecordField(PrimaryCostModel,M4Int,0,0);
+  RecordField(QueuedCostModel,M4Int,0,0);
+  RecordField(CostPerc,M4Val,0,0);
+  RecordField(FIFOPerSerialNr,M4Int,0,0);
+  RecordField(FIFOPerLocation,M4Int,0,0);
+  RecordField(WAPerLocation,M4Int,0,0);
+  RecordField(CostPricePerLocation,M4Int,0,0);
+  RecordField(NotForSales,M4Int,0,0);
+  RecordField(SRUpdateCost,M4Int,0,0);
+  
+	RecordField(LPriceList,M4Code,5,0);// Edit ************************** Thursday, 19 June 2014 13:37:39
+	RecordField(LName,M4Str,200,0);// Edit ************************** Thursday, 19 June 2014 13:37:39
+	RecordField(LDefFormCode,M4Code,20,0);// Edit ************************** Thursday, 19 June 2014 13:37:40
+	RecordField(LComment,M4Str,200,0);// Edit ************************** Thursday, 19 June 2014 13:37:41
+	RecordField(LCurncyCode,M4Code,5,CurncyCodeVc);// Edit ************************** Thursday, 19 June 2014 13:37:41
+	RecordField(LSize,M4Int,0,0);// Edit ************************** Thursday, 19 June 2014 13:37:42
+	RecordField(LCust1,M4Str,200,0);//custcode// Edit ************************** Thursday, 19 June 2014 13:37:42
+	RecordField(LCust2,M4Str,200,0);// Edit ************************** Thursday, 19 June 2014 13:37:43
+	RecordField(LCust3,M4Str,200,0);// Edit ************************** Thursday, 19 June 2014 13:37:43
+	RecordField(LCust4,M4Str,200,0);// Edit ************************** Thursday, 19 June 2014 13:37:44
+	RecordField(LCust5,M4Str,200,0);// Edit ************************** Thursday, 19 June 2014 13:37:44
+	RecordField(LCustInt1,M4Int,0,0);// Edit ************************** Thursday, 19 June 2014 13:37:47
+	RecordField(LCustInt2,M4Int,0,0);// Edit ************************** Thursday, 19 June 2014 13:37:47
+	RecordField(LCustInt3,M4Int,0,0);// Edit ************************** Thursday, 19 June 2014 13:37:48
+	RecordField(LCustInt4,M4Int,0,0);// Edit ************************** Thursday, 19 June 2014 13:37:48
+	RecordField(LCustInt5,M4Int,0,0);// Edit ************************** Thursday, 19 June 2014 13:37:49
+	
+  ArrayBegin(Math,-,1);
+  ArrayField(LangCode,M4Code,5,0);
+  ArrayField(Text,M4Str,100,0);
+  
+  ArrayField(LParam,M4Str,200,0);// Edit ************************** Thursday, 19 June 2014 13:38:56
+	ArrayField(LName,M4Str,200,0);// Edit ************************** Thursday, 19 June 2014 13:38:57
+	ArrayField(LComment1,M4Str,200,0);// Edit ************************** Thursday, 19 June 2014 13:38:57
+	ArrayField(LComment2,M4Str,200,0);// Edit ************************** Thursday, 19 June 2014 13:38:58
+	ArrayField(LComment3,M4Str,200,0);// Edit ************************** Thursday, 19 June 2014 13:38:58
+	ArrayField(LComment4,M4Str,200,0);// Edit ************************** Thursday, 19 June 2014 13:38:59
+	ArrayField(LComment5,M4Str,200,0);// Edit ************************** Thursday, 19 June 2014 13:38:59
+	ArrayField(LComment6,M4Str,200,0);// Edit ************************** Thursday, 19 June 2014 13:39:00
+	ArrayField(LComment7,M4Str,200,0);// Edit ************************** Thursday, 19 June 2014 13:39:02
+	ArrayField(LComment8,M4Str,200,0);// Edit ************************** Thursday, 19 June 2014 13:39:03
+	ArrayField(LArInt1,M4int,0,0);// Edit ************************** Thursday, 19 June 2014 13:39:03
+	ArrayField(LArInt2,M4int,0,0);// Edit ************************** Thursday, 19 June 2014 13:39:04
+	ArrayField(LArInt3,M4int,0,0);// Edit ************************** Thursday, 19 June 2014 13:39:04
+	ArrayField(LArInt4,M4int,0,0);// Edit ************************** Thursday, 19 June 2014 13:39:05
+  EndArray;
+  MainKeyBegin(Code,1);
+  StoreInBaseKey;
+  AppendFieldToKeyName("Group");
+  KeySegment(Code);
+  SynchronizationIndex;
+  SubsetKeyBegin2(Name);
+  StoreInBaseKey;
+  AppendFieldToKeyName("Group");
+  KeySegment(Name);
+  KeySegment(Code);
+  KeyBegin(Group);
+  KeySegment(Group);
+  KeySegment(Code);
+  KeyBegin(BarCode);
+  KeySegment(BarCode);
+  KeySegment(Code);
+  KeyBegin(InvCode);
+  KeySegment(InvCode);
+  KeySegment(Code);
+  KeyBegin(Recepy);
+  KeySegment(Recepy);
+  KeySegment(Code);
+  KeyBegin(ActCode);
+  KeySegment(Code);
+  KeySegment(Terminated);
+  KeyBegin(ActName);
+  KeySegment(Name);
+  KeySegment(Code);
+  KeySegment(Terminated);
+  KeyBegin(ActGroup);
+  KeySegment(Group);
+  KeySegment(Code);
+  KeySegment(Terminated);
+  KeyBegin(EUCodex);
+  KeySegment(EUCodex);
+  KeySegment(Code);
+  KeyBegin(Department);
+  KeySegment(Department);
+  KeySegment(Code);
+  KeyBegin(AlternativeCode);
+  KeySegment(AlternativeCode);
+  KeySegment(Code);
+  KeyBegin(ItemType);
+  KeySegment(ItemType);
+  KeySegment(Code);
+  SubsetKeyBegin2(DICode);
+  StoreInBaseKey;
+  AppendListFieldToKeyName("DispGroups");
+  KeySegment(Code);
+  SubsetKeyBegin2(DIName);
+  StoreInBaseKey;
+  AppendListFieldToKeyName("DispGroups");
+  KeySegment(Name);
+  KeySegment(Code);
+  SubsetKeyBegin2(DIGroup);
+  StoreInBaseKey;
+  AppendListFieldToKeyName("DispGroups");
+  KeySegment(Group);
+  KeySegment(Code);
+  KeyBegin(Objects);
+  KeySegment(Objects);
+  KeySegment(Code);
+  EndRecord;*/

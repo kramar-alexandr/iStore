@@ -1,0 +1,14 @@
+
+global
+function LongInt POSEventVcRecordRemoveTest(var record POSEventVc POSEventr,record POSEventVc POSEvent2r,LongInt long3,LongInt long4)
+BEGIN
+  LongInt res;
+
+  res = 0;
+  if(currentuser=="SA")then begin
+    res = 1;
+  end;
+  POSEventVcRecordRemoveTest = res; 
+  RETURN;
+END;
+

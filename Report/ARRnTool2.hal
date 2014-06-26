@@ -1,0 +1,1317 @@
+external function val MulRateToBase1(var string,val,val,val,val,val,val,Integer);
+external function val MulWithRateToBase1(var string,Date,val,Integer);
+external function Boolean FindAccPeriod(Date,var record AccPeriodr);
+external function Integer TypeOfCurncy(var string,var Integer);
+external function Integer GetIntYc(Date);
+external procedure PSFindPaydAmount2(record IPrsVc,Boolean,var val,var val,var Date);
+external function string 255 CreateInvoiceNumber(LongInt);
+external function Boolean ObjectTypeMatch(string,string);
+external function LongInt DateDiff(Date,Date);
+external function Integer GetProgramMode();
+external procedure HTCusts(string, string, var string);
+external procedure HTInvSel(Integer, var string);
+external procedure HTSort2(Integer, var string);
+external procedure HTSaleMan(string, var string);
+external procedure HTCustCat(string,var string);
+external procedure HTCustClass(string,var string);
+external procedure HTCustClassType(string,var string);
+external procedure HTPLDetailLevel(Integer,var string);
+external procedure HTObj(string,var string);
+external procedure HTOT(string,var string);
+external procedure PrintCurTotalsRow(record SMVc,Integer,Integer,Integer,Integer);
+
+   SetLangMode(LangUkrainian,"UKR",0);
+
+
+procedure CalcVATElement(val invval,val invsum3,val recval,var val vatel)
+BEGIN
+  val t;
+  
+  t = recval/invval;
+  vatel = invsum3*t;
+  RETURN;
+END;
+
+procedure PrintInstallments(record IVVc IVr,val rval,val rs)
+BEGIN
+  record ARInstallVc ARIr;
+  Boolean TrHs;
+  LongInt latedays;
+  string 255 tstr;
+  Integer ProgramType;  
+
+  ProgramType = GetProgramMode;
+  ARIr.InvoiceNr = IVr.SerNr;
+  TrHs = true;
+  while (LoopMain(ARIr,1,TrHs)) begin
+    if (ARIr.InvoiceNr!=IVr.SerNr) then begin TrHs = false; end;
+    if (TrHs) then begin
+      latedays = DateDiff(ARIr.DueDate,CurrentDate);
+//      ARSump = ARSump + ARIr.BookRVal;
+      StartFormat(15);
+      tstr = CreateInvoiceNumber(ARIr.InvoiceNr);
+      OutString(90,"DblAR",tstr,false);
+      OutDate(150,0,IVr.InvDate,false);
+      OutString(210,0,IVr.PayDeal,false);
+      OutDate(230,0,ARIr.DueDate,false);
+      tstr = "DblBadCU";
+      if ((ProgramType==14) or (ProgramType==15)) then begin
+        tstr = "";
+      end;
+      OutStringID(310,tstr,latedays,true,IVr.SerNr);
+      OutLongInt(350,0,IVr.LastRemndr,true);  
+      OutVal(450,0,ARIr.BookRVal,M4Val,true);
+      EndFormat;
+    end;
+  end;
+  RETURN;
+END;
+
+global
+procedure ARRPrintOverView(record IVVc IVr,record RcVc RepSpec,val rval,val rs,LongInt latedays)
+BEGIN
+  string 255 tstr;
+  Integer ProgramType;  
+  record AgedBlock Ab;
+  record CUVc CUr;
+  
+  BlockLoad(Ab);
+  if ((IVr.InstallmentInv==1) and (RepSpec.flags[19]!=0)) then begin
+    PrintInstallments(IVr,rval,rs);
+    goto LARRPrintOverView;
+  end;
+   ProgramType = GetProgramMode;
+   StartFormat(15);
+    If(RepSpec.Media == 20 or RepSpec.Media == 2) then begin// Edit ************************** Wednesday, 18 August 2010 13:35:11
+	          
+	          OutString(0,0,IVr.CustCode,false);
+	          OutString(0,0,IVr.Addr0,false);
+	          
+	          CUr.Code = IVr.CustCode;
+	          ReadFirstmain(CUr,1,true);
+	          OutString(0,0,CUr.SalesMan,false);
+	          
+	          OutString(0,0,IVr.CustCode,false);
+	          OutString(0,0,IVr.CustCode,false);
+	          OutString(0,0,IVr.CustCode,false);
+	          OutString(0,0,IVr.CustCode,false);
+	          OutString(0,0,IVr.CustCode,false);
+	          OutString(0,0,IVr.CustCode,false);
+	          OutString(0,0,IVr.CustCode,false);
+	          OutString(0,0,IVr.CustCode,false);
+	          OutString(0,0,IVr.CustCode,false);
+	          OutString(0,0,IVr.CustCode,false);
+	          OutString(0,0,IVr.CustCode,false);
+	          
+	  end else begin// Edit ************************** Wednesday, 18 August 2010 13:35:12
+            OutString(0,0,IVr.SalesMan,false);// Edit ************************** Wednesday, 18 August 2010 13:33:03
+            if (RepSpec.flags[23]!=0) then begin
+              OutStringID(12,"DblAR",IVr.OfficialSerNr,false,IVr.SerNr);
+        //      OutString(100,"DblAR",IVr.SerNr,false);
+            end else begin
+              tstr = CreateInvoiceNumber(IVr.SerNr);
+              OutString(90,"DblAR",tstr,false);
+            end;
+            OutDate(160,0,IVr.InvDate,false);
+            OutString(220,0,IVr.PayDeal,false);
+            OutDate(240,0,IVr.PayDate,false);
+        //    OutLongInt(310,0,latedays,true);
+            tstr = "DblBadCU";
+            if ((ProgramType==9) or (ProgramType==15)) then begin
+              tstr = "";
+            end;
+            if (Ab.ShowDelayDays!=0) then begin
+              if (latedays<0) then begin
+                OutStringID(345,tstr,-latedays,true,IVr.SerNr);
+              end else begin
+                OutStringID(345,tstr,0,true,IVr.SerNr);
+              end;
+            end else begin      
+              OutStringID(345,tstr,latedays,true,IVr.SerNr);
+            end;
+            OutLongInt(360,0,IVr.LastRemndr,true);
+            if (RepSpec.flags[2]==1) then begin
+              OutVal(450,0,rval,M4Val,true);
+              OutString(480,0,IVr.CurncyCode,true);
+            end else begin
+              OutVal(450,0,rs,M4Val,true);
+            end;
+    end;// Edit ************************** Wednesday, 18 August 2010 13:35:14
+   EndFormat;
+LARRPrintOverView:;   
+  if ((RepSpec.flags[14]!=0) and (IVr.InvComment<>"")) then begin
+    StartFormat(15);
+    OutString(150,0,IVr.InvComment,false);
+    EndFormat;
+  end;
+  RETURN;         
+END;
+
+/* Both SL and PL */
+global
+procedure CountPeriods(var Integer nrofper)
+begin
+  record AgedBlock AgedRec;
+  
+  BlockLoad(AgedRec);  
+  nrofper = 2;
+  if (AgedRec.UseAccPeriod) then begin
+    if (AgedRec.AccPeriods>0) then begin
+      nrofper = AgedRec.AccPeriods;
+    end;
+  end else begin
+    if (AgedRec.Per3>-1) then begin nrofper = 3; end;
+    if (AgedRec.Per4>-1) then begin nrofper = 4; end;
+    if (AgedRec.Per5>-1) then begin nrofper = 5; end;
+    if (AgedRec.Per6>-1) then begin nrofper = 6; end;
+  end;
+  return;
+end;
+
+/* Both SL and PL */
+global
+procedure PrintAgedLine(val s0,val s1,val s2,val s3,val s4,val s5,val s6,val s7,val totinv,Integer nrofper,Integer totpos)
+begin
+  OutVal(2,0,s0,M4Val,true);
+  OutVal(3,0,s1,M4Val,true);
+  OutVal(4,0,s2,M4Val,true);
+  OutVal(5,0,s3,M4Val,true);
+  if (nrofper>2) then begin
+    OutVal(6,0,s4,M4Val,true);
+  end;
+  if (nrofper>3) then begin
+    OutVal(7,0,s5,M4Val,true);
+  end;
+  if (nrofper>4) then begin
+    OutVal(8,0,s6,M4Val,true);
+  end;
+  if (nrofper>5) then begin
+    OutVal(9,0,s7,M4Val,true);
+  end;
+  OutVal(totpos,0,totinv,M4Val,true);            
+  return;
+end;
+
+/* Both SL and PL */
+global
+procedure SumAged(Date ondat,Integer late,var val valp,var val s0,var val s1,var val s2,var val s3,var val s4,var val s5,var val s6,var val s7)
+BEGIN
+  LongInt per1,per2,per3;
+  record AgedBlock AgedRec;
+  record AccPeriodVc prevAccPeriodr,AccPeriodr;
+  row AccPeriodVc AccPeriodrw;
+  Integer rwcnt,rwcnt2,i;
+  Integer periodzero,thisperiod,nrofperiods;
+  Boolean testf;
+  Date dt,StartDate;
+    //StopAlert(late);
+  testf = true;
+  BlockLoad(AgedRec);
+  if (AgedRec.UseAccPeriod!=0) then begin
+    periodzero = 0;
+    if (AgedRec.AccPeriods>0) then begin
+      nrofperiods = AgedRec.AccPeriods;
+    end else begin
+      nrofperiods = 2;
+    end;
+    if (FindAccPeriod(ondat,AccPeriodr)) then begin
+      if (late>=0) then  begin
+        s0 = valp + s0;
+        StopAlert(11);
+      end else begin
+        
+        dt = AddDay(AccPeriodr.FiscalStartDate,-1);
+        stopalert(dt);
+        StartDate = AccPeriodr.FiscalStartDate;
+        rwcnt = MatRowCnt(AccPeriodr);
+  // Merge previous and current Accounting Periods so previous year is first..
+        if (FindAccPeriod(dt,prevAccPeriodr)) then begin
+          rwcnt2 = MatRowCnt(prevAccPeriodr);
+          StartDate = prevAccPeriodr.FiscalStartDate;
+          for (i=0;i<rwcnt2;i=i+1) begin
+            MatRowGet(prevAccPeriodr,i,AccPeriodrw);
+            if (rwcnt>0) then begin
+              MatRowInsert(AccPeriodr,i,AccPeriodrw);
+            end else begin
+              MatRowPut(AccPeriodr,i,AccPeriodrw);
+            end;
+          end;
+        end;
+        if (StartDate<AddDay(ondat,late)) then begin
+          rwcnt = MatRowCnt(AccPeriodr);
+          for (i=rwcnt-1;i>=0;i=i-1) begin
+            MatRowGet(AccPeriodr,i,AccPeriodrw);
+            if (blankdate(AccPeriodrw.DueDate)) then begin
+              AccPeriodrw.DueDate = AccPeriodrw.EndDate;
+            end;
+            if (periodzero==0) then begin
+              if (ondat>AccPeriodrw.DueDate) then begin
+                if (i+1<rwcnt) then begin
+                  i = i + 1;
+                  periodzero = i;
+                end;
+              end;
+            end else begin
+              if (AddDay(ondat,late)>AccPeriodrw.DueDate) then begin
+                thisperiod = periodzero-i-1;
+                switch (thisperiod) begin
+                  case 0:
+                    s0 = valp + s0;
+                  case 1:
+                    s1 = valp + s1;
+                  case 2:
+                    switch (thisperiod-nrofperiods-1) begin
+                      case 1: s1 = valp + s1;
+                      otherwise s2 = valp + s2;
+                    end;
+                  case 3:
+                    switch (thisperiod-nrofperiods-1) begin
+                      case 2: s1 = valp + s1;
+                      case 1: s2 = valp + s2;
+                      otherwise s3 = valp + s3;
+                    end;
+                  case 4:
+                    switch (thisperiod-nrofperiods-1) begin
+                      case 3: s1 = valp + s1;
+                      case 2: s2 = valp + s2;
+                      case 1: s3 = valp + s3;
+                      otherwise s4 = valp + s4;
+                    end;
+                  case 5:
+                    switch (thisperiod-nrofperiods-1) begin
+                      case 4: s1 = valp + s1;
+                      case 3: s2 = valp + s2;
+                      case 2: s3 = valp + s3;
+                      case 1: s4 = valp + s4;
+                      otherwise s5 = valp + s5;
+                    end;
+                  case 6:
+                    switch (thisperiod-nrofperiods-1) begin
+                      case 5: s1 = valp + s1;
+                      case 4: s2 = valp + s2;
+                      case 3: s3 = valp + s3;
+                      case 2: s4 = valp + s4;
+                      case 1: s5 = valp + s5;
+                      otherwise s6 = valp + s6;
+                    end;
+                  otherwise
+                    switch (nrofperiods+1) begin
+                      case 1: s1 = valp + s1;
+                      case 2: s2 = valp + s2;
+                      case 3: s3 = valp + s3;
+                      case 4: s4 = valp + s4;
+                      case 5: s5 = valp + s5;
+                      case 6: s6 = valp + s6;
+                      otherwise s7 = valp + s7;
+                    end;
+  //                  switch (thisperiod-nrofperiods-1) begin
+  //                     case 6: s1 = valp + s1;
+  //                     case 5: s2 = valp + s2;
+  //                     case 4: s3 = valp + s3;
+  //                     case 3: s4 = valp + s4;
+  //                     case 2: s5 = valp + s5;
+  //                     case 1: s6 = valp + s6;
+  //                     otherwise s7 = valp + s7;
+  //                   end;
+                end;
+                i = -1;
+              end;
+            end;
+          end;
+        end else begin
+          switch (nrofperiods+1) begin
+            case 1: s1 = valp + s1;
+            case 2: s2 = valp + s2;
+            case 3: s3 = valp + s3;
+            case 4: s4 = valp + s4;
+            case 5: s5 = valp + s5;
+            case 6: s6 = valp + s6;
+            otherwise s7 = valp + s7;
+          end;
+        end;
+      end;
+      testf = false;
+    end;
+  end;
+  if (testf) then begin
+    per1 = AgedRec.Per1;
+    per2 = AgedRec.Per2;
+    per3 = AgedRec.Per3;
+
+    if (per1==-1) then begin per1 = -15; end;  
+    if (per2==-1) then begin per2 = -30; end;  
+    if (per3==-1) then begin per3 = 0; end;  
+    if (late>=0) then  begin s0 = valp + s0; end;  
+    if (late<0 and late>=-per1) then begin s1 = valp + s1; end; 
+    if (late<-per1 and late>=-per2) then begin s2 = valp + s2; end;  
+    if ((AgedRec.Per2>-1) and (late<-AgedRec.Per2)) then begin
+      if (AgedRec.Per3==-1) then begin
+        s3 = valp + s3;
+      end else begin
+        if (late<-per2 and late>=-AgedRec.Per3) then begin s3 = valp + s3; end;  
+      end;
+      
+    end;
+    if ((AgedRec.Per3>-1) and (late<-AgedRec.Per3)) then begin
+      if (AgedRec.Per4==-1) then begin
+        s4 = valp + s4;
+      end else begin
+        if (late<-AgedRec.Per3 and late>=-AgedRec.Per4) then begin s4 = valp + s4; end;  
+      end;
+    end;
+    if ((AgedRec.Per4>-1) and (late<-AgedRec.Per4)) then begin
+      if (AgedRec.Per5==-1) then begin
+        s5 = valp + s5;
+      end else begin
+        if (late<-AgedRec.Per4 and late>=-AgedRec.Per5) then begin s5 = valp + s5; end;  
+      end;
+    end;
+    if ((AgedRec.Per5>-1) and (late<-AgedRec.Per5)) then begin
+      if (AgedRec.Per6==-1) then begin
+        s6 = valp + s6;
+      end else begin
+        if (late<-AgedRec.Per5 and late>=-AgedRec.Per6) then begin s6 = valp + s6; end;  
+      end;
+    end;
+    if ((AgedRec.Per6>-1) and (late<-AgedRec.Per6)) then begin 
+      s7 = valp + s7; 
+    end;
+  end;
+  RETURN;  
+END;
+
+global
+procedure SumAgedInstalmenInvoice(Date curdat,LongInt SerNr,var val s0,var val s1,var val s2,var val s3,var val s4,var val s5,var val s6,var val s7)
+BEGIN
+  record ARInstallVc ARIr;
+  Boolean TrHs;
+  LongInt latedays;
+
+  ARIr.InvoiceNr = SerNr;
+  TrHs = true;
+  while (LoopMain(ARIr,1,TrHs)) begin
+    if (ARIr.InvoiceNr!=SerNr) then begin TrHs = false; end;
+    if (TrHs) then begin
+      latedays = DateDiff(ARIr.DueDate,CurrentDate);
+      SumAged(curdat,latedays,ARIr.BookRVal,s0,s1,s2,s3,s4,s5,s6,s7);
+    end;
+  end;
+  RETURN;
+END;
+
+procedure GetAccPeriodComments(Date ondat,var string tstr1,var string tstr2,var string tstr3,var string tstr4,var string tstr5,var string tstr6,var string tstr7)
+begin
+  record AccPeriodVc prevAccPeriodr,AccPeriodr;
+  row AccPeriodVc AccPeriodrw;
+  Integer rwcnt,rwcnt2,i;
+  Integer periodzero,thisperiod,nrofperiods;
+  Date dt;
+  
+  periodzero = 0;
+  if (FindAccPeriod(ondat,AccPeriodr)) then begin
+    dt = AddDay(AccPeriodr.FiscalStartDate,-1);
+    rwcnt = MatRowCnt(AccPeriodr);
+// Merge previous and current Accounting Periods so previous year is first..
+    if (FindAccPeriod(dt,prevAccPeriodr)) then begin
+      rwcnt2 = MatRowCnt(prevAccPeriodr);
+      for (i=0;i<rwcnt2;i=i+1) begin
+        MatRowGet(prevAccPeriodr,i,AccPeriodrw);
+        if (rwcnt>0) then begin
+          MatRowInsert(AccPeriodr,i,AccPeriodrw);
+        end else begin
+          MatRowPut(AccPeriodr,i,AccPeriodrw);
+        end;
+      end;
+    end;
+    rwcnt = MatRowCnt(AccPeriodr);
+    for (i=rwcnt-1;i>=0;i=i-1) begin
+      MatRowGet(AccPeriodr,i,AccPeriodrw);
+      if (blankdate(AccPeriodrw.DueDate)) then begin
+        AccPeriodrw.DueDate = AccPeriodrw.EndDate;
+      end;
+      if (periodzero==0) then begin
+        if (ondat>AccPeriodrw.DueDate) then begin
+          if (i+1<rwcnt) then begin
+            i = i + 1;
+            periodzero = i;
+          end;
+        end;
+      end;
+    end;
+    Startformat(15);
+    Outstring(0,0,"periodzero = " & periodzero,false);
+    EndFormat;
+    MatRowGet(AccPeriodr,periodzero,AccPeriodrw);
+    if (nonblank(AccPeriodrw.Comment)) then begin
+      tstr1 = AccPeriodrw.Comment;
+    end else begin
+      tstr1 = USetStr(2540) & "1";
+    end;
+    MatRowGet(AccPeriodr,periodzero-1,AccPeriodrw);
+    if (nonblank(AccPeriodrw.Comment)) then begin
+      tstr2 = AccPeriodrw.Comment;
+    end else begin
+      tstr2 = USetStr(2540) & "2";
+    end;
+    MatRowGet(AccPeriodr,periodzero-2,AccPeriodrw);
+    if (nonblank(AccPeriodrw.Comment)) then begin
+      tstr3 = AccPeriodrw.Comment;
+    end else begin
+      tstr3 = USetStr(2540) & "3";
+    end;
+    MatRowGet(AccPeriodr,periodzero-3,AccPeriodrw);
+    if (nonblank(AccPeriodrw.Comment)) then begin
+      tstr4 = AccPeriodrw.Comment;
+    end else begin
+      tstr4 = USetStr(2540) & "4";
+    end;
+    MatRowGet(AccPeriodr,periodzero-4,AccPeriodrw);
+    if (nonblank(AccPeriodrw.Comment)) then begin
+      tstr5 = AccPeriodrw.Comment;
+    end else begin
+      tstr5 = USetStr(2540) & "5";
+    end;
+    MatRowGet(AccPeriodr,periodzero-5,AccPeriodrw);
+    if (nonblank(AccPeriodrw.Comment)) then begin
+      tstr6 = AccPeriodrw.Comment;
+    end else begin
+      tstr6 = USetStr(2540) & "6";
+    end;
+    MatRowGet(AccPeriodr,periodzero-6,AccPeriodrw);
+    if (nonblank(AccPeriodrw.Comment)) then begin
+      tstr7 = AccPeriodrw.Comment;
+    end else begin
+      tstr7 = USetStr(2540) & "7";
+    end;
+  end;
+  return;
+end;
+
+procedure PrintSLAgedHeader(record RcVc RepSpec,Date agedate,Integer nrofper)
+begin
+  record AgedBlock AgedRec;
+  string 30 tstr1,tstr2,tstr3,tstr4,tstr5,tstr6,tstr7;
+  LongInt p1,p2;
+
+  BlockLoad(AgedRec);
+  if (AgedRec.UseAccPeriod) then begin
+    GetAccPeriodComments(agedate,tstr1,tstr2,tstr3,tstr4,tstr5,tstr6,tstr7);
+    if (nrofper<=1) then begin
+      tstr2 = tstr2 & " - ";
+    end;
+    if (nrofper<=2) then begin
+      tstr3 = tstr3 & " - ";
+    end;
+    if (nrofper<=3) then begin
+      tstr4 = tstr4 & " - ";
+    end;
+    if (nrofper<=4) then begin
+      tstr5 = tstr5 & " - ";
+    end;
+    if (nrofper<=5) then begin
+      tstr6 = tstr6 & " - ";
+    end;
+    tstr7 = tstr7 & " - ";
+  end else begin
+    p1 = AgedRec.Per1;
+    p2 = AgedRec.Per2;
+    if (p1==-1) then begin p1 = 15; end;
+    if (p2==-1) then begin p2 = 30; end;
+    tstr1 = "0 - " & p1;
+    tstr2 = "" & p1+1 & " - " & p2;
+    tstr3 = "" & p2+1 & " - "; 
+    if (AgedRec.Per3>-1) then begin tstr3 = tstr3 & AgedRec.Per3; end;
+    tstr4 = "" & AgedRec.Per3+1 & " - ";
+    if (AgedRec.Per4>-1) then begin tstr4 = tstr4 & AgedRec.Per4; end;
+    tstr5 = "" & AgedRec.Per4+1 & " - ";
+    if (AgedRec.Per5>-1) then begin tstr5 = tstr5 & AgedRec.Per5; end;
+    tstr6 = "" & AgedRec.Per5+1 & " - ";
+    if (AgedRec.Per6>-1) then begin tstr6 = tstr6 & AgedRec.Per6; end;
+    tstr7 = "" & AgedRec.Per6+1 & " - ";
+  end;
+  StartFormat(15);
+  OutString(0,0,USetStr(2426),false);
+  if (RepSpec.ArtMode==5) then begin
+    if (RepSpec.flags[23]!=0) then begin
+      OutString(100,0,USetStr(2707),false);
+      OutString(155,0,USetStr(2708),false);
+    end else begin
+      OutString(70,0,USetStr(2707),false);
+      OutString(125,0,USetStr(2708),false);
+    end;
+  end;
+  OutString(2,0,USetStr(2521),true);
+  OutString(3,0,tstr1,true);
+  OutString(4,0,tstr2,true);
+  OutString(5,0,tstr3,true);
+  if (nrofper>2) then begin
+    OutString(6,0,tstr4,true);
+  end;
+  if (nrofper>3) then begin
+    OutString(7,0,tstr5,true);
+  end;
+  if (nrofper>4) then begin
+    OutString(8,0,tstr6,true);
+  end;
+  if (nrofper>5) then begin
+    OutString(9,0,tstr7,true);
+  end;
+  OutString(480,0,USetStr(2424),true);
+/*
+  if (RepSpec.ArtMode==5) then begin
+    OutString(480,0,"VAT",true);
+  end;
+*/
+  EndFormat;
+  Gray_Divider(0,1);
+  return;
+end;
+
+global
+procedure PrintDueDetailed(record IVVc IVr,record RcVc RepSpec,string curcode,string objects,val s0inv,val s1inv,val s2inv,val s3inv,val s4inv,val s5inv,val s6inv,val s7inv,var val totinv,Integer nrofper)
+BEGIN
+  record ARVc AR2r;
+  val t,vatel;
+  string 255 tstr1;
+  
+    tstr1 = CreateInvoiceNumber(IVr.SerNr);
+    StartFormat(15);
+    if (RepSpec.flags[23]!=0) then begin
+      OutStringID(11,"DblAR",IVr.OfficialSerNr,false,IVr.SerNr);
+      OutDate(100,0,IVr.InvDate,false);
+      OutDate(155,0,IVr.PayDate,false);
+    end else begin
+      OutString(11,"DblAR",tstr1,false);
+      OutDate(70,0,IVr.InvDate,false);
+      OutDate(125,0,IVr.PayDate,false);
+    end;
+    if (RepSpec.flags[2]==1) then begin
+      PrintAgedLine(s0inv,s1inv,s2inv,s3inv,s4inv,s5inv,s6inv,s7inv,totinv,nrofper,465)
+      OutString(464,0,curcode,false);
+    end else begin
+      PrintAgedLine(s0inv,s1inv,s2inv,s3inv,s4inv,s5inv,s6inv,s7inv,totinv,nrofper,480)
+    end;
+    EndFormat;
+  RETURN;            
+END;
+
+procedure PrintARTotals(record RcVc RepSpec,Integer tabs,string curcode,val ivtot,val ivdue,val ivnotdue,val onacc)
+BEGIN
+  Integer j;
+  
+  StartFormat(15);
+  for (j=0;j<tabs;j=j+1) begin
+    OutString(0,0,"",false);
+  end;
+  OutString(290,0,USetStr(2429),false);
+  OutVal(455,0,ivtot,M4Val,true);
+  OutString(460,0,curcode,false);
+  EndFormat;
+  StartFormat(15);
+  for (j=0;j<tabs;j=j+1) begin
+    OutString(0,0,"",false);
+  end;
+  OutString(290,0,USetStr(2527),false);
+  OutVal(455,0,ivdue,M4Val,true);
+  OutString(460,0,curcode,false);
+  EndFormat;
+  StartFormat(15);
+  for (j=0;j<tabs;j=j+1) begin
+    OutString(0,0,"",false);
+  end;
+  OutString(290,0,USetStr(2521),false);
+  OutVal(455,0,ivnotdue,M4Val,true);
+  OutString(460,0,curcode,false);
+  EndFormat;
+  if (onacc!=0) then begin
+    StartFormat(15);
+    for (j=0;j<tabs;j=j+1) begin
+      OutString(0,0,"",false);
+    end;
+    OutString(290,0,USetStr(2497),false);
+    OutVal(455,0,onacc,M4Val,true);
+    OutString(460,0,curcode,false);
+    EndFormat;
+  end;
+  RETURN;
+END;
+
+global
+procedure PrintHeaderAR2(record RcVc RepSpec,Date agedate,Integer nrofper)
+BEGIN  
+record BaseCurBlock BCb;// Edit ************************** Tuesday, 8 May 2012 15:07:06
+
+blockload(BCb);// Edit ************************** Tuesday, 8 May 2012 15:07:05
+  if (RepSpec.ArtMode==0) then begin
+  
+    StartFormat(15);
+       // Edit Start ---------------------------------------------- Edit Start
+	//Wednesday, 18 August 2010 13:20:27
+	if(RepSpec.Media==2 or RepSpec.Media==20 ) then begin
+      OutString(0,0,"Клієнт",false);
+      OutString(1,0,"Найменування",false);
+      OutString(2,0,"Менеджер",false);// Edit ************************** Tuesday, 19 October 2010 13:18:26
+      OutString(40,0,"Продавець",false);// Edit ************************** Tuesday, 19 October 2010 13:22:45
+      OutString(3,0,"Тип",false);
+      OutString(4,0,"Номер",false);
+      OutString(5,0,"Рахунок",false);
+      OutString(6,0,"Дата акту/накл.",false);
+      OutString(7,0,"Днів",false);
+      OutString(8,0,"Термін",false);
+      OutString(8,0,"Коментар",false);
+      OutString(9,0,"Валюта",false);
+      OutString(10,0,"Сума, " & BCb.BaseCur1,false);
+      OutString(20,0,"Сума, валюта документа",false);
+      OutString(30,0,"Баланс, " & BCb.BaseCur1,false);
+      OutString(30,0,"Баланс, валюта документа",false);      
+
+    end else begin
+	// Edit End ---------------------------------------------- Edit End
+	
+    
+     OutString(0,0,USetStr(2426),false);
+     OutString(55,0,USetStr(2435),false);
+     OutString(100,0,USetStr(2436),false);
+     OutString(170,0,USetStr(2707),false);
+     OutString(240,0,USetStr(2438),false);
+     OutString(380,0,USetStr(2425),true);
+     OutString(480,0,USetStr(2434),true);
+    end;
+    EndFormat;
+    
+  end;
+  if (RepSpec.ArtMode==1) then begin
+  StartFormat(15);
+      OutString(0,0,USetStr(2426),false);
+     if (RepSpec.flags[23]!=0) then begin
+//       OutString(100,0,USetStr(2423),false);
+     end else begin
+       OutString(90,0,USetStr(2423),false);
+     end;
+     OutString(160,0,USetStr(2707),false);
+     OutString(240,0,USetStr(2422),false);
+     OutString(345,0,USetStr(2428),true);
+//     if (lightFlag==false) then begin
+//       OutString(350,0,USetStr(2711),true);
+//     end;  
+     OutString(480,0,USetStr(2434),true);
+    EndFormat;       
+  end;
+  if ((RepSpec.ArtMode==2) or (RepSpec.ArtMode==5)) then begin
+    PrintSLAgedHeader(RepSpec,agedate,nrofper);
+  end;
+  if (RepSpec.ArtMode==3) then begin
+    StartFormat(15);
+     OutString(0,0,USetStr(2426),false);
+     OutString(480,0,USetStr(2424),true);
+    EndFormat;
+  end;
+  if (RepSpec.ArtMode==4) or (RepSpec.ArtMode==6) then begin
+    StartFormat(15);
+     OutString(0,0,USetStr(2426),false);
+     OutString(240,0,USetStr(2528),true); 
+     OutString(320,0,USetStr(2440),true);
+     OutString(400,0,USetStr(2439),true);
+     OutString(480,0,USetStr(2529),true);
+    EndFormat;
+    Gray_Divider(0,1);
+  end;
+  RETURN;
+END;  
+
+function Boolean IsOpenARPayHist(record RcVc RepSpec,LongInt cupnr,val v,Boolean backdate,var val openv)
+begin
+  Boolean res;
+  record ARPayHistVc ARPayHistr;
+  Boolean found,testf;
+  val t;
+
+  t = v;
+  found = true;
+  ARPayHistr.CUPNr = cupnr;
+  while (LoopKey("MainKey",ARPayHistr,1,found)) begin
+    if (ARPayHistr.CUPNr!=cupnr) then begin found = false; end;
+    if (found) then begin
+      testf = true;
+      if (ARPayHistr.FileName!="IPVc") and (ARPayHistr.FileName!="CLInVc") then begin
+        if (backdate) then begin
+          if (RepSpec.d1<ARPayHistr.TransDate) then begin
+            testf = false;
+          end;
+        end;
+        if (testf) then begin
+          t = t - ARPayHistr.Val;
+        end;
+      end;
+    end;
+  end;
+  if (t!=0) then begin res = true; end;
+  openv = t;
+  IsOpenARPayHist = res;
+  return;
+end;
+
+global
+procedure PrintPrepaymentsNrsIP(record RcVc RepSpec,string custcode,Boolean backdate)
+BEGIN
+  record ARPayHistVc ARPayHistr;
+  record ARPayVc ARPayr;
+  Boolean found,testf;
+  string 255 tstr;
+  record IPVc IPr;
+  row IPVc IPrw;
+  record CLInVc CLInr;
+  row CLInVc CLInrw;
+  record CLOutVc CLOutr;
+  row CLOutVc CLOutrw;
+  Integer i,rwcnt;
+  LongInt prepno;
+  val prepbal;
+  
+  if (backdate==false) then begin
+    found = true;
+    ARPayr.CustCode = custcode;
+    while LoopKey("CustCode",ARPayr,1,found) begin
+      if (ARPayr.CustCode<>custcode) then begin 
+        found = false; 
+      end;
+      if (found) then begin
+        StartFormat(15);
+        tstr = ARPayr.CUPNr;
+        OutStringID(140,"DblPrHisSL",tstr,false,custcode);
+        if (RepSpec.flags[2]==0) then begin
+          OutVal(300,0,ARPayr.BookRVal,M4Val,true);
+        end else begin
+          OutVal(300,0,ARPayr.RVal,M4Val,true);
+        end;
+        EndFormat;
+      end;
+    end;
+  end else begin
+    ARPayHistr.CustCode = custcode;
+    found = true;
+    ResetLoop(ARPayHistr);
+    while (LoopKey("CUPNrCustCode",ARPayHistr,1,found)) begin
+      if (found) then begin
+        testf = true;
+        if (ARPayHistr.CustCode<>custcode) then begin 
+          found = false; 
+          testf = false;
+        end;
+        if (RepSpec.d1<ARPayHistr.TransDate) then begin
+          testf = false;
+        end;
+        if (testf) then begin
+          if (ARPayHistr.FileName=="IPVc") then begin
+            if ((nonblank(RepSpec.ObjType)) or (nonblank(RepSpec.ObjStr))) then begin
+              IPr.SerNr = ARPayHistr.SerNr;
+              if (ReadFirstMain(IPr,1,true)) then begin
+                rwcnt = MatRowCnt(IPr);
+                for (i=0;i<rwcnt;i=i+1) begin
+                  MatRowGet(IPr,i,IPrw);
+                  if (IPrw.CUPNr==ARPayHistr.CUPNr) then begin
+                    if (nonblank(RepSpec.ObjType)) then begin
+                      testf = ObjectTypeMatch(IPrw.Objects,RepSpec.ObjType);
+                    end;
+                    if (nonblank(RepSpec.ObjStr)) then begin
+                      testf = SetInSet(RepSpec.ObjStr,IPrw.Objects);
+                    end;
+                  end;
+                end;
+              end;
+            end;
+            /*if (testf) then begin
+              testf = IsOpenARPayHist(RepSpec,ARPayHistr.CUPNr,ARPayHistr.Val,backdate);
+           end;*/
+          end;
+          if (ARPayHistr.FileName=="CLInVc") then begin
+            if ((nonblank(RepSpec.ObjType)) or (nonblank(RepSpec.ObjStr))) then begin
+              CLInr.SerNr = ARPayHistr.SerNr;
+              if (ReadFirstMain(CLInr,1,true)) then begin
+                rwcnt = MatRowCnt(CLInr);
+                for (i=0;i<rwcnt;i=i+1) begin
+                  MatRowGet(CLInr,i,CLInrw);
+                  if (CLInrw.Type==4) then begin
+                    if (CLInrw.TransNr==ARPayHistr.CUPNr) then begin
+                      if (nonblank(RepSpec.ObjType)) then begin
+                        testf = ObjectTypeMatch(CLInr.Objects,RepSpec.ObjType);
+                      end;
+                      if (nonblank(RepSpec.ObjStr)) then begin
+                        testf = SetInSet(RepSpec.ObjStr,CLInr.Objects);
+                      end;
+                      i = rwcnt;
+                    end;
+                  end;
+                end;
+              end;
+            end;
+            /*if (testf) then begin
+              testf = IsOpenARPayHist(RepSpec,ARPayHistr.CUPNr,ARPayHistr.Val,backdate);
+            end;*/
+          end;
+          
+          if (ARPayHistr.FileName=="CLOutVc") then begin
+            if ((nonblank(RepSpec.ObjType)) or (nonblank(RepSpec.ObjStr))) then begin
+              CLOutr.SerNr = ARPayHistr.SerNr;
+              if (ReadFirstMain(CLOutr,1,true)) then begin
+                rwcnt = MatRowCnt(CLOutr);
+                for (i=0;i<rwcnt;i=i+1) begin
+                  MatRowGet(CLOutr,i,CLOutrw);
+                  if (CLOutrw.Type==5) then begin
+                    if (CLOutrw.TransNr==ARPayHistr.CUPNr) then begin
+                      if (nonblank(RepSpec.ObjType)) then begin
+                        testf = ObjectTypeMatch(CLOutr.Objects,RepSpec.ObjType);
+                      end;
+                      if (nonblank(RepSpec.ObjStr)) then begin
+                        testf = SetInSet(RepSpec.ObjStr,CLOutr.Objects);
+                      end;
+                      i = rwcnt;
+                    end;
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;
+      end;
+      if (testf) then begin
+        if (prepno<>ARPayHistr.CUPNr) then begin
+          if ((prepno<>-1) and (prepbal<>0)) then begin
+            StartFormat(15);
+            tstr = prepno;
+            OutStringID(140,"DblPrHisSL",tstr,false,custcode);
+            OutVal(300,0,prepbal,M4Val,true);
+            EndFormat;
+            prepbal = 0;
+          end;
+        end;
+        prepno = ARPayHistr.CUPNr;
+        if ((ARPayHistr.FileName=="IVVc") or (ARPayHistr.FileName=="CLOutVc")) then begin
+          if (RepSpec.flags[2]==0) then begin
+            prepbal = prepbal - ARPayHistr.BookVal;
+          end else begin
+            prepbal = prepbal - ARPayHistr.Val;
+          end;
+        end else begin
+          if (RepSpec.flags[2]==0) then begin
+            prepbal = prepbal + ARPayHistr.BookVal;
+          end else begin
+            prepbal = prepbal + ARPayHistr.Val;
+          end;
+        end;  
+      end;
+    end;
+    if ((prepno<>-1) and (prepbal<>0)) then begin
+      StartFormat(15);
+      tstr = prepno;
+      OutStringID(140,"DblPrHisSL",tstr,false,custcode);
+      OutVal(300,0,prepbal,M4Val,true);
+      EndFormat;
+    end;
+  end;
+  RETURN;
+END;
+
+global
+procedure PrintOnAccountInfo(record CUVc CUp,val rval,val sum,var Boolean CustOut,record RcVc RepSpec,record SMVc CurTotalsr,Boolean backdatf)
+BEGIN
+  if (CustOut==false) then begin
+    Gray_Divider(0,1);
+    StartFormat(15);
+    OutString(0,0,CUp.Code,false);
+    OutString(100,0,CUp.Name,false);
+    OutString(280,0,CUp.Phone,false);
+    if (RepSpec.flags[2]==1) then begin
+      OutString(480,0,CUp.CurncyCode,true);
+    end;  
+    EndFormat;
+    CustOut = true;
+  end;
+  if (blank(CUp.CurncyCode)) then begin
+    if (RepSpec.ArtMode==5) then begin
+      PrintCurTotalsRow(CurTotalsr,2497,2,-1,-1);
+    end else begin
+      PrintCurTotalsRow(CurTotalsr,2497,450,-1,-1);
+    end;
+  end else begin
+    StartFormat(15);
+    OutString(130,0,USetStr(2497),false);
+    if (RepSpec.flags[2]==1) then begin
+      OutVal(450,0,rval,M4Val,true);
+      OutString(480,0,CUp.CurncyCode,true);
+    end else begin
+      OutVal(450,0,sum,M4Val,true);
+    end;
+    EndFormat;
+  end;  
+  if (RepSpec.flags[20]!=0) then begin
+    PrintPrepaymentsNrsIP(RepSpec,CUp.Code,backdatf);
+  end;
+  RETURN;
+END;
+
+global
+procedure PrintHeaderAR(record RcVc RepSpec)
+BEGIN
+  Integer rw;
+  string 255 tstr,frcc,tocc;
+  
+  frcc = FirstInRange(RepSpec.f1,20);
+  tocc = FirstInRange(RepSpec.f1,20);
+   rw = 1;
+   HTCusts(frcc,tocc,tstr);
+   Header(rw,tstr,1);
+   rw = rw + 1;
+   HTInvSel(RepSpec.flags[0],tstr);
+   Header(rw,tstr,0);
+   HTSort2(RepSpec.flags[1],tstr);
+   Header(rw,tstr,1);
+   rw = rw + 1;
+   if (RepSpec.ArtMode==0) then begin
+     tstr = USetStr(1161);
+   end else begin
+     HTPLDetailLevel(RepSpec.ArtMode,tstr);
+   end;         
+   Header(rw,tstr,0);
+   if (RepSpec.flags[2]==0) then begin
+     tstr = USetStr(2369);
+   end else begin
+     tstr = USetStr(6650);
+   end;            
+   Header(rw,tstr,1);
+   rw = rw + 1;
+   Header(rw,USetStr(5549) & ": " & USetStr(2534+RepSpec.flags[3]),0);   
+   HTSaleMan(RepSpec.f2,tstr);
+   if (nonblank(tstr)) then begin
+     Header(rw,tstr,1);
+     rw = rw + 1;
+   end;         
+   HTCustCat(RepSpec.f3,tstr);
+   if (nonblank(tstr)) then begin
+     Header(rw,tstr,1);
+     rw = rw + 1;
+   end;  
+   HTCustClass(RepSpec.f4,tstr);
+   if (nonblank(tstr)) then begin
+     Header(rw,tstr,1);
+     rw = rw + 1;
+   end; 
+   HTCustClassType(RepSpec.f5,tstr);
+   if (nonblank(tstr)) then begin
+     Header(rw,tstr,1);
+     rw = rw + 1;
+   end; 
+   tstr = RepSpec.d1;
+   if (nonblank(tstr)) then begin
+     Header(rw,tstr,1);
+     rw = rw + 1;
+   end; 
+  if (RepSpec.ObjStr<>"") then begin
+    HTObj(RepSpec.ObjStr,tstr);
+    Header(rw,tstr,1);
+    rw = rw + 1;
+  end else begin
+    if (RepSpec.ObjType<>"") then begin
+      HTOT(RepSpec.ObjType,tstr);
+      Header(rw,tstr,1);
+      rw = rw + 1;
+    end;
+  end;  
+  if (RepSpec.flags[17]!=0) then begin
+    Header(rw,USetStr(2537),1);
+    rw = rw + 1;  
+  end;
+  if (RepSpec.flags[16]!=0) then begin
+    Header(rw,USetStr(2538),1);
+    rw = rw + 1;  
+  end;
+  RETURN;
+END;
+
+global
+procedure ARRnGetInvBalance(LongInt invnr,var Date baldatep,Integer invtype,var val rvalp,var val rvalb1,var LongInt latedays)
+BEGIN
+  record IVVc IVr;
+  record IPrsVc IPrsr;
+  record TRVc TRr;
+  record CLInVc CLInr;
+  record CLOutVc CLOutr;
+  record CredManVc CredManr;
+  row TRVc TRrw;
+  row CLInVc CLInrw;
+  row CLOutVc CLOutrw;
+  Boolean found;
+  val amnt,amntb1,t,t2;
+  Integer i,rwcnt,oldstyle;  
+  Date dt;
+  Boolean ivcredf;
+
+  IPrsr.IVNr = invnr;
+  found = true;
+  while (LoopKey("IVKey",IPrsr,1,found)) begin
+    if (IPrsr.IVNr<>invnr) then begin found = false; end;
+    if (found) then begin
+      if (IPrsr.TransDate<=baldatep) then begin
+        if (IPrsr.TransType==0) then begin
+          if (IPrsr.TransNr<>invnr) then begin
+            IVr.SerNr = IPrsr.TransNr;
+            if (ReadFirstMain(IVr,1,true)) then begin
+              if (IVr.Invalid==0) then begin
+                if (IVr.InvType==3) then begin
+                  if (invtype<>2) then begin
+                    t = -IVr.Sum4;
+                    rvalp = rvalp + t;
+                    rvalb1 = rvalb1 - IVr.BaseSum4;
+                    ivcredf = true;
+                    if (rvalp<0) then begin
+                      if (latedays>0) then begin latedays = 0; end;
+                    end;
+                  end;
+                end else begin
+                  rvalp = rvalp + IVr.Sum4;
+                  rvalb1 = rvalb1 + IVr.BaseSum4;
+                end;
+              end;  
+            end;
+          end;
+        end;
+        if (IPrsr.TransType==1) then begin            
+          PSFindPaydAmount2(IPrsr,true,amnt,amntb1,dt);
+          t = -amnt;
+          rvalp = rvalp + t;
+          rvalb1 = rvalb1 - amntb1;
+          if (ivcredf) then begin
+            if (rvalp<0) then begin
+              if (latedays>0) then begin latedays = 0; end;
+            end;
+          end;
+        end;
+        if (IPrsr.TransType==2) then begin            
+          TRr.Number = IPrsr.TransNr;
+          TRr.IntYc = GetIntYc(IPrsr.TransDate);
+          if (ReadFirstMain(TRr,2,true)) then begin
+            if ((TRr.TransDate==IPrsr.TransDate) and (TRr.TransDate<=baldatep)) then begin
+              rwcnt = MatRowCnt(TRr);
+              for (i=0;i<rwcnt;i=i+1) begin
+                MatRowGet(TRr,i,TRrw);
+                if (TRrw.ovst==0) then begin
+                  if (TRrw.stp==1) and (TRrw.Typ==1) then begin
+                    if (TRrw.SerNr==invnr) then begin
+                      t = TRrw.CurDebVal - TRrw.CurCredVal;
+                      t2 = TRrw.DebVal - TRrw.CredVal;
+                      if ((TRrw.CurDebVal==0) and (TRrw.CurCredVal==0)) then begin
+                        t = t2;
+                      end;                        
+                      if (TypeOfCurncy(TRrw.Curncy,oldstyle)==2) then begin
+                        t = TRrw.DebVal2 - TRrw.CredVal2;
+                      end;
+                      rvalp = rvalp  + t;
+                      rvalb1 = rvalb1  + (TRrw.DebVal - TRrw.CredVal);
+                      if (ivcredf) then begin
+                        if (rvalp<0) then begin
+                          if (latedays>0) then begin latedays = 0; end;
+                        end;
+                      end;
+                    end;
+                  end;
+                end;
+              end;
+            end;  
+          end;
+        end;
+        if (IPrsr.TransType==3) then begin            
+          CLInr.SerNr = IPrsr.TransNr;
+          if (ReadFirstMain(CLInr,1,true)) then begin
+            if ((CLInr.TransDate==IPrsr.TransDate) and (CLInr.TransDate<=baldatep) and (CLInr.Invalid==0)) then begin
+              rwcnt = MatRowCnt(CLInr);
+              for (i=0;i<rwcnt;i=i+1) begin
+                MatRowGet(CLInr,i,CLInrw);
+                if (CLInrw.TransNr==invnr) then begin
+                  t = -CLInrw.Sum;
+//                  t2 = MulRateToBase1(CLInr.CurncyCode,t,CLInr.FrRate,CLInr.ToRateB1,CLInr.ToRateB2,CLInr.BaseRate1,CLInr.BaseRate2,DefaultCurRoundOff);
+                  rvalp = t + rvalp;
+                  rvalb1 = rvalb1 + MulRateToBase1(CLInr.CurncyCode,t,CLInr.FrRate,CLInr.ToRateB1,CLInr.ToRateB2,CLInr.BaseRate1,CLInr.BaseRate2,DefaultCurRoundOff);
+                  if (ivcredf) then begin
+                    if (rvalp<0) then begin
+                      if (latedays>0) then begin latedays = 0; end;
+                    end;
+                  end;
+                end;
+              end;
+            end;  
+          end;
+        end;
+        if (IPrsr.TransType==4) then begin
+          CLOutr.SerNr = IPrsr.TransNr;
+          if (ReadFirstMain(CLOutr,1,true)) then begin
+            if ((CLOutr.TransDate==IPrsr.TransDate) and (CLOutr.TransDate<=baldatep) and (CLOutr.Invalid==0)) then begin
+              rwcnt = MatRowCnt(CLOutr);
+              for (i=0; i<rwcnt; i=i+1) begin
+                MatRowGet(CLOutr,i,CLOutrw);
+                if (CLOutrw.Type==1) then begin
+                  if (CLOutrw.TransNr==invnr) then begin
+                    rvalp = rvalp + CLOutrw.Sum;
+                    rvalb1 = rvalb1 + MulRateToBase1(CLOutr.CurncyCode,CLOutrw.Sum,CLOutr.FrRate,CLOutr.ToRateB1,CLOutr.ToRateB2,CLOutr.BaseRate1,CLOutr.BaseRate2,DefaultCurRoundOff);
+                    if (ivcredf) then begin
+                      if (rvalp<0) then begin
+                        if (latedays>0) then begin latedays = 0; end;
+                      end;
+                    end;
+                  end;  
+                end;    
+              end;
+            end;
+          end;
+        end;
+        if (IPrsr.TransType==6) then begin
+          CredManr.SerNr = IPrsr.TransNr;
+          if (ReadFirstMain(CredManr,1,true)) then begin
+            if ((CredManr.TransDate<=baldatep) and (CredManr.Invalid==0)) then begin
+              rvalp = rvalp - CredManr.InvSum4;
+              rvalb1 = rvalb1 - CredManr.BaseTotalSum;
+              if (ivcredf) then begin
+                if (rvalp<0) then begin
+                  if (latedays>0) then begin latedays = 0; end;
+                end;    
+              end;
+            end;
+          end;
+        end;
+      end;
+    end;
+  end;
+  RETURN; 
+END;
+
+global
+procedure ARRnPrintDebtorsAccounts(Array string debaccs,Array val debbal,var Integer debcnt)
+BEGIN
+  Integer i;
+  
+  Gray_Divider(290,1);
+  for (i=0;i<=debcnt;i=i+1) begin
+    StartFormat(15);
+    OutString(290,0,debaccs[i],false);
+    OutVal(480,0,debbal[i],M4Val,true);
+    EndFormat;
+  end;
+  RETURN;
+END;
+
+global
+procedure ARRnAddToDebtorsAccounts(string aracc,Integer invtype,val vp,Array string debaccs,Array val debbal,var Integer debcnt)
+BEGIN
+  Integer i;
+  
+  for (i=0;i<=debcnt;i=i+1) begin
+    if (aracc==debaccs[i]) then begin
+      switch (invtype) begin
+        case 3:
+          debbal[i] = debbal[i] + vp;
+        otherwise
+          debbal[i] = debbal[i] + vp;          
+      end;
+      goto LAddToDebtorsAccounts;
+    end;
+  end;
+  debcnt = debcnt + 1;
+  debaccs[debcnt] = aracc;
+  switch (invtype) begin
+    case 3:
+      debbal[debcnt] = vp;
+    otherwise
+      debbal[debcnt] = vp;
+  end;
+LAddToDebtorsAccounts:;  
+  RETURN
+END;
+
+global
+function Boolean TestObjType(string ObjType,string Objects)
+BEGIN
+  Boolean res;
+  record ObjVc OBr;
+  Boolean Accs;
+  
+  OBr.OTCode = ObjType;
+  OBr.Code = "";
+  Accs = true;
+  ResetLoop(OBr);
+  while (LoopKey("OTCode",OBr,1,Accs)) begin
+    if ((Accs==true) and (ObjType==OBr.OTCode)) then begin              
+      if (SetInSet(OBr.Code,Objects)==true) then begin
+        res = true;
+        Accs = false;
+      end;
+    end;
+  end; 
+  TestObjType = res;
+  RETURN
+END;
+
+global
+procedure PrintARReportTotals(record RcVc RepSpec,val tot1Sum,val Total1Due,val Total1NotDue,val TotOnAcc,
+           val tot2Sum,val Total2Due,val Total2NotDue,val totCurSum,val TotalCurDue,val TotalCurNotDue)
+begin
+  record BaseCurBlock BCb;  
+  BlockLoad(BCb);
+
+  if (RepSpec.ArtMode<>4) and (RepSpec.ArtMode<>6) then begin
+    if (nonblank(RepSpec.CurncyCode)) and (RepSpec.flags[2]==1) then begin
+      PrintARTotals(RepSpec,5,RepSpec.CurncyCode,totCurSum,TotalCurDue,TotalCurNotDue,TotOnAcc);
+    end else begin
+      PrintARTotals(RepSpec,5,BCb.BaseCur1,tot1Sum,Total1Due,Total1NotDue,TotOnAcc);
+    end;
+    if ((BCb.BaseCur1<>BCb.BaseCur2) and (RepSpec.flags[12]==1)) then begin
+      Gray_Divider(290,1);
+      PrintARTotals(RepSpec,5,BCb.BaseCur2,tot2Sum,Total2Due,Total2NotDue,blankval);
+    end;
+  end;
+
+  return;
+end;
+
+global
+procedure PrintARAged(record RcVc RepSpec,val ss0,val ss1,val ss2,val ss3,val ss4,val ss5,val ss6,val ss7,val tot,Integer nrofper,
+                      val ss0b2,val ss1b2,val ss2b2,val ss3b2,val ss4b2,val ss5b2,val ss6b2,val ss7b2,val totb2)
+begin
+  StartFormat(15);
+  if (RepSpec.Media==mtFile) then begin
+    OutString(0,0,"",false);
+    OutString(0,0,"",false);
+  end;
+  PrintAgedLine(ss0,ss1,ss2,ss3,ss4,ss5,ss6,ss7,tot,nrofper,480)
+  EndFormat;
+  if (RepSpec.flags[12]!=0) then begin
+    StartFormat(15);
+    PrintAgedLine(ss0b2,ss1b2,ss2b2,ss3b2,ss4b2,ss5b2,ss6b2,ss7b2,totb2,nrofper,480)
+    EndFormat;
+  end;
+  StartFormat(10);
+  EndFormat;
+  
+  StartFormat(15);
+  if (RepSpec.Media==mtFile) then begin
+    OutString(0,0,"",false);
+  end;
+  OutString(100,0,USetStr(2539),false);
+  OutVal(2,0,100*ss0/tot,M4UPrcnt,true);
+  OutVal(3,0,100*ss1/tot,M4UPrcnt,true);
+  OutVal(4,0,100*ss2/tot,M4UPrcnt,true);
+  OutVal(5,0,100*ss3/tot,M4UPrcnt,true);
+  if (nrofper>2) then begin
+  	OutVal(6,0,100*ss4/tot,M4UPrcnt,true);
+  end;
+  if (nrofper>3) then begin
+  	OutVal(7,0,100*ss5/tot,M4UPrcnt,true);
+  end;
+  if (nrofper>4) then begin
+  	OutVal(8,0,100*ss6/tot,M4UPrcnt,true);
+  end;
+  if (nrofper>5) then begin
+  	OutVal(9,0,100*ss7/tot,M4UPrcnt,true);
+  end;
+  OutVal(480,0,100,M4UPrcnt,true);          
+  EndFormat;
+  return;
+end;

@@ -1,0 +1,910 @@
+remote procedure WriteRepTofSrvFile(Area,string);
+remote procedure fil();
+remote procedure MyItemReport();
+remote procedure MyItemReportNoCost();
+external function val ItemInStock(var record INVc,string);
+external function LongInt NumberOfJunkLeadingCharactersInArea(Area);
+remote procedure LocStockToArrea(var string);
+remote procedure runscript(string,string);
+external remote procedure GetMyDebCred(Date,Date,string,var val,var val,Var Val);
+
+remote procedure LocManyStock(record RcVc);
+remote procedure RunTransReportRemote();
+
+remote procedure RunMainRn(var record RcVc,Date,var Boolean,var val,var val,record SMVc,Boolean,var val,var val);
+external procedure MainRClassReportDef(var record RcVc);
+
+external procedure GetAccDCStartBalance(string,string,Date,record ObjBalVc,Integer,Integer,string,Integer,var val,var val);
+external procedure GetAccDCBalance(string,string,Date,record ObjBalVc,Integer,Integer,Integer,string,var val,var val,Integer);
+external function val FindAccBalance(string,string,date,record ObjBalVc,Integer,Integer,Integer,string,Integer);
+remote function string 20 GetPostavschik(string,string);
+
+remote procedure GetItemName(string,var string,var string);
+remote function Boolean SerialNrAvail(string,string,string,val);
+
+external function val conv(date);
+external procedure GetFullCurncyRate(var string,Date,var val,var val,var val,var val,var val);
+external procedure GetAccBalance(string,string,Date,record ObjBalVc,Integer,Integer,Integer,string,Integer,var val);
+
+
+
+	SetLangMode(LangUkrainian,"UKR",0);
+
+global function val conv1(date curdate,string cur)
+begin
+val frrate,to1,to2,br1,br2;
+String 5 curcode;
+val conv;
+curcode=cur;
+GetFullCurncyRate(curcode,curdate,frrate,to1,to2,br1,br2);
+//////StopAlert(to1/frrate);
+conv=frrate/to1;
+If(conv==0) then begin
+	conv=1;
+	end;
+	
+	conv1 = conv;
+return;
+end;
+
+/*global
+procedure RunTransReport()
+begin
+ 
+ RunTransReportRemote;
+ runscript("Stock/CUA_TRWH.sh","");
+  return;
+end;*/
+
+function string 255 GetClassificationString1(string ArtCode)
+begin
+record INVc INr;
+string 255 res;
+integer lenth,i;
+string 10 char;
+
+  res = "";
+  INr.Code = ArtCode;
+  If(readfirstmain(INr,1,true)) begin
+    lenth = len(INr.DispGroups);
+      
+
+    for(i=0;i<lenth;i=i+1) begin
+     char = "";
+     char = MID(INr.DispGroups,i,1);
+     if(char==",") then begin char = chr(9); end;
+     res = res & char;
+    end;
+  end;
+  
+GetClassificationString1 = res;
+return;
+end;
+
+
+global
+procedure MyRepSenderManyStockTClassOnOpenWindow(Integer wn)
+begin
+  record RcVc RepSpec;
+
+  DeselectWindow(wn,false);
+  GetWindowRecord(wn,RepSpec);
+  RepSpec.Media = 0;
+  RepSpec.f1 = "INV#1,INV#1/ADJ,INV#1/E,INV#2,INV#2/E,INV_OUT,OFFICE,TRWH,TRANSIT#2"; 
+  PutWindowRecord(wn,RepSpec);
+  SelectWindow(wn);
+  return;
+end;
+
+
+global
+procedure MyRepSenderManyStockTClassMediaButtonAfter(Integer wn,Boolean changedf)
+begin
+  record RcVc RepSpec;
+  
+  DeselectWindow(wn,false);
+  GetWindowRecord(wn,RepSpec);
+  switch (RepSpec.Media) begin
+    case 0: RepSpec.f1 = "INV#1,INV#1/ADJ,INV#1/E,INV#2,INV#2/E,INV_OUT,OFFICE,TRWH,TRANSIT#2"; 
+    case 1: RepSpec.f1 = "SERVICE,PACK";
+  end;
+  PutWindowRecord(wn,RepSpec);
+  SelectWindow(wn);
+  return;
+end;
+
+global
+procedure MyRepSenderManyStockVClassMediaButtonAfter(Integer wn,Boolean changedf)
+begin
+  record RcVc RepSpec;
+  
+  DeselectWindow(wn,false);
+  GetWindowRecord(wn,RepSpec);
+  switch (RepSpec.Media) begin
+    case 0: RepSpec.f1 = "INV#1,INV#1/ADJ,INV#1/E,INV#2,INV#2/E,INV_OUT,OFFICE,TRWH,TRANSIT#2"; 
+    case 1: RepSpec.f1 = "SERVICE,PACK";
+    case 2: RepSpec.f1 = "DOA#1,DOA_INV,INV#1,INV#2,INV_OUT,K_TRANSIT,MARKETING,OFFICE,RSV_OKS,SERVICE,TRANSIT#2,TRWH,INV#1/E,INV#1_TXT,INV#2_TXT,TRWH_TXT,MARKET_TXT,TRNS#2_TXT";
+  end;
+  PutWindowRecord(wn,RepSpec);
+  SelectWindow(wn);
+  return;
+end;
+
+global function PintMyReport(date d11, date d22, date d1,date d2,string accnum,Var Val SumCredit, var val SumDebit, var val DifSum,Var Val SSumCredit, var val SSumDebit, var val SDifSum,integer k)
+begin
+val Debit,Credit,Dif;
+val SDebit,SCredit,SDif;
+record AccVc Accr;
+
+//accnum="111/1/2";
+Dif=0; Credit=0; Debit=0;
+//GetMyDebCred(d1,d2,accnum,Debit,Credit,Dif);
+
+//RunMainRn(RepSpec,AccumStartDate,resUseAccum,TotSumDebet,TotSumCredit,VATSumr,true,TotSumFwBal,TotSumBal);
+
+Dif=Dif*k;
+SumCredit = Sumcredit+Credit;
+SumDebit = SumDebit+Debit;
+DifSum=(DifSum+Dif);
+
+SDif=0; SCredit=0; SDebit=0;
+GetMyDebCred(d11,d22,accnum,SDebit,SCredit,SDif);
+SDif=SDif*k;
+SSumCredit = SSumcredit+SCredit;
+SSumDebit = SSumDebit+SDebit;
+SDifSum=(SDifSum+SDif);
+
+Accr.AccNumber=accnum;
+ReadFirstMain(Accr,1,true);
+ExportString(Accr.Comment);
+//ExportString(accnum);
+//ExportVal(Debit,M4Val);
+//ExportVal(Credit,M4Val);
+Exportval(Dif,M4Val);
+Exportval(SDif,M4Val);
+NewLine;
+
+return;
+end;
+
+global function PintMyReport1(date d11, date d22, date d1,date d2,string accnum,Var Val SumCredit, var val SumDebit, var val DifSum,Var Val SSumCredit, var val SSumDebit, var val SDifSum, var val MonthBalDebit, var val MonthBalCredit,var val MonthBalSum, var val YearBalDebit, var val YearBalCredit,var val YearBalSum,integer k,integer flag)
+begin
+record RcVc RepSpec;
+val Debit,Credit,Dif;
+val Debit1,Credit1,Dif1;
+val SDebit,SCredit,SDif;
+val MDebit,MCredit,MDif;
+val YDebit,YCredit,YDif;
+string 10 dateyear,datemonth;
+integer dday,mmonth,yyear;
+record AccVc Accr;
+Record SMVc VATSumr;
+val rean;
+boolean testf;
+record ObjBalVc ObjBalr;
+
+//accnum="111/1/2";
+Dif=0; Credit=0; Debit=0;
+GetMyDebCred(d1,d2,accnum,Debit,Credit,Dif);
+/*ObjBalr.AccNumber = accnum;
+ReadFirstmain(ObjBalr,1,true);
+  
+GetAccDCBalance(accnum,"",d2,ObjBalr,0,0,0,"",Debit,Credit,0);
+GetAccDCBalance(accnum,"",d1,ObjBalr,0,0,0,"",Debit1,Credit1,0);
+Credit = Credit-Credit1;
+Debit = Debit-Debit1;
+Dif = Debit-Credit;*/
+
+Dif=Dif*k;
+SumCredit = Sumcredit+Credit;
+SumDebit = SumDebit+Debit;
+DifSum=(DifSum+Dif);
+
+SDif=0; SCredit=0; SDebit=0;
+GetMyDebCred(d11,d22,accnum,SDebit,SCredit,SDif);
+SDif=SDif*k;
+SSumCredit = SSumcredit+SCredit;
+SSumDebit = SSumDebit+SDebit;
+SDifSum=(SDifSum+SDif);
+
+if (flag == 1) then begin 
+  mmonth = getmonth(d2);
+  yyear = getyear(d2);
+  if (mmonth==1) then begin mmonth = 12; yyear = yyear-1; end
+  else
+  begin
+    mmonth = mmonth-1;
+  end;
+  datemonth = stringtodate("31/" & mmonth & "/" & yyear);
+  MDif=0; MCredit=0; MDebit=0;
+  GetMyDebCred("1/1/2008",datemonth,accnum,MDebit,MCredit,MDif);
+  //GetMyDebCred(d1,d2,accnum,MDebit,MCredit,MDif);
+  MDif=MDif*k;
+  
+//  MonthBalCredit = MonthBalCredit+MCredit;
+//  MonthBalDebit = MonthBalDebit+MDebit;
+//  MonthBalSum=(MonthBalSum+MDif);
+  
+  yyear = getyear(d22);
+  dateyear = "31/12/" & yyear-1;
+  YDif=0; YCredit=0; YDebit=0;
+  GetMyDebCred("1/1/2008",dateyear,accnum,YDebit,YCredit,YDif);
+  //GetMyDebCred(d11,d22,accnum,YDebit,YCredit,YDif);
+  YDif=YDif*k;
+
+  MonthBalSum=(MonthBalSum+MDif);
+  YearBalSum=(YearBalSum+YDif);
+end;
+Accr.AccNumber=accnum;
+ReadFirstMain(Accr,1,true);
+ExportString(accnum);
+ExportString(Accr.Comment);
+//
+//ExportVal(Debit,M4Val);
+//ExportVal(Credit,M4Val);
+if (flag == 1) then begin Exportval(MDif,M4Val); end;
+if (flag == 0) then begin Exportval(Dif,M4Val); end;
+if (flag == 1) then begin Exportval(YDif,M4Val); end;
+if (flag == 0) then begin Exportval(SDif,M4Val); end;
+NewLine;
+
+return;
+end;
+
+
+global procedure MyCashFlowEClassReportDefaults (integer wn)
+begin
+record RcVc RepSpec;
+String 15 datee;
+//StopAlert("dsfsd");
+DeselectWindow(wn,false);
+GetWindowRecord(wn,RepSpec);
+datee = "1/" & getmonth(Currentdate) & "/" & Getyear(currentDate);
+RepSpec.d1 = Stringtodate(datee);
+RepSpec.d2 = CurrentDate;//Stringtodate("31/5/2009");
+
+datee = "1/" &  "1/" & Getyear(currentDate);
+RepSpec.sStartDate = Stringtodate(datee);
+RepSpec.sEndDate = CurrentDate;//Stringtodate("31/5/2009");
+PutWindowRecord(wn,RepSpec);
+SelectWindow(wn);
+
+return;
+end;
+
+
+global procedure MyItemReportForEachStock()
+begin
+Boolean Mool;
+Record LocationVc Locr;
+INTEGER wn;
+integer compno;
+
+compno = currentCompany;
+
+//wn = CurWindow;
+//CloseWindow(wn);
+LogText(0,"Ot4et po skladam odelno BEGIN");
+
+	Mool=True;
+	Locr.Code="";
+	
+	/*EQUI_DREAM
+	EQUI_D_DEK
+	EQUI_KARAV
+	EQUI_KH_KR
+	EQUI_OFFIC
+	EQUI_OLIMP
+	EQUI_O_SAD*/
+
+While(loopmain(Locr,1,Mool)) begin
+  if (nonblank(Locr.Code)) then begin
+    If((Locr.Code != "EQUI_DREAM") and (Locr.Code != "EQUI_D_DEK") and (Locr.Code != "EQUI_KARAV") and (Locr.Code != "EQUI_KH_KR") and (Locr.Code != "EQUI_OFFIC") and (Locr.Code != "EQUI_OLIMP") and (Locr.Code != "EQUI_O_SAD") and (Locr.Code != "OFFI_EQUIP")) then begin
+      LocStockToArrea(Locr.Code);
+    end;   
+  end;
+end;
+
+switch compno begin
+	case 1:	runscript("Stock/Stocks.sh","");
+	case 2: runscript("Stock/CUAStocks.sh","");
+end;
+LogText(0,"Ot4et po skladam odelno End");
+//runscript("Stock/Stocks.sh","");
+return;
+end;
+	
+	//--------------------------------------------------------------------------
+	
+
+global procedure MyCustReservRn(record RCVc RepSpec)
+begin
+  record INVc INr;
+  record ORVc ORr;
+  row ORVc ORrw;
+  boolean TrHs,TrHs1,testf,foundf,testf1,testf2;
+  integer i,instock,inreserv,cnt;
+  record ItemStatusVc ISr;
+  record LocationVc Locationr;
+  record StockReservVc StockReservr;
+  string 20 frloc,toloc;
+  date dat1,dat2;
+  string 20 art,client;
+  
+  frloc = FirstInRange(RepSpec.f2,10);
+  toloc = LastInRange(RepSpec.f2,10);
+  art = RepSpec.f3;
+  client = RepSpec.f1;
+  dat1 = RepSpec.sStartDate;
+  dat2 = RepSpec.sEndDate;
+  if (blank(dat1)) then begin dat1 = "01/01/1990"; dat2 = CurrentDate; end;
+  if (blank(dat2)) then begin dat2 = dat1; end;
+  StartReportJob("Отчет резервов по клиентам");
+  EndHeader;
+  
+  SetRepCol(2,40);
+  SetRepCol(3,120);
+  SetRepCol(4,260);
+  SetRepCol(5,300);
+  SetRepCol(6,340);
+  SetRepCol(7,400);
+  SetRepCol(8,440);
+  SetRepCol(9,460);
+ // SetRepCol(9,400);
+  StartFormat(15);
+    OutString(0,0,"Клиент",false);
+    OutString(2,0,"Номер рахунка",false);
+    OutString(3,0,"Партномер",false);
+    OutString(4,0,"Наименование",true);
+    OutString(5,0,"Кол-во",true);
+    OutString(6,0,"Цена",true);
+    OutString(7,0,"Сумма",true);
+    OutString(8,0,"Склад",true);
+    OutString(9,0,"Дата",true);
+    OutString(1,0,"Продавец",true);
+  EndFormat;
+  Gray_Divider(0,1);
+
+  ISr.Code = "";
+  if(nonblank(art)) then begin
+    ISr.Code = art;
+  end;
+  
+  TrHs = true;
+  testf1=true;
+  while (LoopMain(ISr,1,TrHs)) begin
+    if (nonblank(art) and (ISr.Code!=art)) then begin testf1 = false; end;
+    if (testf1) then begin
+      if(ISr.StockRsrvQty!=0) then begin
+        StockReservr.Donef = 0;
+        StockReservr.ArtCode = ISr.Code;
+        foundf = true;
+        frloc = "";
+        toloc = "";
+        while (LoopKey("ArtCode",StockReservr,2,foundf)) begin
+         
+          if (StockReservr.Donef!=0) then begin foundf = false; end;
+          if (StockReservr.ArtCode!=ISr.Code) then begin foundf = false; end;
+           
+          testf = foundf;
+          if ((blank(frloc)) and (blank(toloc))) then begin frloc = ISr.Location; toloc = ISr.Location; end;
+          if (nonblank(ISr.Location)) then begin
+            if (StockReservr.FromLocation<frloc) then begin testf = false; end;
+          end;
+          if (nonblank(ISr.Location)) then begin
+            if (StockReservr.FromLocation>toloc) then begin testf = false; end;
+          end;
+          
+          If((ISr.Location== "EQUI_DREAM") or (ISr.Location== "EQUI_D_DEK") or (ISr.Location== "EQUI_KARAV") or (ISr.Location== "EQUI_KH_KR") or (ISr.Location== "EQUI_OFFIC") or (ISr.Location== "EQUI_OLIMP") or (ISr.Location== "EQUI_O_SAD") or (ISr.Location== "OFFI_EQUIP")) then begin
+            testf = false;
+          end; 
+          
+          if(testf) then begin
+            ORr.SerNr = StockReservr.FromSerNr;
+            if(ReadFirstMain(ORr,1,True)) begin
+            testf2 = true;
+              if (blank(dat2)) then begin dat2 = dat1; end;
+              if ((ORr.OrdDate < dat1) or (ORr.OrdDate > dat2)) then begin testf2 = false; end;
+              if ((ORr.CustCode!=client) and (nonblank(client))) then begin testf2 = false; end;
+              if (testf2) then begin
+                cnt=matRowCnt(ORr);
+                for(i=0;i<cnt;i=i+1) begin
+                  MatRowGet(ORr,i,ORrw);
+                  If(ORrw.ArtCode == ISr.Code) then begin
+                    StartFormat(15);
+                      OutString(0,0,ORr.CustCode,false);
+                      OutString(2,0,StockReservr.FromSerNr,false);
+                      OutString(3,0,ORrw.ArtCode,false);
+                      OutString(4,0,ORrw.Spec,true);
+                      //OutString(5,0,ORrw.Quant,true);//--------------------------Из StockReservr!!!
+                      OutString(5,0,StockReservr.Quant-StockReservr.QuantDone,true);
+                      OutString(6,0,ORrw.Price,true);
+                      //OutString(7,0,ORrw.Sum,true);
+                      OutString(7,0,ORrw.Price*(StockReservr.Quant-StockReservr.QuantDone),true);
+                      OutString(8,0,ISr.Location,true);
+                      OutDate(9,0,ORr.OrdDate,true);
+                      OutString(1,0,ORr.SalesMan,true);
+                    EndFormat;
+                  end;
+                end;
+              end;
+            end;
+          end;
+        end;
+        resetloop(StockReservr);
+      end;
+    end;
+  end;
+EndJob;
+return;
+end;
+
+global procedure MyStockCustRn(record RCVc RepSpec)
+begin
+  record INVc INr;
+  record ORVc ORr;
+  row ORVc ORrw;
+  boolean TrHs,TrHs1,testf,foundf,testf1,testf2;
+  integer i,instock,inreserv,cnt;
+  record ItemStatusVc ISr;
+  record PLVc PLr;
+  record PLDefVc PLDr;
+  record LocationVc Locationr;
+  record StockReservVc StockReservr;
+  record SerBalVc SBr;
+  record ItemHistVc IHr;
+  string 20 frloc,toloc;
+  date dat1,dat2;
+  string 20 art,client,serno,name,postavchik,location,group,Groupe,pricecode;
+  val cost,myprice;
+  longint puno;
+  date datepu;
+  
+  frloc = RepSpec.f2;
+  art = RepSpec.f3;
+  client = RepSpec.f1;
+  dat1 = RepSpec.sStartDate;
+  dat2 = RepSpec.sEndDate;
+  Groupe = RepSpec.f4;
+  pricecode = RepSpec.f5;
+  if (blank(dat1)) then begin dat1 = "01/01/1990"; dat2 = CurrentDate; end;
+  if (blank(dat2)) then begin dat2 = dat1; end;
+  StartReportJob("Отчет остатков по клиентах");
+  EndHeader;
+  //messagebox(0,frloc & "  " & toloc);
+  SetRepCol(2,40);
+  SetRepCol(3,280);
+  SetRepCol(4,340);
+  SetRepCol(5,380);
+  SetRepCol(6,440);
+  SetRepCol(7,440);
+  SetRepCol(8,440);
+  SetRepCol(9,450);
+ // SetRepCol(9,400);
+  StartFormat(15);
+    OutString(0,0,"PartNo",false);
+    OutString(2,0,"Наименование",false);
+    OutString(3,0,"Склад",false);
+    OutString(4,0,"Кол-во",false);
+    OutString(5,0,"Серийник",false);
+    OutString(6,0,"Поставщик",true);
+    OutString(7,0,"Цена",true);
+    OutString(8,0,"Счет",true);
+    OutString(9,0,"Група",true);
+    OutString(1,0,"Дата",true);
+    OutString(1,0,"Прайс",true);
+  EndFormat;
+  Gray_Divider(0,1);
+
+
+  
+   SBr.Item = art;
+    TrHs = true;
+    while(loopmain(SBr,1,TrHs)) begin
+      testf = true;
+      testf1 = true;
+      if(SBr.Item!=art and nonblank(art)) then begin testf = false; TrHs = false; end;
+      if(SBr.Quant<=0) then begin testf = false; end;
+      if (nonblank(frloc) and (frloc!=SBr.Location)) then begin testf = false; end;
+      
+      If((SBr.Location== "EQUI_DREAM") or (SBr.Location== "EQUI_D_DEK") or (SBr.Location== "EQUI_KARAV") or (SBr.Location== "EQUI_KH_KR") or (SBr.Location== "EQUI_OFFIC") or (SBr.Location== "EQUI_OLIMP") or (SBr.Location== "EQUI_O_SAD") or (SBr.Location== "OFFI_EQUIP")) then begin
+        testf = false;
+      end;
+      
+      if (testf) then begin
+        IHr.FileName = "PUVc";
+        IHr.ArtCode = SBr.Item;
+        IHr.SerialNr = SBr.Serial;
+        ReadFirstKey("ArtCodeSerialNr",IHr,3,true);
+              
+        if ((IHr.TransDate<dat1) or (IHr.TransDate>dat2)) then begin testf1=false; end;
+        postavchik = "";
+        postavchik = GetPostavschik(SBr.Item,SBr.Serial);
+        
+        if (nonblank(client) and (client!=postavchik)) then begin testf1=false; end;
+        GetItemName(SBr.Item,name,group);
+        
+        if (nonblank(Groupe) and (Groupe!=group)) then begin testf1 = false; end;
+        
+        if (testf1) then begin
+          
+          
+            StartFormat(15);
+              OutString(0,"DblINVc",SBr.Item,false);
+              OutString(2,0,name,false);
+              OutString(3,0,SBr.Location,false);
+              OutString(4,0,SBr.Quant,false);
+              OutString(5,0,SBr.Serial,false);
+              OutString(6,0,postavchik,true);
+              
+              OutVal(7,0,IHr.TotCostPrice,M4Val,true);
+              OutString(8,"Dbl" & IHr.FileName,IHr.TransNr,true);
+              OutString(9,0,group,true);
+              OutString(1,0,IHr.TransDate,true);
+              
+              PLr.ArtCode = SBr.Item;
+          	  PLr.PLCode = pricecode;
+          	  
+          		if(readfirstmain(PLr,2,true))then begin
+                       OutString(200,0,PLr.ExVatPrice,false);
+                end;
+
+            endformat;
+          
+          
+        end;
+      end;
+    end;
+  
+ 
+EndJob;
+return;
+end;
+
+
+global updating procedure MyStockCustEn()
+begin
+integer compno;
+record RcVc RepSpec;
+string 50 filename;
+      compno = CurrentCompany;
+      switch (compno) begin
+      case 1: filename = "Stock/OstatkiPoVend_iStore.xls";
+              CreateFile(filename);
+              closefile;
+              millisleep(100);
+              openexportfile(filename,true);
+              MyStockCustRn(RepSpec);
+              closefile;
+              RunProgram("Stock/OstatkiPoVend_iStore.sh", "");
+      end;
+return;
+end;
+
+
+global
+procedure MySaleRepRn(record RcVc RepSpec)
+begin
+record IVVc IVr,newIVr,credIVr;
+row IVVc IVrw,newIVrw,new2IVrw;
+record ORVc ORr;
+row ORVc ORrw;
+record SHVc SHr;
+row SHVc SHrw;
+record ItemHistVc IHr;
+record SerBalVc SBr;
+string 100 client,vender,code,group,invnoms,name;
+date d1,d2;
+boolean TrHs,testf,newtestf;
+record RLinkVc RLr;
+integer i,rl,mtrw,rl1,j;
+integer ormtrw,shmtrw,k,o,y,newmtrw;
+val priceval,costval;
+val pricevaluah,costvaluah;
+Record CUVc CUr;// Edit ************************** вторник, 20 июля 2010 г. 11:04:39
+integer credinv;
+
+  client = RepSpec.f1;
+  vender = RepSpec.f2;
+  code = RepSpec.f3;
+  group = RepSpec.f4;
+  
+  d1 = RepSpec.sStartDate;
+  d2 = RepSpec.sEndDate;
+  
+  StartReportJob("ItemStatistic");
+
+  EndHeader;
+  
+  StartFormat(15);
+    //OutString(10,0,"Invoice Type",false);
+    OutString(0,0,"Inv_No",false);
+    OutString(20,0,"Cust.",false);
+    OutString(50,0,"Sup.",false);
+    OutString(70,0,"Date",false);
+    OutString(90,0,"Part_No.",false);
+    OutString(120,0,"Description",false);
+    OutString(160,0,"Serial",false);
+    OutString(200,0,"Price",false);
+    OutString(220,0,"Price(UAH)",false);
+    OutString(240,0,"Rebate",false);
+    OutString(260,0,"Cost",false);
+    OutString(280,0,"Cost(UAH)",false);
+    OutString(300,0,"Profit",false);
+    OutString(320,0,"Profit(UAH)",false);
+    OutString(340,0,"Curncy",false);
+    OutString(350,0,"Region",false);
+    OutString(355,0,"SalesMan",false);
+    OutString(360,0,"Group",false);
+    //OutString(380,0,"Classification",false);
+  EndFormat;
+  
+  IVr.CustCode = client;
+  TrHs = true;
+  
+  while(loopkey("CustCode",IVr,1,TrHs)) begin
+    testf = true;
+    
+    if(nonblank(client)) then begin
+    if(IVr.CustCode!=client) then begin TrHs = false; testf = false; end;
+    end;
+    if(IVr.OKFlag==0) then begin testf = false; end;
+    if(IVr.Invalid==1) then begin testf = false; end;
+    if(IVr.InvType==3) then begin credinv = -1; end else begin credinv = 1; end;// Edit ************************** Thursday, 30 September 2010 09:54:09
+    
+    matrowget(IVr,0,IVRw);
+    if(IVrw.stp==3) then begin testf = false; end;
+    
+    if(testf) then begin
+    
+      RecordNew(newIVr);
+      newIVr.SerNr = IVr.SerNr;
+      //newIVr.InvDate = IVr.InvDate;
+      newIVr.CustCode = IVr.CustCode;
+      newIVr.CurncyCode = IVr.CurncyCode;
+      newIVr.FrRate = IVr.FrRate;
+      newIVr.ToRateB1 = IVr.ToRateB1;
+      mtrw = matrowcnt(IVr);
+      
+      If(credinv==-1) then begin
+	      MatRowGet(IVr,0,IVrw);
+	      credIVr.SerNr=IVrw.OrdRow;
+	      ReadFirstMain(credIVr,1,true);
+	      ReadRecordLink(credIVr,1,ORr,RLr);
+      end else begin
+        ReadRecordLink(IVr,1,ORr,RLr);
+      end;
+      j=0;
+      k=0;
+      for(i=0;i<mtrw;i=i+1) begin
+        matrowget(IVr,i,IVrw);
+        for(j=0;j<IVrw.Quant;j=j+1) begin
+          
+        
+          if((IVrw.stp==1) or (IVrw.stp==4)) then begin
+            newIVrw.ArtCode = IVrw.ArtCode;
+            newIVrw.Spec = IVrw.Spec;
+            newIVrw.Price = IVrw.Price*credinv;
+            newIVrw.vRebate = IVrw.vRebate;
+            newIVrw.Sum = newIVrw.Price-(newIVrw.Price/100*newIVrw.vRebate)*credinv;
+            rl=1;
+            newIVrw.SerialNr = "";
+            newIVrw.FIFO = 0;
+            while(ReadRecordLink(ORr,rl,SHr,RLr)) begin
+              if(SHr.OKFlag==1) then begin
+                shmtrw = matrowcnt(SHr);
+                for(o=0;o<shmtrw;o=o+1) begin
+                  matrowget(SHr,o,SHrw);
+                  newIVrw.CUServiceUntilDate = "";// Edit ************************** Wednesday, 29 September 2010 13:59:46
+                  if(SHrw.ArtCode == newIVrw.ArtCode)then begin
+                    newtestf = true;
+                    for(y=0;y<k;y=y+1) begin
+                      matrowget(newIVr,y,new2IVrw);
+                      if(SHrw.SerialNr==new2IVrw.SerialNr) then begin newtestf = false; end;
+                    end;
+                    if (SHrw.Ordered!=SHrw.Ship) then begin newtestf = false; end;
+                    if(newtestf)then begin
+                      newIVrw.SerialNr = SHrw.SerialNr;
+                      newIVrw.FIFO = SHrw.FIFO*credinv;
+                      newIVrw.CUServiceUntilDate = SHr.ShipDate;
+                      newtestf = false;
+                      GoTo L1;
+                    end;
+                  end;
+                end;
+              end;
+              rl = rl+1;
+            end;
+            L1:;
+            matrowput(newIVr,k,newIVrw);
+            k=k+1;
+          end;
+        end;
+        //stopalert(k);
+
+      end;
+      
+      newmtrw = matrowcnt(newIVr);
+      for(i=0;i<newmtrw;i=i+1) begin
+        matrowget(newIVr,i,newIVrw);
+        if(newIVrw.CUServiceUntilDate<=d2 and newIVrw.CUServiceUntilDate>=d1) then begin
+          StartFormat(15);
+          OutString(0,0,newIVr.SerNr,false);
+          OutString(20,0,newIVr.CustCode,false);
+          OutString(50,0,GetPostavschik(newIVrw.ArtCode,newIVrw.SerialNr),false);
+          //OutString(70,0,newIVr.InvDate,false);
+          OutString(70,0,newIVrw.CUServiceUntilDate,false);
+          OutString(90,0,newIVrw.ArtCode,false);
+          OutString(110,0,newIVrw.Spec,false);
+          OutString(130,0,newIVrw.SerialNr,false);
+          priceval = 0;
+          if(newIVr.CurncyCode=="USD") then begin
+            OutString(150,0,newIVrw.Price,false);
+            priceval = newIVrw.Price;
+          end else begin
+            priceval = newIVrw.Price/newIVr.FrRate*newIVr.ToRateB1;
+            OutString(150,0,priceval,false);
+          end;
+          
+          if(newIVr.CurncyCode=="UAH") then begin
+          OutString(170,0,newIVrw.Price,false);
+          pricevaluah = newIVrw.Price;
+          end else begin
+          OutString(170,0,priceval*conv1(newIVr.InvDate,"UAH"),false);
+          pricevaluah = priceval*conv1(newIVr.InvDate,"UAH");
+          end;
+          
+          OutString(190,0,newIVrw.vRebate,false);
+          costval = newIVrw.FIFO;
+          OutString(210,0,costval,false);
+          costvaluah = round(newIVrw.FIFO*conv1(newIVr.InvDate,"UAH"),defaultcurroundoff);
+          OutString(230,0,costvaluah,false);
+          
+          OutString(250,0,priceval-costval,false);
+          OutString(270,0,pricevaluah-costvaluah,false);
+          
+          OutString(290,0,newIVr.CurncyCode,false);
+          name = "";
+          group = "";
+          CUr.Code = newIVr.CustCode;
+          ReadFirstMain(CUr,1,true);
+          OutString(290,0,CUr.Region,false);// Edited вторник, 20 июля 2010 г. 11:03:22
+          OutString(300,0,CUr.SalesMan,false);
+          GetItemName(newIVrw.ArtCode,name,group);
+          OutString(310,0,group,false);
+          
+          //
+          //
+          endformat;
+        end;
+      end;
+      
+    end;
+  end;
+  endJob;
+
+return;
+end;
+
+
+
+
+
+global
+procedure MyStockCashRClassReportDefaults(Integer wn)
+BEGIN
+  record RcVc RepSpec;
+   
+  DeselectWindow(wn,false);
+  GetWindowRecord(wn,RepSpec);
+  ReportDefaults(RepSpec,"MyStockCashRClass");  
+  
+  RepSpec.d2 = CurrentDate;
+  
+  PutWindowRecord(wn,RepSpec);
+  SelectWindow(wn);
+  RETURN;
+END;
+
+
+global procedure MyStockCashRn(record RcVc RepSpec)
+begin
+  record ObjBalVc ObjBalr;
+  date dat1,dat2,datbef;
+  val bal,sumstock,sumcash,scd1,ssd1;
+  boolean TrHs;
+  integer i;
+  string 255 data;
+  record AccVc Accr;
+  
+  StartReportJob("Stock/Cash");
+  EndHeader;
+  dat2 = RepSpec.d2;
+  data = "1/" & getmonth(dat2) & "/" & getyear(dat2);
+  dat1 = addday(dat2,-(getday(dat2)));
+
+  
+  While(dat1<=dat2) begin
+    bal=0;
+    Accr.AccNumber = "150/0/2";
+    TrHs = true;
+    sumstock = 0;
+    While(loopmain(Accr,1,TrHs)) begin
+      ObjBalr.AccNumber = Accr.AccNumber; 
+      if(Accr.AccNumber>"159/0/2") then begin TrHs = false; end;
+      If(TrHs) then begin
+      GetAccBalance(Accr.AccNumber,RepSpec.ObjStr,dat1,ObjBalr,RepSpec.SimVerf,RepSpec.basecurncy,0,RepSpec.CurncyCode,RepSpec.IncDaughter,bal);
+      sumstock = sumstock+bal;
+      end; 
+    end;
+    resetloop(Accr);
+    bal = 0;
+    Accr.AccNumber = "100/0/1";
+    TrHs = true;
+    sumcash = 0;
+    While(loopmain(Accr,1,TrHs)) begin
+      ObjBalr.AccNumber = Accr.AccNumber; 
+      if(Accr.AccNumber>"129/0/2") then begin TrHs = false; end;
+      If(TrHs) then begin
+      GetAccBalance(Accr.AccNumber,RepSpec.ObjStr,dat1,ObjBalr,RepSpec.SimVerf,RepSpec.basecurncy,0,RepSpec.CurncyCode,RepSpec.IncDaughter,bal);
+      sumcash = sumcash+bal;
+      end; 
+    end;
+    resetloop(Accr);
+    
+    if(nonblank(datbef)) then begin
+      StartFormat(15);
+        OutString(0,0,"",false);
+        OutString(100,0,datbef,false);
+        OutString(200,0,dat1,false);
+        OutString(300,0,"Dynamic",false);
+      endformat;
+    
+      StartFormat(15);
+        OutString(0,0,"Stock",false);
+        OutString(100,0,ssd1,false);
+        OutString(200,0,sumstock,false);
+        OutString(300,0,sumstock-ssd1,false);
+      endformat;
+    
+      StartFormat(15);
+        OutString(0,0,"Cash",false);
+        OutString(100,0,scd1,false);
+        OutString(200,0,sumcash,false);
+        OutString(300,0,sumcash-scd1,false);
+      endformat;
+      
+      StartFormat(15);
+        OutString(0,0,"",false);
+      endformat;
+    Gray_Divider(0,1);
+    end;
+    
+    
+    datbef = dat1;
+    scd1 = sumcash;
+    ssd1 = sumstock;
+    dat1 = addday(dat1,1);
+  end;
+  
+  endJob;
+return;
+end;
+
+global 
+procedure DblWebSyncReg(string dblstr,string l,Integer currepwn)
+begin
+   Integer wn;
+   record WebSyncRegVc WSr;
+   
+   WSr.ArtCode = dblstr;
+   if (ReadFirstMain(WSr,1,true)) then begin 
+     wn = OpenWindow("WebSyncRegDClass",1,0,"","",WSr);
+   end;
+   
+   return;
+end;
+
+
+
+

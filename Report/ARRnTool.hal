@@ -1,0 +1,1546 @@
+external procedure GetARAcc(string,var string);
+external function Integer GetIntYc(Date);
+external function string 255 CreateInvoiceNumber(LongInt);
+external function val MulRateToBase1(var string,val,val,val,val,val,val,Integer);
+external function val MulWithRateToBase2(var string,Date,val,Integer);
+external function val MulWithRateToBase1(var string,Date,val,Integer);
+external procedure AddCurncyTotals(var array string,var array val,var Integer,string,val);
+external procedure Base1ToBase2(var val,Date,var val);
+external procedure CurValToOtherCur(Date,string,val,string,var val,Integer);
+external function Integer TypeOfCurncy(var string,var Integer);
+external function LongInt DateDiff(Date,Date);// Edit ************************** Tuesday, 31 August 2010 10:31:10
+external function val conv1(date,string);
+
+	SetLangMode(LangUkrainian,"UKR",0);
+	
+procedure ToStrTRCode(var string rstr,Integer ycp,LongInt nrp)
+begin
+  string 255 t2;
+  
+  t2 = nrp;
+  rstr = StrTRCode(ycp);
+  if (nonblank(rstr)) then begin
+    rstr = rstr & ".";
+  end;  
+  rstr = rstr & t2;
+  return;
+end;
+
+procedure PrintInstallments(record RcVc RepSpec,record IVVc IVr)
+BEGIN
+  record ARInstallVc ARIr;
+  Boolean TrHs;
+  string 255 tstr;
+  Integer ProgramType;  
+  Integer h1,h2,h3;
+
+  h1 = 55;
+  h2 = 100;
+  h3 = 170;
+  ARIr.InvoiceNr = IVr.SerNr;
+  TrHs = true;
+  while (LoopMain(ARIr,1,TrHs)) begin
+    if (ARIr.InvoiceNr!=IVr.SerNr) then begin TrHs = false; end;
+    if (TrHs) then begin
+      StartFormat(15);
+      OutString(h1,0,USetStr(2431),false);
+      tstr = CreateInvoiceNumber(ARIr.InvoiceNr);
+      OutString(h2,"DblAR",tstr,false);
+      OutDate(h3,0,IVr.InvDate,false);
+      OutDate(240,0,ARIr.DueDate,false);
+      if (RepSpec.flags[2]==1) then begin
+        OutVal(380,0,IVr.Sum4,M4Val,true);
+        OutVal(450,0,ARIr.RVal,M4Val,true);
+        OutString(480,0,IVr.CurncyCode,true);
+      end else begin
+        OutVal(380,0,ARIr.RVal,M4Val,true);
+        OutVal(450,0,ARIr.BookRVal,M4Val,true);
+      end;  
+      EndFormat;  
+    end;
+  end;
+  RETURN;
+END;
+
+global
+procedure ARWithLogg(var array string acur,var array val av1,var Integer curcnt,record RcVc RepSpec,record IVVc IVp,var val rvalp,Integer hrwcnt,Boolean backdatf)
+BEGIN
+  record IVVc IVr;
+  record IPVc IPr;
+  record TRVc TRr;
+  record CLInVc CLInr;
+  record CLInVc CLOutr;
+  record IPrsVc IPrsr;
+  record CredManVc CredManr;
+  row IPVc IPrw;
+  row TRVc TRrw;
+  row CLInVc CLInrw;
+  row CLInVc CLOutrw;
+  Boolean found;
+  val invsal,t,InvVal;
+  Integer h1,h2,h3;
+  Integer i,rwcnt;
+  LongInt invnr;
+  val rs,t2,t3;
+  Boolean testf;
+  string 255 tstr;
+  Integer typeofcur,oldstyle;
+  record CUVc CUr;// Edit ************************** Tuesday, 31 August 2010 10:23:56
+
+  
+  h1 = 55;
+  h2 = 100;
+  h3 = 170;
+  invnr = IVp.SerNr;
+  InvVal = 0;
+  InvVal = MulRateToBase1(IVp.CurncyCode,IVp.Sum4,IVp.FrRate,IVp.ToRateB1,IVp.ToRateB2,IVp.BaseRate1,IVp.BaseRate2,3/*DefaultCurRoundOff*/);
+  if (hrwcnt>1) then begin
+    Gray_Divider(300,380);
+  end;  
+  rs = MulWithRateToBase1(IVp.CurncyCode,CurrentDate,rvalp,3/*DefaultCurRoundOff*/);   
+/*   
+  if (RepSpec.flags[2]==1) then begin // it should be like in PL
+    MulBaseRate(IVp.CurncyCode,rvalp,&frrate,&torate1,&torate2,&baserate1,&baserate2,&rs,NIL,DefaultCurRoundOff);
+  end else begin
+    CopyM4Val(&rs,rvalp);
+  end;
+*/ 
+  if ((IVp.InstallmentInv==1) and (RepSpec.flags[19]!=0)) then begin
+    PrintInstallments(RepSpec,IVp);
+  end else begin
+    //StartFormat(15);
+    
+ // Edit Start ---------------------------------------------- Edit Start
+	//Tuesday, 31 August 2010 10:41:48
+	   If(RepSpec.ArtMode==0 and (RepSpec.Media==2 or RepSpec.Media==20)) then begin
+	    If(rvalp!=0) then begin
+        StartFormat(15);
+        OutString(1,0,IVp.CustCode,false);
+        OutString(2,0,IVp.Addr0,false);
+        CUr.Code = IVp.CustCode;
+        If(ReadFirstMain(CUr,1,true)) then begin
+          OutString(3,0,CUr.SalesMan,false);
+        end;
+        OutString(15,0,IVp.SalesMan,false);// Edit ************************** Tuesday, 19 October 2010 13:24:34
+        OutString(4,0,USetStr(2431),false);
+        tstr = CreateInvoiceNumber(IVp.SerNr);
+        OutString(5,0,tstr,false);
+        if(IVp.OrderNr>0)then begin
+          OutString(6,0,"OR-" & IVp.OrderNr,false);
+        end else begin
+          OutString(6,0,"SO-" & IVp.SVONr,false);
+        end;
+        OutString(7,0,IVp.InvDate,false);
+        OutString(8,0,DateDiff(IVp.PayDate,IVp.InvDate),false);
+        OutString(9,0,IVp.PayDate,false);
+        OutString(9,0,IVp.InvComment,false);
+        OutString(11,0,IVp.CurncyCode,false);
+        OutVal(12,0,IVp.BaseSum4,M4Val,false);
+        OutVal(13,0,IVp.Sum4,M4Val,false);
+       // OutString(14,0,rvalp/Conv1(IVp.InvDate,IVp.CurncyCode),false);
+        OutVal(14,0,round(rvalp/Conv1(IVp.InvDate,IVp.CurncyCode),defaultcurroundoff),M4Val,false);
+        OutVal(14,0,round(rvalp,defaultcurroundoff),M4Val,false);
+        
+        endformat;
+      end; 
+	    
+	    
+    end else begin
+	// Edit End ---------------------------------------------- Edit End
+	
+      StartFormat(15);
+      OutString(h1,0,USetStr(2431),false);
+      tstr = CreateInvoiceNumber(IVp.SerNr);
+      OutString(h2,"DblAR",tstr,false);
+      OutDate(h3,0,IVp.InvDate,false);
+      OutDate(240,0,IVp.PayDate,false);
+      if (RepSpec.flags[2]==1) then begin
+        OutVal(380,0,IVp.Sum4,M4Val,true);
+        OutVal(450,0,rvalp,M4Val,true);
+        OutString(480,0,IVp.CurncyCode,true);
+      end else begin
+        OutVal(380,0,InvVal,M4Val,true);
+        OutVal(450,0,rs,M4Val,true);
+      end;  
+      endformat;
+    end;
+    
+   // EndFormat;  
+  end;
+  if(RepSpec.ArtMode==0 and (RepSpec.Media==2 or RepSpec.Media==20)) then begin// Edit ************************** Wednesday, 1 September 2010 17:11:50
+  end else begin// Edit ************************** Wednesday, 1 September 2010 17:11:48
+    if (RepSpec.flags[23]!=0) then begin  
+      if (nonblank(IVp.InvComment)) or (nonblank(IVp.OfficialSerNr)) then begin
+        StartFormat(15);
+        OutString(11,0,IVp.OfficialSerNr,false);
+        if (nonblank(IVp.InvComment))then begin
+          OutString(h2,0,IVp.InvComment,false);
+        end;
+        EndFormat;
+      end;
+    end else begin
+      if (nonblank(IVp.InvComment))then begin
+        StartFormat(15);
+         OutString(h2,0,IVp.InvComment,false);
+        EndFormat;
+      end; 
+    end;
+  end;// Edit ************************** Wednesday, 1 September 2010 17:12:07
+  AddCurncyTotals(acur,av1,curcnt,IVp.CurncyCode,rvalp);
+  invsal = InvVal;
+  
+  IPrsr.IVNr = invnr;
+  found = true;
+  while (LoopKey("IVKey",IPrsr,1,found)) begin
+    testf = false;
+      if (IPrsr.IVNr<>invnr) then begin
+        found = false;
+      end;  
+    if (found) then begin
+      testf = true;
+      if (backdatf) then begin
+        if (IPrsr.TransDate>RepSpec.d1) then begin testf = false; end;
+      end;  
+    end;
+    if (testf) then begin
+      if (IPrsr.TransType==0) then begin
+        IVr.SerNr = IPrsr.TransNr;
+        if (IVr.SerNr<>invnr) then begin
+          if (ReadFirstMain(IVr,1,true)) then begin
+            if (IVr.Invalid==0) then begin
+            if (IVr.InvType==3) then begin
+              invsal = invsal - IVr.Sum4;
+              t = -IVr.Sum4;
+              t2 = -IVr.Sum4;
+              t = MulRateToBase1(IVr.CurncyCode,t,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,3/*DefaultCurRoundOff*/);
+              
+              
+              // Edit ************************** Wednesday, 1 September 2010 16:07:52
+             // StartFormat(15);
+                If(RepSpec.ArtMode==0 and (RepSpec.Media==2 or RepSpec.Media==20)) then begin
+                /*StartFormat(15);
+                OutString(1,0,IVr.CustCode,false);
+                OutString(2,0,IVr.Addr0,false);
+                
+                CUr.Code = IVr.CustCode;
+                If(ReadFirstMain(CUr,1,true)) then begin
+                  OutString(3,0,CUr.SalesMan,false);
+                end;
+                OutString(4,0,USetStr(2433),false);
+                tstr = CreateInvoiceNumber(IVp.SerNr);
+                OutString(5,0,tstr,false);
+                OutString(6,0,IVr.OrderNr,false);
+                OutString(7,0,IVr.InvDate,false);
+                OutString(8,0,DateDiff(IVr.PayDate,IVr.InvDate),false);
+                OutString(9,0,IVr.PayDate,false);
+                OutString(11,0,IVr.CurncyCode,false);
+                OutString(12,0,t,false);
+                OutString(13,0,t2,false);
+                OutString(14,0,"",false);
+                OutString(15,0,IVr.SalesMan,false);
+                endformat;*/
+              end else begin
+              StartFormat(15);
+                OutString(h1,0,USetStr(2433),false);
+                tstr = CreateInvoiceNumber(IVr.SerNr);
+                OutString(h2,"DblAR",tstr,false);
+                OutDate(h3,0,IVr.InvDate,false);
+                OutDate(240,0,IVr.PayDate,false);
+                OutString(295,0,IVr.PayDeal,false);
+                if (RepSpec.flags[2]==1) then begin
+                  OutVal(380,0,t2,M4Val,true);
+                end else begin
+                  OutVal(380,0,t,M4Val,true);
+                end;
+              endformat;  
+              end;
+              //EndFormat;
+              if(RepSpec.ArtMode==0 and (RepSpec.Media==2 or RepSpec.Media==20)) then begin// Edit ************************** Wednesday, 1 September 2010 17:11:50
+              end else begin// Edit ************************** Wednesday, 1 September 2010 17:11:48
+                if (nonblank(IVp.InvComment) and (RepSpec.Media!=2 or RepSpec.Media!=20)) then begin
+                  StartFormat(15);
+                  OutString(h2,0,IVr.InvComment,false);
+                  EndFormat;
+                end;
+              end;
+            end;
+            end;
+          end;
+        end;
+      end;
+      if (IPrsr.TransType==1) then begin
+          IPr.SerNr = IPrsr.TransNr;
+          if (ReadFirstMain(IPr,1,true)) then begin
+            t = 0;
+            t2 = 0;
+            if (IPr.RejectedFlag==0) then begin
+              rwcnt = MatRowCnt(IPr);
+              for (i=0; i<rwcnt; i=i+1) begin
+                MatRowGet(IPr,i,IPrw);
+                if ((blankdate(IPrw.PayDate)) or (IPrw.PayDate==IPrsr.CustDate)) then begin
+                  if ((IPrw.stp==1) or (IPrw.stp==5) or (IPrw.stp==6) or (IPrw.stp==7)) then begin
+                    if (IPrw.ovst==0) then begin
+                      if (IPrw.InvoiceNr==invnr) then begin
+                        if (IPrw.PayDate==IPrsr.CustDate) then begin
+                          t3 = MulWithRateToBase1(IPrw.InvCurncy,IPrw.PayDate,IPrw.InvVal,3/*DefaultCurRoundOff*/);   
+                          t = t + t3;
+                          t2 = t2 + IPrw.InvVal;
+                        end;  
+                      end;
+                    end;  
+                  end;
+                end;
+              end;  
+            end;
+            if ((t<>0) or (IPr.RejectedFlag<>0)) then begin
+              invsal = invsal - t;
+              t = -t;
+              t2 = -t2;
+                // Edit Start ---------------------------------------------- Edit Start
+    //Tuesday, 31 August 2010 11:10:52
+                if(RepSpec.ArtMode==0 and (RepSpec.Media==2 or RepSpec.Media==20)) then begin
+                  /*StartFormat(15);
+                  OutString(1,0,IVp.CustCode,false);
+                  OutString(2,0,IVp.Addr0,false);
+                  CUr.Code = IVp.CustCode;
+                  If(ReadFirstMain(CUr,1,true)) then begin
+                    OutString(3,0,CUr.SalesMan,false);
+                  end else begin
+                    OutString(3,0,"",false);
+                  end;
+                  
+                  if ((IPr.OKFlag<>0) and (IPr.ReceivedFlag==0)) then begin
+                    OutString(4,0,USetStr(2432),false);
+                  end else begin
+                    if (IPr.OKFlag==0) then begin OutString(4,0,USetStr(2533),false); end;
+                    if (IPr.RejectedFlag==1) then begin OutString(4,0,USetStr(2531),false); end;
+                    if ((IPr.RejectedFlag==0) and (IPr.OKFlag==1)) then begin OutString(4,0,USetStr(2532),false); end;
+                  end;
+                 
+                  OutString(5,0,IPr.SerNr,false);
+                  OutString(6,0,"",false);
+                  OutString(7,0,IPr.TransDate,false);
+                  OutString(8,0,"",false);
+                  OutString(9,0,"",false);
+                  OutString(11,0,IPr.PayCurCode,false);
+                  OutString(12,0,t,false);
+                  OutString(13,0,t2,false);
+                  OutString(14,0,"",false);
+                  OutString(15,0,"",false);
+                  endformat;*/
+                end else begin
+                StartFormat(15);
+                  if ((IPr.OKFlag<>0) and (IPr.ReceivedFlag==0)) then begin
+                    OutString(h1,0,USetStr(2432),false);
+                  end else begin
+                    if (IPr.OKFlag==0) then begin OutString(h1,0,USetStr(2533),false); end;
+                    if (IPr.RejectedFlag==1) then begin OutString(h1,0,USetStr(2531),false); end;
+                    if ((IPr.RejectedFlag==0) and (IPr.OKFlag==1)) then begin OutString(h1,0,USetStr(2532),false); end;
+                  end;
+                  endformat;
+                end;
+    // Edit End ---------------------------------------------- Edit End
+      
+              if(RepSpec.ArtMode==0 and (RepSpec.Media==2 or RepSpec.Media==20)) then begin// Edit ************************** Tuesday, 31 August 2010 11:14:47
+              
+              end else begin// Edit ************************** Tuesday, 31 August 2010 11:14:48
+                StartFormat(15);
+  //              OpM46o(h2,"DblAR",&IPr.SerNr,M4Long,false,IPr.SerNr);
+                OutLongInt(h2,"DblCuPerIP",IPr.SerNr,false);
+                OutDate(240,0,IPr.TransDate,false);
+                if (RepSpec.flags[2]==1) then begin
+                  OutVal(380,0,t2,M4Val,true);
+                end else begin
+                  OutVal(380,0,t,M4Val,true);
+                end;  
+                EndFormat;
+              end;// Edit ************************** Tuesday, 31 August 2010 11:14:49
+              
+            end;
+          end;
+      end;
+      if (IPrsr.TransType==2) then begin
+          TRr.Number = IPrsr.TransNr;
+          TRr.IntYc = GetIntYc(IPrsr.TransDate);          
+          if (ReadFirstMain(TRr,2,true)) then begin
+            if (TRr.TransDate==IPrsr.CustDate) then begin
+              t = 0;
+              rwcnt = MatRowCnt(TRr);
+              for (i=0; i<rwcnt; i=i+1) begin
+                MatRowGet(TRr,i,TRrw);
+                if (TRrw.ovst==0) then begin
+                  if (TRrw.stp==1) then begin
+                    if (TRrw.SerNr==invnr) then begin
+                      if (TRrw.CredVal<>0) then begin
+                        t = TRrw.CurDebVal - TRrw.CurCredVal;
+                        t2 = TRrw.DebVal - TRrw.CredVal;
+                        if ((TRrw.CurDebVal==0) and (TRrw.CurCredVal==0)) then begin
+                          typeofcur = TypeOfCurncy(TRrw.Curncy,oldstyle);   
+                          if (typeofcur==1) then begin
+                            t = t2;                          
+                          end;
+                          if (typeofcur==2) then begin
+                            t = TRrw.DebVal2 - TRrw.CredVal2;
+                          end;                          
+                        end;
+                        invsal = t + invsal;                        
+                        ToStrTRCode(tstr,TRr.IntYc,TRr.Number);
+                        StartFormat(15);
+                        OutString(h1,0,USetStr(2530),false);
+                        OutString(h2,"DblTrans",tstr,false);
+                        OutDate(240,0,TRr.TransDate,false);
+                        if (RepSpec.flags[2]==0) then begin
+                          OutVal(380,0,t2,M4Val,true);
+                        end else begin
+                          OutVal(380,0,t,M4Val,true);
+                        end;  
+                        EndFormat;                        
+                      end;  
+                    end;  
+                  end;
+                end;
+              end;
+            end;
+          end;                    
+      end;
+      if (IPrsr.TransType==3) then begin
+          CLInr.SerNr = IPrsr.TransNr;
+          if (ReadFirstMain(CLInr,1,true)) then begin
+            if (CLInr.TransDate==IPrsr.CustDate) then begin
+              t = 0;
+              rwcnt = MatRowCnt(CLInr);
+              for (i=0; i<rwcnt; i=i+1) begin
+                MatRowGet(CLInr,i,CLInrw);
+                if (CLInrw.TransNr==invnr) then begin
+                  t = -CLInrw.Sum;
+                  t2 = -CLInrw.Sum;
+                  t2 = MulRateToBase1(CLInr.CurncyCode,t,CLInr.FrRate,CLInr.ToRateB1,CLInr.ToRateB2,CLInr.BaseRate1,CLInr.BaseRate2,3/*DefaultCurRoundOff*/);
+                  if (RepSpec.flags[2]==1) then begin
+                    invsal = invsal + t;        
+                  end else begin
+                    invsal = invsal + t2;        
+                  end;
+                  //StartFormat(15);
+               // Edit Start ---------------------------------------------- Edit Start
+                //Tuesday, 31 August 2010 10:41:48
+                   If(RepSpec.ArtMode==0 and (RepSpec.Media==2 or RepSpec.Media==20)) then begin
+                    /*StartFormat(15);
+                    OutString(1,0,CLInr.CUCode,false);
+                    OutString(2,0,CLInr.CUName,false);
+                    
+                    CUr.Code = CLInr.CUCode;
+                    If(ReadFirstMain(CUr,1,true)) then begin
+                      OutString(3,0,CUr.SalesMan,false);
+                    end;
+                    
+                    OutString(4,0,USetStr(1193),false);
+                    OutString(5,0,CLInr.SerNr,false);
+                    OutString(6,0,"",false);
+                    OutString(7,0,CLInr.TransDate,false);
+                    OutString(8,0,DateDiff(CLInr.TransDate,CLInr.TransDate),false);
+                    OutString(9,0,CLInr.TransDate,false);
+                    OutString(11,0,CLInr.CurncyCode,false);
+                    OutString(12,0,t2,false);
+                    OutString(13,0,t,false);
+                    OutString(14,0,"",false);
+                    OutString(15,0,"",false);
+                    endformat;*/
+                    
+                  end else begin
+                // Edit End ---------------------------------------------- Edit End
+                    StartFormat(15);              
+                    OutString(h1,0,USetStr(1193),false);
+                    OutString(h2,"DblCLInVc",CLInr.SerNr,false);
+                    OutDate(240,0,CLInr.TransDate,false);
+                    if (RepSpec.flags[2]==0) then begin
+                      OutVal(380,0,t2,M4Val,true);
+                    end else begin
+                      OutVal(380,0,t,M4Val,true);
+                    end;  
+                    endformat;
+                  end;
+                  //EndFormat;                        
+                end;  
+              end;
+            end;
+          end;
+      end;      
+      if (IPrsr.TransType==6) then begin
+        CredManr.SerNr = IPrsr.TransNr;
+        if (ReadFirstMain(CredManr,1,true)) then begin
+          t = 0;
+          t2 = 0;
+          if (CredManr.Invalid==0) then begin
+            t3 = MulRateToBase1(CredManr.CurncyCode,CredManr.InvSum4,CredManr.FrRate,CredManr.ToRateB1,CredManr.ToRateB2,CredManr.BaseRate1,CredManr.BaseRate2,3/*DefaultCurRoundOff*/);
+            t = t + t3;
+            t2 = t2 + CredManr.InvSum4;
+            if (t<>0) then begin
+              invsal = invsal - t;
+              t = -t;
+              t2 = -t2;
+              if (CredManr.OKFlag<>0) then begin
+                OutString(h1,0,USetStr(1635),false);
+              end;
+              StartFormat(15);
+              OutLongInt(h2,"DblCredManVc",CredManr.SerNr,false);
+              OutDate(240,0,CredManr.TransDate,false);
+              if (RepSpec.flags[2]==1) then begin
+                OutVal(380,0,t2,M4Val,true);
+              end else begin
+                OutVal(380,0,t,M4Val,true);
+              end;  
+              EndFormat;
+            end;
+          end;
+        end;
+      end;
+
+    end;
+  end;
+  RETURN;
+END;
+
+global
+procedure PrintCurTotalsRow(record SMVc CurTotalsr,Integer snr,Integer col1,Integer col2,Integer col3)
+BEGIN
+  row SMVc CurTotalsrw;
+  Integer i,rwcnt;
+    
+  rwcnt = MatRowCnt(CurTotalsr);    
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(CurTotalsr,i,CurTotalsrw);
+    if ((CurTotalsrw.DebVal!=blankval) or (CurTotalsrw.DebVal2!=blankval) or (CurTotalsrw.CurDebVal!=blankval)) then begin
+      StartFormat(15);
+       if (snr!=-1) then begin
+         OutString(130,0,USetStr(snr),false);
+       end else begin
+         OutString(150,0,CurTotalsrw.CurncyCode,false);
+       end;
+       if ((col1>-1) and (CurTotalsrw.DebVal!=blankval)) then begin    
+         OutVal(col1,0,CurTotalsrw.DebVal,M4Val,true);
+       end;
+       if ((col2>-1) and (CurTotalsrw.DebVal2!=blankval)) then begin    
+         OutVal(col2,0,CurTotalsrw.DebVal2,M4Val,true);
+       end;  
+       if ((col3>-1) and (CurTotalsrw.CurDebVal!=blankval)) then begin    
+         OutVal(col3,0,CurTotalsrw.CurDebVal,M4Val,true);
+       end;  
+       if (snr!=-1) then begin
+         OutString(480,0,CurTotalsrw.CurncyCode,true);
+       end;  
+      EndFormat;
+    end;  
+  end;
+  RETURN;
+END;
+
+global
+procedure AddCurTotalsRow(string curncycode,val rval,val rval2,val rval3,var record SMVc CurTotalsr)
+BEGIN
+  row SMVc CurTotalsrw;
+  Integer i,rwcnt;
+  Boolean addf;
+  record BaseCurBlock bascur;
+  string 20 loccurncycode;
+  
+  loccurncycode = curncycode;
+  BlockLoad(bascur);
+  if (blank(loccurncycode)) then begin
+    loccurncycode = bascur.BaseCur1;
+  end;
+  addf = true;
+  rwcnt = MatRowCnt(CurTotalsr);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(CurTotalsr,i,CurTotalsrw);
+    if (CurTotalsrw.CurncyCode==loccurncycode) then begin
+      CurTotalsrw.DebVal = CurTotalsrw.DebVal + rval;
+      CurTotalsrw.DebVal2 = CurTotalsrw.DebVal2 + rval2;
+      CurTotalsrw.CurDebVal = CurTotalsrw.CurDebVal + rval3;
+      MatRowPut(CurTotalsr,i,CurTotalsrw);
+      addf = false;
+      i = rwcnt;
+    end;
+  end;
+  if (addf) then begin
+    ClearRow(CurTotalsr,CurTotalsrw,1);
+    CurTotalsrw.CurncyCode = loccurncycode;
+    CurTotalsrw.DebVal = rval;
+    CurTotalsrw.DebVal2 = rval2;
+    CurTotalsrw.CurDebVal = rval3;
+    MatRowPut(CurTotalsr,rwcnt,CurTotalsrw);
+  end;
+  RETURN;
+END;
+
+global
+function Boolean ObjectTypeMatch(string ObjStr,string ObjType)
+BEGIN
+  record ObjVc Objr;
+  Boolean res,TrHs;
+  
+  TrHs = true;
+  Objr.Code = "";
+  Objr.OTCode = ObjType;
+  while (LoopKey("OTCode",Objr,1,TrHs)) begin
+    if (Objr.OTCode!=ObjType) then begin TrHs = false; end;
+    if (TrHs) then begin    
+      if (SetInSet(Objr.Code,ObjStr)) then begin
+        res = true;
+        goto LObjectTypeMatch;
+      end;
+    end;
+  end; 
+LObjectTypeMatch:;  
+  ObjectTypeMatch = res;
+  RETURN;
+END;
+
+function Boolean PrepaymentObjectMatch(LongInt CUPNr,string ObjStr,string ObjType)
+BEGIN
+  record ARPayHistVc ARPayHistr;  
+  record IPVc IPr;  
+  row IPVc IPrw;
+  Boolean foundf,res;
+  Integer i,rwcnt;
+
+  res = true;
+  if ((blank(ObjType)) and (blank(ObjStr))) then begin
+    goto LPrepaymentObjectMatch;
+  end;
+  ARPayHistr.CUPNr = CUPNr;
+  ARPayHistr.FileName = "IPVc";
+  foundf = true;
+  while (LoopMain(ARPayHistr,2,foundf)) begin
+    if ((ARPayHistr.CUPNr<>CUPNr) or (ARPayHistr.FileName<>"IPVc")) then begin foundf = false; end;
+    if (foundf) then begin
+      IPr.SerNr = ARPayHistr.SerNr;
+      if (ReadFirstMain(IPr,1,true)) then begin
+        rwcnt = MatRowCnt(IPr);
+        for (i=0;i<rwcnt;i=i+1) begin
+          MatRowGet(IPr,i,IPrw);
+          if (IPrw.CUPNr==CUPNr) then begin
+            if (nonblank(ObjType)) then begin
+              res = ObjectTypeMatch(IPrw.Objects,ObjType);
+            end;
+            if (nonblank(ObjStr)) then begin
+              res = SetInSet(ObjStr,IPrw.Objects);
+            end;
+            goto LPrepaymentObjectMatch;
+          end;
+        end;
+      end;
+    end;
+  end;
+LPrepaymentObjectMatch:;
+  PrepaymentObjectMatch = res;
+  RETURN;
+END;
+
+
+global
+procedure GetOnAccBalance1(record RcVc RepSpec,string cucode,string cucrncy,Boolean backdate,Integer foreigncur,var val sump,var val bc2sump,var val rvalp,var val sumbooked,var val sumnow,var val sumcurncy,var val sumdiff,record SMVc CurTotalsr)
+BEGIN
+  val t,t2,t3;
+  record IPrsVc IPrsr;
+  record ARPayVc ARPayr;  
+  record ARPayHistVc ARPayHistr; 
+  record ARPayHistVc newARPayHistr;  // Edit ************************** Tuesday, 30 March 2010 10:48:47 AM
+  record IPVc IPr,myIPr;// Edit ************************** Thursday, 29 September 2011 13:14:07
+  row IPVc IPrw,myIPrw;// Edit ************************** Thursday, 29 September 2011 13:14:06
+  record TRVc TRr;
+  row TRVc TRrw;
+  record CLInVc CLInr;
+  row CLInVc CLInrw;
+  record CLOutVc CLOutr;
+  row CLOutVc CLOutrw;
+  Boolean found,found1;// Edit ************************** Tuesday, 30 March 2010 10:48:55 AM
+  Integer rwcnt,i,myi,mymtrw;// Edit ************************** Thursday, 29 September 2011 13:13:49
+  Boolean testf,TrHs;// Edit ************************** Tuesday, 30 March 2010 10:48:45 AM
+  val onaccv,onaccv2,onacccurv;
+  string 20 aracc;
+  record BaseCurBlock bcur;
+  val MySum,sum1,sum2;// Edit ************************** Tuesday, 30 March 2010 10:48:51 AM
+  record CUVc CUr;// Edit ************************** Tuesday, 31 August 2010 13:11:26
+  string 255 mystr;// Edit ************************** Thursday, 29 September 2011 13:13:31
+  
+  MySum = 0;
+
+  BlockLoad(bcur);
+  sump = 0;
+  bc2sump = 0;
+  rvalp = 0;
+  IPrsr.IVNr = -1;
+  IPrsr.TransType = 1;
+  IPrsr.CustCode = cucode;
+  found = true;
+  while (LoopKey("OnAcc",IPrsr,3,found)) begin
+    if (found) then begin
+      if (IPrsr.CustCode!=cucode) then begin found = false; end;
+      if (IPrsr.IVNr!=-1) then begin found = false; end;
+      if (IPrsr.TransType!=1) then begin found = false; end;
+      if (found) then begin      
+        if (nonblank(RepSpec.AccStr)) then begin
+          GetARAcc(cucode,aracc);
+          if (aracc!=RepSpec.AccStr) then begin
+            goto LSkipOnAcc;
+          end;
+        end;
+        IPr.SerNr = IPrsr.TransNr;
+        if (ReadFirstMain(IPr,1,true)) then begin
+          if (IPr.RejectedFlag==0) then begin
+          rwcnt = MatRowCnt(IPr);
+          for (i=0;i<rwcnt;i=i+1) begin
+            MatRowGet(IPr,i,IPrw);
+            if ((IPrw.InvoiceNr==-1) and (IPrw.CUPNr==-1) and (IPrw.stp==1)) then begin
+              if (IPrw.PayDate==IPrsr.CustDate) then begin
+                if (IPrw.CustCode==cucode) then begin
+                  testf = true;
+                  if (testf) then begin
+                    if (backdate) then begin
+                      if (RepSpec.d1<IPrsr.CustDate) then begin
+                        testf = false;
+                      end;
+                    end;
+                    if (nonblank(RepSpec.ObjStr)) then begin
+                      if (SetInSet(RepSpec.ObjStr,IPrw.Objects)==false) then begin
+                        testf = false;
+                      end;
+                    end;                                        
+                    if (nonblank(RepSpec.CurncyCode)) then begin
+                      if (RepSpec.CurncyCode!=IPrw.InvCurncy) then begin
+                        testf = false;
+                      end;
+                    end;                                        
+                    if (nonblank(RepSpec.ObjType)) then begin
+                      testf = ObjectTypeMatch(IPrw.Objects,RepSpec.ObjType);
+                    end;                                        
+                  end;
+                  if (testf) then begin
+                    if (nonblank(cucrncy)) then begin
+                      CurValToOtherCur(IPr.TransDate,IPrw.InvCurncy,IPrw.InvVal,cucrncy,t,3/*DefaultCurRoundOff*/);
+                    end else begin
+                      if (nonblank(IPrw.InvCurncy)) then begin
+                        if (foreigncur==1) then begin
+                          AddCurTotalsRow(IPrw.InvCurncy,-IPrw.InvVal,blankval,blankval,CurTotalsr);
+                        end else begin
+                          AddCurTotalsRow(bcur.BaseCur1,MulWithRateToBase1(IPrw.InvCurncy,IPr.TransDate,-IPrw.InvVal,3/*DefaultCurRoundOff*/),blankval,blankval,CurTotalsr);
+                        end;
+                      end;
+                      t = IPrw.InvVal;
+                      
+//                      AddCurncyTotals(acur,av1,curcnt,IPrw.InvCurncy,IPrw.InvVal); // Should we have CurncyTotals in GetOnAccBalance????
+                    end;
+                    rvalp = rvalp - t;
+                    if (IPrw.B1BankVal==0) then begin
+                      if (IPrw.BankCurncy!=bcur.BaseCur1) then begin
+                      t3=t;
+                        t = MulWithRateToBase1(IPrw.InvCurncy,IPr.TransDate,t,3/*DefaultCurRoundOff*/);
+                       
+                      end else begin
+                        t = IPrw.BankVal;
+                      end;
+                    end else begin
+                      t = IPrw.B1BankVal;
+                    end;
+                    sump = sump - t;
+                    // Edit Start ---------------------------------------------- Edit Start
+	//Tuesday, 31 August 2010 12:47:52
+                    if(RepSpec.ArtMode==0 and (RepSpec.Media==2 or RepSpec.Media==20))then begin
+                      /*StartFormat(15);
+                        OutString(1,0,cucode,false);
+                        CUr.Code = cucode;
+                        If(ReadFirstMain(CUr,1,true)) then begin
+                          OutString(2,0,CUr.Name,false);
+                          OutString(3,0,CUr.SalesMan,false);
+                        end;
+                        
+                        OutString(4,0,"Џлатґж клґ№нта",false);
+                        OutString(5,0,IPr.SerNr,false);
+                        OutString(6,0,"",false);
+                        OutString(7,0,IPr.TransDate,false);
+                        OutString(8,0,"",false);
+                        OutString(9,0,"",false);
+                        OutString(11,0,IPr.PayCurCode,false);
+                        OutString(12,0,t,false);
+                        OutString(13,0,t3,false);
+                        OutString(14,0,"",false);
+                        OutString(15,0,"",false);
+                      endformat;*/
+                    end else begin
+                        StartFormat(15);
+                         OutString(0,0,"Џлатґж клґ№нта",false);
+                         OutString(150,"DblIPVc",IPr.SerNr,true);
+                         OutString(3,0,t,false);
+                         OutDate(4,0,IPr.TransDate,false);
+                       EndFormat;
+                     end;
+	// Edit End ---------------------------------------------- Edit End
+	
+                     MySum = MySum+t;
+                    //StopAlert("4" & sump);
+                    if (IPrw.B2BankVal==0) then begin
+                      t = MulWithRateToBase2(IPrw.InvCurncy,IPr.TransDate,t,3/*DefaultCurRoundOff*/);
+                    end else begin
+                      t = IPrw.B2BankVal;
+                    end;
+                    bc2sump = bc2sump - t;
+                    if (RepSpec.ArtMode==4) or (RepSpec.ArtMode==6) then begin
+                      sumcurncy = sumcurncy + IPrw.InvVal;
+                      if (backdate) then begin
+                        if (IPrw.InvCurncy<>IPrw.BankCurncy) then begin                      
+                          t = MulWithRateToBase1(IPrw.BankCurncy,RepSpec.d1,IPrw.BankVal,3/*DefaultCurRoundOff*/);
+                        end else begin
+                          t = MulWithRateToBase1(IPrw.InvCurncy,RepSpec.d1,IPrw.InvVal,3/*DefaultCurRoundOff*/);
+                        end;  
+                      end else begin
+                        if (IPrw.InvCurncy<>IPrw.BankCurncy) then begin                      
+                          t = MulWithRateToBase1(IPrw.BankCurncy,IPr.TransDate,IPrw.BankVal,3/*DefaultCurRoundOff*/);
+                        end else begin
+                          t = MulWithRateToBase1(IPrw.InvCurncy,IPr.TransDate,IPrw.InvVal,3/*DefaultCurRoundOff*/);
+                        end;  
+                      end;
+                      sumbooked = sumbooked + t;
+                      t2 = MulWithRateToBase1(IPrw.InvCurncy,CurrentDate,IPrw.InvVal,3/*DefaultCurRoundOff*/);
+                      sumnow = sumnow + t2;
+                      t2 = t2 - t;
+                      sumdiff = sumdiff + t2;
+                    end;                    
+                  end;
+                end;
+              end;
+            end;
+          end;
+          end;
+        end;
+      end;
+    end;
+LSkipOnAcc:;    
+  end;
+  
+  IPrsr.IVNr = -1;
+  IPrsr.TransType = 2;
+  IPrsr.CustCode = cucode;
+  found = true;
+  ResetLoop(IPrsr);
+  while (LoopKey("OnAcc",IPrsr,3,found)) begin
+    if (found) then begin
+      if (IPrsr.CustCode<>cucode) then begin found = false; end;
+      if (IPrsr.IVNr<>-1) then begin found = false; end;      
+      if (IPrsr.TransType!=2) then begin found = false; end;
+      if (found) then begin      
+        testf = true;
+        TRr.Number = IPrsr.TransNr;
+        TRr.IntYc = GetIntYc(IPrsr.TransDate);                
+        if (ReadFirstMain(TRr,2,true)) then begin
+          if (backdate) then begin
+            if (RepSpec.d1<TRr.TransDate) then begin
+              testf = false;
+            end;
+          end;          
+          if (TRr.TransDate!=IPrsr.TransDate) then begin
+            testf = false;
+          end;
+          if (testf) then begin          
+            rwcnt = MatRowCnt(TRr);
+            for (i=0; i<rwcnt; i=i+1) begin
+              MatRowGet(TRr,i,TRrw);
+              if (TRrw.ovst==0) then begin
+                if (TRrw.stp==1) then begin
+                  if (TRrw.SerNr==-1) then begin
+                    if (TRrw.CompCode==cucode) and (TRrw.Typ==1) then begin 
+                      if (nonblank(TRrw.CredVal)) then begin
+                        onaccv = TRrw.CredVal;
+                        onaccv2 = TRrw.CredVal2;
+                        onacccurv = TRrw.CurCredVal;
+                      end else begin
+                        onaccv = -TRrw.DebVal;
+                        onaccv2 = -TRrw.DebVal2;
+                        onacccurv = -TRrw.CurDebVal;
+                      end;        
+                      if (nonblank(cucrncy)) then begin
+                        if (onacccurv!=blankval) then begin                   
+                          CurValToOtherCur(TRr.TransDate,TRrw.Curncy,onacccurv,cucrncy,t,3/*DefaultCurRoundOff*/);
+                        end else begin
+                          CurValToOtherCur(TRr.TransDate,TRrw.Curncy,onaccv,cucrncy,t,3/*DefaultCurRoundOff*/);
+                        end;  
+                      end else begin            
+                        if (nonblank(TRrw.Curncy)) then begin                  
+                          if (onacccurv!=blankval) then begin 
+                            AddCurTotalsRow(TRrw.Curncy,-onacccurv,blankval,blankval,CurTotalsr);
+//                          AddCurncyTotals(acur,av1,curcnt,TRrw.Curncy,onacccurv);
+                          end else begin
+                            AddCurTotalsRow(TRrw.Curncy,-onaccv,blankval,blankval,CurTotalsr);
+//                          AddCurncyTotals(acur,av1,curcnt,TRrw.Curncy,onaccv);
+                          end;
+                        end;
+                      end;    
+                      sump = sump - onaccv;
+                      // Edit Start ---------------------------------------------- Edit Start
+	//Tuesday, 31 August 2010 12:48:19
+                      if(RepSpec.ArtMode==0 and (RepSpec.Media==2 or RepSpec.Media==20))then begin
+                        /*StartFormat(15);
+                        OutString(1,0,cucode,false);
+                        CUr.Code = cucode;
+                        If(ReadFirstMain(CUr,1,true)) then begin
+                          OutString(2,0,CUr.Name,false);
+                          OutString(3,0,CUr.SalesMan,false);
+                        end;
+                        
+                        OutString(4,0,"Ћперацґ»",false);
+                        OutString(5,0,TRr.Number,false);
+                        OutString(6,0,"",false);
+                        OutString(7,0,TRr.TransDate,false);
+                        OutString(8,0,"",false);
+                        OutString(9,0,"",false);
+                        OutString(11,0,"",false);
+                        OutString(12,0,onaccv,false);
+                        OutString(13,0,"",false);
+                        OutString(14,0,"",false);
+                        OutString(15,0,"",false);
+                      endformat;*/
+                      end else begin
+                        StartFormat(15);
+                        OutString(0,0,"Ћперацґ»",false);
+                        OutString(150,0,TRr.Number,true);
+                        OutString(3,0,onaccv,false);
+                        OutDate(4,0,TRr.TransDate,false);
+                        EndFormat;
+                      end;
+	// Edit End ---------------------------------------------- Edit End
+	
+                      MySum = MySum+onaccv;
+                      
+                      //StopAlert("5" & sump);
+                      bc2sump = bc2sump - onaccv2;
+                      if (nonblank(onacccurv)) then begin
+                        rvalp = rvalp - onacccurv;
+                      end else begin
+                        rvalp = rvalp - onaccv;
+                      end;
+                      if (RepSpec.ArtMode==4) or (RepSpec.ArtMode==6) begin
+                        sumcurncy = sumcurncy + onacccurv;
+                        if (backdate) then begin
+                          if (onacccurv!=blankval) then begin                   
+                            t = MulWithRateToBase1(TRrw.Curncy,RepSpec.d1,onacccurv,3/*DefaultCurRoundOff*/);
+                          end else begin
+                            t = onaccv;
+                          end;
+                        end else begin
+                          t = onaccv;
+                        end;
+                        sumbooked = sumbooked + t;
+                        t2 = MulWithRateToBase1(TRrw.Curncy,CurrentDate,onacccurv,3/*DefaultCurRoundOff*/);
+                        sumnow = sumnow + t2;
+                        t2 = t2 - t;
+                        sumdiff = sumdiff + t2;                        
+                      end;
+                    end;
+                  end;                
+                end;
+              end;
+            end;                
+          end;
+        end;
+      end;          
+    end;
+  end;
+    
+  ARPayHistr.CustCode = cucode;
+  found = true;
+  while (LoopKey("CustCode",ARPayHistr,1,found)) begin
+    if (found) then begin
+      if (ARPayHistr.CustCode<>cucode) then begin found = false; end;
+      if (found) then begin
+        if (ARPayHistr.FileName=="IVVc") then begin
+          testf = true;
+          if (backdate) then begin
+            if (RepSpec.d1<ARPayHistr.TransDate) then begin
+              testf = false;
+            end;
+          end;
+          if (PrepaymentObjectMatch(ARPayHistr.CUPNr,RepSpec.ObjStr,RepSpec.ObjType)==false) then begin
+            testf = false;
+          end;
+          if (nonblank(RepSpec.CurncyCode)) then begin
+            if (RepSpec.CurncyCode!=ARPayHistr.CurncyCode) then begin
+              testf = false;
+            end;
+          end;                                        
+          if (testf) then begin
+            if (nonblank(cucrncy)) then begin
+              CurValToOtherCur(ARPayHistr.TransDate,ARPayHistr.CurncyCode,ARPayHistr.Val,cucrncy,t,3/*DefaultCurRoundOff*/);
+            end else begin
+              if (nonblank(ARPayHistr.CurncyCode)) then begin
+                AddCurTotalsRow(ARPayHistr.CurncyCode,ARPayHistr.Val,blankval,blankval,CurTotalsr);
+              end;
+              t = ARPayHistr.Val;
+//              AddCurncyTotals(acur,av1,curcnt,ARPayHistr.CurncyCode,ARPayHistr.Val);
+            end;          
+            rvalp = rvalp + t;
+// Why? It should take whatever was booked, or?
+            sump = sump + ARPayHistr.BookVal;
+           // Edit Start ---------------------------------------------- Edit Start
+	//Wednesday, 1 September 2010 11:11:14
+            /*if(RepSpec.ArtMode==0 and (RepSpec.Media==2 or RepSpec.Media==20))then begin
+              StartFormat(15);
+                  OutString(1,0,cucode,false);
+                  CUr.Code = cucode;
+                  If(ReadFirstMain(CUr,1,true)) then begin
+                    OutString(2,0,CUr.Name,false);
+                    OutString(3,0,CUr.SalesMan,false);
+                  end;
+                  
+                  OutString(4,0,"Џередплати0",false);
+                  OutString(5,0,ARPayHistr.SerNr,false);
+                  OutString(6,0,ARPayHistr.CUPNr,false);
+                  OutString(7,0,ARPayHistr.TransDate,false);
+                  OutString(8,0,"",false);
+                  OutString(9,0,"",false);
+                  OutString(11,0,ARPayHistr.CurncyCode,false);
+                  t3 = Conv1(ARPayHistr.TransDate,ARPayHistr.CurncyCode)*-ARPayHistr.BookVal;
+                  OutString(12,0,-ARPayHistr.BookVal,false);
+                  OutString(13,0,t3,false);
+                  OutString(14,0,"",false);
+                  OutString(15,0,"",false);
+                endformat;
+            end else begin
+              StartFormat(15);
+                OutString(0,0,"Џередплати0",false);//-------------------
+                OutString(150,0,ARPayHistr.SerNr,true);
+                OutString(3,0,-ARPayHistr.BookVal,false);
+                OutDate(4,0,ARPayHistr.TransDate,false);
+              EndFormat;
+            end;*/
+	// Edit End ---------------------------------------------- Edit End
+	
+            MySum = MySum-ARPayHistr.BookVal;
+            
+            
+            //StopAlert("6" & sump);
+//            sump = sump + MulWithRateToBase1(ARPayHistr.CurncyCode,ARPayHistr.TransDate,ARPayHistr.Val,DefaultCurRoundOff);
+            Base1ToBase2(ARPayHistr.BookVal,ARPayHistr.TransDate,t);
+            bc2sump = bc2sump + t;
+          end;  
+        end;
+        if (ARPayHistr.FileName=="IPVc") then begin
+          testf = true;
+          if (backdate) then begin
+            if (RepSpec.d1<ARPayHistr.TransDate) then begin
+              testf = false;
+            end;
+          end;
+          if ((nonblank(RepSpec.ObjStr)) or (nonblank(RepSpec.ObjType))) then begin
+            IPr.SerNr = ARPayHistr.SerNr;
+            if (ReadFirstMain(IPr,1,true)) then begin
+              rwcnt = MatRowCnt(IPr);
+              for (i=0;i<rwcnt;i=i+1) begin
+                MatRowGet(IPr,i,IPrw);
+                if (IPrw.CUPNr==ARPayHistr.CUPNr) then begin
+                  if (nonblank(RepSpec.ObjType)) then begin
+                    testf = ObjectTypeMatch(IPrw.Objects,RepSpec.ObjType);
+                  end;                                                        
+                  if (SetInSet(RepSpec.ObjStr,IPrw.Objects)==false) then begin
+                    testf = false;
+                  end;
+                  i = rwcnt;
+                end;
+              end;
+            end;
+          end;
+          if (nonblank(RepSpec.AccStr)) then begin
+            GetARAcc(IPrw.CustCode,aracc);
+            if (aracc!=RepSpec.AccStr) then begin
+              testf = false;
+            end;
+          end;
+          if (nonblank(RepSpec.CurncyCode)) then begin
+            if (RepSpec.CurncyCode!=ARPayHistr.CurncyCode) then begin
+              testf = false;
+            end;
+          end;                                        
+          if (testf) then begin
+            if (nonblank(cucrncy)) then begin
+              CurValToOtherCur(ARPayHistr.TransDate,ARPayHistr.CurncyCode,-ARPayHistr.Val,cucrncy,t,3/*DefaultCurRoundOff*/);
+            end else begin
+              t = -ARPayHistr.Val;
+              if (nonblank(ARPayHistr.CurncyCode)) then begin
+                if (foreigncur==1) then begin
+                  AddCurTotalsRow(ARPayHistr.CurncyCode,t,blankval,blankval,CurTotalsr);
+                end else begin
+                  AddCurTotalsRow(bcur.BaseCur1,-ARPayHistr.BookVal,blankval,blankval,CurTotalsr);
+                end;
+              end else begin
+                AddCurTotalsRow(bcur.BaseCur1,-ARPayHistr.BookVal,blankval,blankval,CurTotalsr);
+              end;
+            end;
+            rvalp = rvalp + t;
+            sump = sump - ARPayHistr.BookVal;
+            //StopAlert("7" & sump);
+            
+                  // Edit Start ---------------------------------------------- Edit Start
+	//Tuesday, 30 March 2010 10:41:31 AM
+            newARPayHistr.CUPNr = ARPayHistr.CUPNr;
+            TrHs = true;
+            sum1 = ARPayHistr.BookVal;
+            sum2 = ARPayHistr.Val;
+            while(loopmain(newARPayHistr,1,TrHs)) begin
+              found1 = true;
+              if(newARPayHistr.FileName<>"IVVc") then begin found1 = false; end;
+              if(newARPayHistr.CUPNr<>ARPayHistr.CUPNr) then begin found1 = false; TrHs = false; end;
+              if(found1) then begin
+                sum1 = sum1 - newARPayHistr.BookVal;
+                sum2 = sum2 - newARPayHistr.Val;
+               /* startFormat(15);
+                OutString(5,0,newARPayHistr.SerNr,false);
+                OutString(5,0,newARPayHistr.FileName,false);
+                OutString(5,0,newARPayHistr.CUPNr,false);
+                OutString(5,0,ARPayHistr.CUPNr,false);
+                OutString(5,0,ARPayHistr.BookVal,false);
+                OutString(5,0,newARPayHistr.BookVal,false);
+                EndFormat;*/
+              end;
+              
+            end;
+            resetloop(newARPayHistr);
+            newARPayHistr.CUPNr = ARPayHistr.CUPNr;
+            TrHs = true;
+            while(loopmain(newARPayHistr,1,TrHs)) begin
+              found1 = true;
+              if(newARPayHistr.FileName<>"IPVc") then begin found1 = false; end;
+              if(newARPayHistr.SerNr==ARPayHistr.SerNr) then begin found1 = false; end;
+              if(newARPayHistr.CUPNr<>ARPayHistr.CUPNr) then begin found1 = false; TrHs = false; end;
+              if(found1) then begin
+                sum1 = sum1 + newARPayHistr.BookVal;
+                sum2 = sum2 + newARPayHistr.Val;
+              end;
+              
+            end;
+            resetloop(newARPayHistr);
+	// Edit End ---------------------------------------------- Edit End
+            if(sum1>0) then begin
+              // Edit Start ---------------------------------------------- Edit Start
+	//Tuesday, 31 August 2010 12:48:59
+              if(RepSpec.ArtMode==0 and (RepSpec.Media==2 or RepSpec.Media==20))then begin
+                    if(ARPayHistr.Val>0)then begin
+											StartFormat(15);
+													OutString(1,0,cucode,false);
+													CUr.Code = cucode;
+													If(ReadFirstMain(CUr,1,true)) then begin
+														//OutString(2,0,CUr.Name,false);
+														
+														mystr = "";
+														myIPr.SerNr = ARPayHistr.SerNr;
+														readfirstmain(myIPr,1,true);
+														mymtrw = matrowcnt(myIPr);
+														for(myi=0;myi<mymtrw;myi=myi+1)begin
+															matrowget(myIPr,myi,myIPrw);
+															if(myIPrw.CUPNr==ARPayHistr.CUPNr)begin
+																mystr = myIPrw.CustName;
+															end;
+														end;
+														
+														OutString(2,0,mystr,false);
+														OutString(3,0,CUr.SalesMan,false);
+													end;
+													OutString(15,0,"",false);// Edit ************************** Tuesday, 19 October 2010 13:27:14
+													OutString(4,0,"Џередплати1",false);
+													OutString(5,0,ARPayHistr.SerNr,false);
+													OutString(6,0,ARPayHistr.CUPNr,false);
+													OutString(7,0,ARPayHistr.TransDate,false);
+													OutString(8,0,"",false);
+													OutString(9,0,"",false);
+													OutString(9,0,"",false);
+													OutString(11,0,ARPayHistr.CurncyCode,false);
+													//t3 = round(Conv1(ARPayHistr.TransDate,ARPayHistr.CurncyCode)*ARPayHistr.BookVal,defaultcurroundoff);
+													OutVal(12,0,-ARPayHistr.BookVal,M4Val,false);
+													//OutVal(13,0,t3,M4Val,false);
+													OutVal(13,0,-ARPayHistr.Val,M4Val,false);
+													OutVal(14,0,-sum1,M4Val,false);
+													OutVal(14,0,-sum2,M4Val,false);
+													OutString(15,0,"",false);
+												endformat;
+                      end;
+              end else begin
+                StartFormat(15);
+                OutString(0,0,"Џередплати",false);
+                OutString(150,"DblIPVc",ARPayHistr.SerNr,true);
+                OutString(200,0,ARPayHistr.CUPNr,true);
+                OutString(3,0,ARPayHistr.BookVal,false);
+                OutString(3,0,sum1,false);
+                OutDate(4,0,ARPayHistr.TransDate,false);
+                EndFormat;
+              end;
+	// Edit End ---------------------------------------------- Edit End
+	
+            end;
+            MySum = MySum+ARPayHistr.BookVal;// Edit ************************** Wednesday, 1 September 2010 11:09:33
+            
+            
+            Base1ToBase2(ARPayHistr.BookVal,ARPayHistr.TransDate,t);
+            bc2sump = bc2sump - t;
+          end;  
+        end;
+        if (ARPayHistr.FileName=="CLInVc") then begin
+          testf = true;
+          if (backdate) then begin
+            if (RepSpec.d1<ARPayHistr.TransDate) then begin
+              testf = false;
+            end;
+          end;
+          if ((nonblank(RepSpec.ObjStr)) or (nonblank(RepSpec.ObjType))) then begin
+            CLInr.SerNr = ARPayHistr.SerNr;
+            if (ReadFirstMain(CLInr,1,true)) then begin
+              rwcnt = MatRowCnt(CLInr);
+              for (i=0;i<rwcnt;i=i+1) begin
+                MatRowGet(CLInr,i,CLInrw);
+                if (CLInrw.Type==4) then begin
+                  if (CLInrw.TransNr==ARPayHistr.CUPNr) then begin
+                    if (nonblank(RepSpec.ObjType)) then begin
+                      testf = ObjectTypeMatch(CLInr.Objects,RepSpec.ObjType);
+                    end;                                                        
+                    if (SetInSet(RepSpec.ObjStr,CLInr.Objects)==false) then begin
+                      testf = false;
+                    end;
+                    i = rwcnt;
+                  end;
+                end;
+              end;
+            end;
+          end;
+          if (nonblank(RepSpec.CurncyCode)) then begin
+            if (RepSpec.CurncyCode!=ARPayHistr.CurncyCode) then begin
+              testf = false;
+            end;
+          end;                                        
+          if (testf) then begin
+            if (nonblank(cucrncy)) then begin
+              CurValToOtherCur(ARPayHistr.TransDate,ARPayHistr.CurncyCode,-ARPayHistr.Val,cucrncy,t,3/*DefaultCurRoundOff*/);
+            end else begin
+              t = -ARPayHistr.Val;
+              if (nonblank(ARPayHistr.CurncyCode)) then begin
+                AddCurTotalsRow(ARPayHistr.CurncyCode,t,blankval,blankval,CurTotalsr);
+              end;
+//              AddCurncyTotals(acur,av1,curcnt,ARPayHistr.CurncyCode,-ARPayHistr.Val);            
+            end;
+            rvalp = rvalp + t;
+            sump = sump - ARPayHistr.BookVal;
+            //StopAlert("8" & sump);
+            
+            // Edit Start ---------------------------------------------- Edit Start
+	//Tuesday, 30 March 2010 10:41:31 AM
+            newARPayHistr.CUPNr = ARPayHistr.CUPNr;
+            TrHs = true;
+            sum1 = ARPayHistr.BookVal;
+            sum2 = ARPayHistr.Val;
+            while(loopmain(newARPayHistr,1,TrHs)) begin
+              found1 = true;
+              if(newARPayHistr.FileName<>"IVVc") then begin found1 = false; end;
+              if(newARPayHistr.CUPNr<>ARPayHistr.CUPNr) then begin found1 = false; TrHs = false; end;
+              if(found1) then begin
+                sum1 = sum1 - newARPayHistr.BookVal;
+                sum2 = sum2 - newARPayHistr.Val;
+              end;
+              
+            end;
+            resetloop(newARPayHistr);
+	// Edit End ---------------------------------------------- Edit End
+	          if(sum1<>0) then begin
+              // Edit Start ---------------------------------------------- Edit Start
+	//Tuesday, 31 August 2010 12:49:27
+              if(RepSpec.ArtMode==0 and (RepSpec.Media==2 or RepSpec.Media==20))then begin
+                     StartFormat(15);
+                        OutString(1,0,cucode,false);
+                        CUr.Code = cucode;
+                        If(ReadFirstMain(CUr,1,true)) then begin
+                           //OutString(2,0,CUr.Name,false);
+                          
+                          mystr = "";
+                          myIPr.SerNr = ARPayHistr.SerNr;
+                          readfirstmain(myIPr,1,true);
+                          mymtrw = matrowcnt(myIPr);
+                          for(myi=0;myi<mymtrw;myi=myi+1)begin
+                            matrowget(myIPr,myi,myIPrw);
+                            if(myIPrw.CUPNr==ARPayHistr.CUPNr)begin
+                              mystr = myIPrw.CustName;
+                            end;
+                          end;
+                          
+                          OutString(2,0,mystr,false);
+                          OutString(3,0,CUr.SalesMan,false);
+                        end;
+                        OutString(15,0,"",false);// Edit ************************** Tuesday, 19 October 2010 13:27:25
+                        OutString(4,0,"Џередплати2",false);
+                        OutString(5,0,ARPayHistr.SerNr,false);
+                        OutString(6,0,ARPayHistr.CUPNr,false);
+                        OutString(7,0,ARPayHistr.TransDate,false);
+                        OutString(8,0,"",false);
+                        OutString(9,0,"",false);
+                        OutString(9,0,"",false);
+                        OutString(11,0,ARPayHistr.CurncyCode,false);
+                        //t3 = round(Conv1(ARPayHistr.TransDate,ARPayHistr.CurncyCode)*ARPayHistr.BookVal,defaultcurroundoff);
+                        OutVal(12,0,-ARPayHistr.BookVal,M4Val,false);
+                        OutVal(13,0,-ARPayHistr.Val,M4Val,false);
+                        //OutVal(13,0,t3,M4Val,false);
+                        OutVal(14,0,-sum1,M4Val,false);
+                        OutVal(14,0,-sum2,M4Val,false);
+                        OutString(15,0,"",false);
+                      endformat; 
+              end else begin
+                StartFormat(15);
+                OutString(0,0,"Џередплати",false);
+                OutString(150,"DblCLInVc",ARPayHistr.SerNr,true);
+                OutString(3,0,ARPayHistr.BookVal,false);
+                OutString(3,0,sum1,false);
+                OutDate(4,0,ARPayHistr.TransDate,false);
+                EndFormat;
+              end;
+	// Edit End ---------------------------------------------- Edit End
+	
+            end;
+            MySum = MySum+ARPayHistr.BookVal;// Edit ************************** Wednesday, 1 September 2010 11:09:20
+            
+            Base1ToBase2(ARPayHistr.BookVal,ARPayHistr.TransDate,t);
+            bc2sump = bc2sump - t;
+          end;          
+        end;        
+        if (ARPayHistr.FileName=="CLOutVc") then begin
+          testf = true;
+          if (backdate) then begin
+            if (RepSpec.d1<ARPayHistr.TransDate) then begin
+              testf = false;
+            end;
+          end;
+          if ((nonblank(RepSpec.ObjStr)) or (nonblank(RepSpec.ObjType))) then begin
+            CLOutr.SerNr = ARPayHistr.SerNr;
+            if (ReadFirstMain(CLOutr,1,true)) then begin
+              rwcnt = MatRowCnt(CLOutr);
+              for (i=0;i<rwcnt;i=i+1) begin
+                MatRowGet(CLOutr,i,CLOutrw);
+                if (CLOutrw.Type==5) then begin
+                  if (CLOutrw.TransNr==ARPayHistr.CUPNr) then begin
+                    if (nonblank(RepSpec.ObjType)) then begin
+                      testf = ObjectTypeMatch(CLOutr.Objects,RepSpec.ObjType);
+                    end;                                                        
+                    if (SetInSet(RepSpec.ObjStr,CLOutr.Objects)==false) then begin
+                      testf = false;
+                    end;
+                    i = rwcnt;
+                  end;
+                end;
+              end;
+            end;
+          end;
+          if (nonblank(RepSpec.CurncyCode)) then begin
+            if (RepSpec.CurncyCode!=ARPayHistr.CurncyCode) then begin
+              testf = false;
+            end;
+          end;                                        
+          if (testf) then begin
+            if (nonblank(cucrncy)) then begin
+              CurValToOtherCur(ARPayHistr.TransDate,ARPayHistr.CurncyCode,-ARPayHistr.Val,cucrncy,t,3/*DefaultCurRoundOff*/);
+            end else begin
+              t = -ARPayHistr.Val;
+              if (nonblank(ARPayHistr.CurncyCode)) then begin
+                AddCurTotalsRow(ARPayHistr.CurncyCode,t,blankval,blankval,CurTotalsr);
+              end;
+//              AddCurncyTotals(acur,av1,curcnt,ARPayHistr.CurncyCode,-ARPayHistr.Val);            
+            end;
+            rvalp = rvalp - t;
+            sump = sump + ARPayHistr.BookVal;
+            //StopAlert("9" & sump);
+            // Edit Start ---------------------------------------------- Edit Start
+	//Tuesday, 31 August 2010 12:49:42
+            if(RepSpec.ArtMode==0 and (RepSpec.Media==2 or RepSpec.Media==20))then begin
+                    /*StartFormat(15);
+                        OutString(1,0,cucode,false);
+                        CUr.Code = cucode;
+                        If(ReadFirstMain(CUr,1,true)) then begin
+                          OutString(2,0,CUr.Name,false);
+                          OutString(3,0,CUr.SalesMan,false);
+                        end;
+                        
+                        OutString(4,0,"Џередплати3",false);
+                        OutString(5,0,ARPayHistr.SerNr,false);
+                        OutString(6,0,ARPayHistr.CUPNr,false);
+                        OutString(7,0,ARPayHistr.TransDate,false);
+                        OutString(8,0,"",false);
+                        OutString(9,0,"",false);
+                        OutString(11,0,ARPayHistr.CurncyCode,false);
+                       t3 = Conv1(ARPayHistr.TransDate,ARPayHistr.CurncyCode)*-ARPayHistr.BookVal;
+                        OutString(12,0,-ARPayHistr.BookVal,false);
+                        OutString(13,0,t3,false);
+                        OutString(14,0,"",false);
+                        OutString(15,0,"",false);
+                      endformat;*/
+            end else begin
+             StartFormat(15);
+            OutString(0,0,"Џередплати",false);
+            OutString(150,0,ARPayHistr.SerNr,true);
+            OutString(3,0,-ARPayHistr.BookVal,false);
+            OutDate(4,0,ARPayHistr.TransDate,false);
+            EndFormat;
+            end;
+	// Edit End ---------------------------------------------- Edit End
+	
+            MySum = MySum-ARPayHistr.BookVal;
+            
+            Base1ToBase2(ARPayHistr.BookVal,ARPayHistr.TransDate,t);
+            bc2sump = bc2sump + t;
+          end;          
+        end;                
+      end;
+    end;
+ 
+ end;
+  
+  //if(RepSpec.ArtMode==0 and (RepSpec.Media==2 or RepSpec.Media==20))then begin
+  //end else begin
+  StartFormat(15);
+  Gray_Divider(0,1);
+  
+  OutString(1,0,"Ђванс. плат.",false);///MySum ->sump
+  OutVal(3,0,MySum,M4Val,false);
+  EndFormat;
+  //end;
+  RETURN;
+END;
+
+global 
+procedure GetInfoAvansBody(string dblstr,string l,record RcVc RepSpec)
+begin
+  string 20 client;
+  boolean TrHs,testf,find,found;
+  Integer rwcnt,i;
+  record IPrsVc IPrsr;
+  record IPVc IPr;
+  row IPVc IPrw;
+  record CUVc CUr;
+  val sum,sum2,rval,sumbooked,sumnow,sumcurncy,sumdiff;
+  date agedate;
+  boolean backdatf;
+  record SMVc CurTotalsr;  //addcurencytotals
+
+  if (nonblankdate(RepSpec.d1)) then begin
+    backdatf = true;
+    agedate = RepSpec.d1;
+  end else begin
+    backdatf = false;
+    agedate = CurrentDate;
+  end;  
+  
+  client = l;
+  CUr.Code = l;
+  ReadFirstMain(CUr,1,True);
+  //record RcVc RepSpec;
+   
+if(dblstr<>"111") begin
+StartReportJob("Ћтчет остатков по клиентах");
+  EndHeader;
+ end; 
+    SetRepCol(2,40);
+  SetRepCol(3,280);
+  SetRepCol(4,340);
+  SetRepCol(5,380);
+  SetRepCol(6,440);
+  SetRepCol(7,440);
+  SetRepCol(8,440);
+  SetRepCol(9,450);
+  
+  if(RepSpec.ArtMode==0 and (RepSpec.Media==2 or RepSpec.Media==20)) then begin
+  
+  end else begin
+    StartFormat(15);
+      OutString(0,0,"Љлиент",false);
+      OutString(2,"DblCUVc",client,false);
+    EndFormat;  
+    Black_Divider(0,1);
+    
+    StartFormat(15);
+      OutString(2,0,"„окумент",false);
+      OutString(3,0,"‘ума",false);
+      OutString(4,0,"„ата",false);
+    EndFormat;
+    Gray_Divider(0,1);
+  end;
+  IPrsr.IVNr = -1;
+  IPrsr.TransType = 1;
+  IPrsr.CustCode = client;
+  found = true;
+  
+  GetOnAccBalance1(RepSpec,CUr.Code,CUr.CurncyCode,backdatf,RepSpec.flags[2],sum,sum2,rval,sumbooked,sumnow,sumcurncy,sumdiff,CurTotalsr);//calcSUM
+   
+   if(dblstr<>"111") begin
+EndJob;
+   end;
+   return;
+end;
+
+global 
+procedure GetInfoAvans(string dblstr,string l,Integer currepwn)
+begin
+  string 20 client;
+  boolean TrHs,testf,find,found;
+  Integer rwcnt,i;
+  record IPrsVc IPrsr;
+  record IPVc IPr;
+  row IPVc IPrw;
+  record RcVc RepSpec;
+  record CUVc CUr;
+  val sum,sum2,rval,sumbooked,sumnow,sumcurncy,sumdiff;
+  date agedate;
+  boolean backdatf;
+  record SMVc CurTotalsr;  //addcurencytotals
+
+  getWindowRecord(currepwn,RepSpec);
+  if (nonblankdate(RepSpec.d1)) then begin
+    backdatf = true;
+    agedate = RepSpec.d1;
+  end else begin
+    backdatf = false;
+    agedate = CurrentDate;
+  end;  
+  
+  client = l;
+  CUr.Code = l;
+  ReadFirstMain(CUr,1,True);
+  //record RcVc RepSpec;
+   
+if(dblstr<>"111") begin
+StartReportJob("Ћтчет остатков по клиентах");
+  EndHeader;
+ end; 
+    SetRepCol(2,40);
+  SetRepCol(3,280);
+  SetRepCol(4,340);
+  SetRepCol(5,380);
+  SetRepCol(6,440);
+  SetRepCol(7,440);
+  SetRepCol(8,440);
+  SetRepCol(9,450);
+  
+  
+  StartFormat(15);
+    OutString(0,0,"Љлиент",false);
+    OutString(2,"DblCUVc",client,false);
+  EndFormat;  
+  Black_Divider(0,1);
+  
+  StartFormat(15);
+    OutString(2,0,"„окумент",false);
+    OutString(3,0,"‘ума",false);
+    OutString(4,0,"„ата",false);
+  EndFormat;
+  Gray_Divider(0,1);
+  
+  IPrsr.IVNr = -1;
+  IPrsr.TransType = 1;
+  IPrsr.CustCode = client;
+  found = true;
+  
+  GetOnAccBalance1(RepSpec,CUr.Code,CUr.CurncyCode,backdatf,RepSpec.flags[2],sum,sum2,rval,sumbooked,sumnow,sumcurncy,sumdiff,CurTotalsr);//calcSUM
+   
+   if(dblstr<>"111") begin
+EndJob;
+   end;
+   return;
+end;

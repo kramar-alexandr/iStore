@@ -1,0 +1,100 @@
+external inner function Boolean StockMovVc_PasteQuant(var record StockMovVc,Integer);
+external inner function Boolean StockMovVc_PasteArtCode(var record StockMovVc,Integer,Integer,Boolean);
+external inner function Boolean StockMovDClassSwitchRow(Integer,Integer);
+
+
+function Boolean StockMovDClassArtCodeEFAfter(Integer wn,Integer rownr,Integer changed)
+BEGIN
+  record StockMovVc StockMovr;
+  row StockMovVc StockMovrw;
+  Boolean res;
+  
+  res = true;
+  GetWindowRecord(wn,StockMovr);
+  if (StockMovVc_PasteArtCode(StockMovr,rownr,changed,true)) then begin
+    
+    MatRowGet(StockMovr,rownr,StockMovrw);
+    if(blank(StockMovrw.Quant)) then begin StockMovrw.Quant = 1; end;
+    if(blank(StockMovrw.SentQuant)) then begin StockMovrw.SentQuant = StockMovrw.Quant; end;
+    if(blank(StockMovrw.OrdQuant)) then begin StockMovrw.OrdQuant = 1; end;
+    MatRowPut(StockMovr,rownr,StockMovrw);
+    PutWindowRecord(wn,StockMovr);    
+  end else begin
+    if (changed!=0) then begin
+      Beep;
+    end;
+  end;
+
+  if (StockMovDClassSwitchRow(wn,rownr)) then begin end;    
+  StockMovDClassArtCodeEFAfter = res;
+  RETURN;
+END;
+
+function Boolean StockMovDClassQuantEFAfter(Integer wn,Integer rownr,Integer changed)
+BEGIN
+  record StockMovVc StockMovr;
+  Boolean res;
+  
+  res = true;
+  if (changed!=0) then begin
+    GetWindowRecord(wn,StockMovr);
+    
+    res = StockMovVc_PasteQuant(StockMovr,rownr);
+    PutWindowRecord(wn,StockMovr);    
+  end;
+  StockMovDClassQuantEFAfter = res;
+  RETURN;
+END;
+
+global
+function Boolean StockMovDClassAfterEditField(Integer wn,string fieldname,Integer fn, Integer rownr,Integer changed)
+BEGIN
+  Boolean res;
+  switch (fieldname) begin
+   
+    case "ArtCode": res = StockMovDClassArtCodeEFAfter(wn,rownr,changed);
+                    res = StockMovDClassQuantEFAfter(wn,rownr,changed);
+    
+  end;
+  StockMovDClassAfterEditField = res;
+  RETURN;
+END;
+
+global
+function Boolean StockMovDClassOnEnterKey(var Integer wn,string fieldname,Integer fn,Integer rownr)
+begin
+  Boolean res;
+  Integer wnst;
+  record StockMovVc SMr;
+  row StockMovVc SMrw;
+  string 255 gotofieldname;
+  Integer gotorownr;
+
+  res = true;
+  /*wnst = WindowState(wn);
+  if ((wnst==2) or (wnst==1)) then begin//Rs_update,Rs_insert
+    GetWindowRecord(wn,SMr);
+    if (rownr<0) then begin
+    end else begin
+      gotorownr = rownr;
+      MatRowGet(SMr,rownr,SMrw);            
+      switch (fieldname) begin
+        case "ArtCode": 
+          if (nonblank(SMr.ThrouLocation)) then begin
+            gotofieldname = "OrdQuant";
+          end else begin
+            gotofieldname = "Quant";
+          end;
+        case "Quant": 
+          gotofieldname = "ArtCode";
+          gotorownr = gotorownr + 1;
+      end;
+      if (nonblank(gotofieldname)) then begin
+        WindowFieldGoto(wn,SMr,gotorownr,gotofieldname,true);
+        res = false;
+      end;
+    end;
+  end;*/
+  StockMovDClassOnEnterKey = res;
+  return;  
+end;

@@ -1,0 +1,377 @@
+SetLangMode(LangUkrainian,"UKR",0);
+
+global
+procedure ExportCashInvoicesEn(record RcVc RepSpec)
+begin
+record IVCashVc IVr;
+row IVCashVc IVrw;
+date dat1;
+string 50 LocalMachine,Mnemocode;
+boolean TrHs,testf;
+string 50 p1,p2,p3,value;
+val q1,q2,q3,pr1,pr2,pr3,sum,perc1,perc2,perc3;
+integer mtrw,i;
+area aBuh;
+
+  SetExportCodepage("CP1251");
+  
+  SetAreaZeroSize(aBuh);
+  
+  //MessageBox(0,3);
+  dat1 = RepSpec.d1;
+  LocalMachine = RepSpec.f1;
+  
+  p3 = "Картка (Сертифікат)";
+  
+  switch(LocalMachine)begin
+    case "KDN" :        p1 = "Готівка Днепр";
+                        p2 = "Термінал Днепр";
+                        
+    case "KDT" :        p1 = "Готівка Дрим Таун";
+                        p2 = "Термінал Дрим Таун";
+                        
+    case "DD" :         p1 = "Готівка Донецьк";
+                        p2 = "Термінал Донецьк";
+                        
+    case "KHK" :     		p1 = "Готівка Харків";
+                        p2 = "Термінал Харків";
+                        
+    case "KK" :         p1 = "Готівка Караван";
+                        p2 = "Термінал Караван";
+                        
+    case "O1" :         p1 = "Готівка Олимп";
+                        p2 = "Термінал Олимп";
+                        
+    /*case "OSP" :        p1 = "Готівка Одеса";
+                        p2 = "Термінал Одеса"; */
+                        
+    case "LOP" :        p1 = "Готівка Львів";
+                        p2 = "Термінал Львів";
+    
+    case "KOP" :        p1 = "Готівка Океан Плаза";
+                        p2 = "Термінал Океан Плаза";
+                        
+    case "P1" :         p1 = "Готівка (Новус кінцевий)";
+                        p2 = "Термінал (Новус кінцевий)";
+    
+    /*case "P2" :         p1 = "Готівка (Скаймол кінцевий)";
+                        p2 = "Термінал (Скаймол кінцевий)";
+                        
+    case "P3" :         p1 = "Готівка (Харків кінцевий)";
+                        p2 = "Термінал (Харків кінцевий)";*/
+                        
+  end;
+  
+ // startreportnoheaderjob("BuhExport");
+ // startformat(15)
+    AddTextToArea("номер накл=123720" & chr(9) & chr(10),aBuh);
+    //OutString(0,0,"номер накл=123720",false);
+ // endformat;
+ // startformat(15)
+    AddTextToArea(p1 & chr(9) & chr(10),aBuh);
+    //OutString(0,0,p1,false);
+ // endformat;
+ // startformat(15)
+    AddTextToArea(p2 & chr(9) & chr(10),aBuh);
+    //OutString(0,0,p2,false);
+ // endformat;
+ // startformat(15)
+    AddTextToArea(p3 & chr(9) & chr(10),aBuh);
+    //OutString(0,0,p3,false);
+ // endformat;
+  
+  IVr.TransDate = dat1;
+  TrHs = true;
+  while(LoopKey("TransDate",IVr,1,TrHs))begin
+    testf = true;
+    if(IVr.TransDate>dat1)then begin TrHs = false; testf = false; end;
+    if(IVr.LocalMachineCode!=LocalMachine)then begin testf = false; end;// Edit ************************** Wednesday, 19 October 2011 10:21:13
+    if(IVr.OKFlag!=1)then begin testf = false; end;
+    
+    //MessageBox(0,IVr.TransDate);
+    if(testf)then begin
+      mtrw = matrowcnt(IVr);
+      sum = IVr.Sum4;
+      perc1 = round((IVr.CashValue-IVr.RetValue)/sum,2);
+      perc2 = round(IVr.RecValue+IVr.RecValue3/sum,2);
+      perc3 = round(IVr.RecValue2/sum,2);
+      if(perc3!=0)then begin perc3=1-perc1-perc2; end;
+      if(perc2!=0)then begin perc2=1-perc1-perc3; end;
+      if(perc1!=0)then begin perc1=1-perc3-perc2; end;
+      
+      if(perc3+perc2+perc1!=1)then begin messagebox(0,"NOT 1 perc") end;
+      
+      For(i=0;i<mtrw;i=i+1) begin
+        MatRowGet(IVr,i,IVrw);
+        if(nonblank(IVrw.ArtCode))then begin
+          q1 = IVrw.Quant*perc1;
+          q2 = IVrw.Quant*perc2;
+          q3 = IVrw.Quant*perc3;
+          if(q1+q2+q3!=IVrw.Quant)then begin messagebox(0,"NOT 1 quant") end;
+          
+          pr1 = IVrw.Sum*perc1;
+          pr2 = IVrw.Sum*perc2;
+          pr3 = IVrw.Sum*perc3;
+          if(pr1+pr2+pr3!=IVrw.Sum)then begin messagebox(0,"NOT 1 Price") end;
+          
+          /*StartFormat(15);
+            OutString(0,0,IVrw.ArtCode,false);*/
+            AddTextToArea(IVrw.ArtCode & chr(9),aBuh);
+            value = ValToString(q1,M4Val,"",chr(46),0);
+            AddTextToArea(value & chr(9),aBuh);
+            value = ValToString(q2,M4Val,"",chr(46),0);
+            AddTextToArea(value & chr(9),aBuh);
+            value = ValToString(q3,M4Val,"",chr(46),0);
+            AddTextToArea(value & chr(9),aBuh);
+            value = ValToString(pr1,M4Val,"",chr(46),0);
+            AddTextToArea(value & chr(9),aBuh);
+            value = ValToString(pr2,M4Val,"",chr(46),0);
+            AddTextToArea(value & chr(9),aBuh);
+            value = ValToString(pr3,M4Val,"",chr(46),0);
+            AddTextToArea(value & chr(9) & chr(10),aBuh);
+            
+            /*OutVal(0,0,q1,M4Val,false);
+            OutVal(0,0,q2,M4Val,false);
+            OutVal(0,0,q3,M4Val,false);
+            OutVal(0,0,pr1,M4Val,false);
+            OutVal(0,0,pr2,M4Val,false);
+            OutVal(0,0,pr3,M4Val,false);
+          endFormat;*/
+          
+        end;
+      end; 
+      
+      
+    end;
+  
+  end;
+  
+  WriteAreaToFile(aBuh,RepSpec.f2,0);
+ // endjob;
+return;
+end;
+
+global updating procedure BuhExportEn()
+begin
+integer compno;
+record RcVc RepSpec;
+string 50 filename;
+      compno = CurrentCompany;
+      switch (compno) begin
+      case 1: RepSpec.d1=addday(CurrentDate,-1);
+              SetFileOnServer(true);
+              RepSpec.f1 = "DN_KARAVAN";
+                filename = "Buh/1/" & RepSpec.f1 & ".txt";
+                RepSpec.f1 = "KDN";
+                RepSpec.f2 = filename;
+                CreateFile(filename);
+                closefile;
+                millisleep(100);
+                openexportfile(filename,true);
+                ExportCashInvoicesEn(RepSpec);
+              
+              RepSpec.f1 = "DREAM_TOWN";
+                filename = "Buh/1/" & RepSpec.f1 & ".txt";
+                RepSpec.f1 = "KDT";
+                RepSpec.f2 = filename;
+                CreateFile(filename);
+                closefile;
+                millisleep(100);
+                openexportfile(filename,true);
+                ExportCashInvoicesEn(RepSpec);
+
+              RepSpec.f1 = "D_DEKOR_D";
+                filename = "Buh/1/" & RepSpec.f1 & ".txt";
+                RepSpec.f1 = "DD";
+                RepSpec.f2 = filename;
+                CreateFile(filename);
+                closefile;
+                millisleep(100);
+                openexportfile(filename,true);
+                ExportCashInvoicesEn(RepSpec);
+
+              RepSpec.f1 = "KH_KARAVAN";
+                filename = "Buh/1/" & RepSpec.f1 & ".txt";
+                RepSpec.f1 = "KHK";
+                RepSpec.f2 = filename;
+                CreateFile(filename);
+                closefile;
+                millisleep(100);
+                openexportfile(filename,true);
+                ExportCashInvoicesEn(RepSpec);
+
+              RepSpec.f1 = "KIEV_KARAVAN";
+                filename = "Buh/1/" & RepSpec.f1 & ".txt";
+                RepSpec.f1 = "KK";
+                RepSpec.f2 = filename;
+                CreateFile(filename);
+                closefile;
+                millisleep(100);
+                openexportfile(filename,true);
+                ExportCashInvoicesEn(RepSpec);
+
+              RepSpec.f1 = "NONAME";
+                filename = "Buh/1/" & RepSpec.f1 & ".txt";
+                RepSpec.f1 = "O1";
+                RepSpec.f2 = filename;
+                CreateFile(filename);
+                closefile;
+                millisleep(100);
+                openexportfile(filename,true);
+                ExportCashInvoicesEn(RepSpec);
+              
+              /*	RepSpec.f1 = "OD_SADU_P";
+                filename = "Buh/1/" & RepSpec.f1 & ".txt";
+                RepSpec.f1 = "OSP";
+                RepSpec.f2 = filename;
+                CreateFile(filename);
+                closefile;
+                millisleep(100);
+                openexportfile(filename,true);
+                ExportCashInvoicesEn(RepSpec);*/
+                
+              RepSpec.f1 = "LV_OPERA_PASSAGE";
+                filename = "Buh/1/" & RepSpec.f1 & ".txt";
+                RepSpec.f1 = "LOP";
+                RepSpec.f2 = filename;
+                CreateFile(filename);
+                closefile;
+                millisleep(100);
+                openexportfile(filename,true);
+                ExportCashInvoicesEn(RepSpec);
+              
+              RepSpec.f1 = "OCEAN_PLAZA";
+                filename = "Buh/1/" & RepSpec.f1 & ".txt";
+                RepSpec.f1 = "KOP";
+                RepSpec.f2 = filename;
+                CreateFile(filename);
+                closefile;
+                millisleep(100);
+                openexportfile(filename,true);
+                ExportCashInvoicesEn(RepSpec);  
+                
+              RepSpec.f1 = "GULLIVER";
+                filename = "Buh/1/" & RepSpec.f1 & ".txt";
+                RepSpec.f1 = "KG";
+                RepSpec.f2 = filename;
+                CreateFile(filename);
+                closefile;
+                millisleep(100);
+                openexportfile(filename,true);
+                ExportCashInvoicesEn(RepSpec); 
+        
+        
+        
+              RunProgram("Buh/1/BuhExport.sh", "");
+              SetFileOnServer(false);
+              
+        case 2: RepSpec.d1=addday(CurrentDate,-1);
+              SetFileOnServer(true);
+              RepSpec.f1 = "IPOINT";
+                filename = "Buh/2/" & RepSpec.f1 & ".txt";
+                RepSpec.f1 = "P1";
+                RepSpec.f2 = filename;
+                CreateFile(filename);
+                closefile;
+                millisleep(100);
+                openexportfile(filename,true);
+                ExportCashInvoicesEn(RepSpec);
+                
+                RepSpec.f1 = "SAMSUNG_OLYMP";
+                filename = "Buh/2/" & RepSpec.f1 & ".txt";
+                RepSpec.f1 = "S1";
+                RepSpec.f2 = filename;
+                CreateFile(filename);
+                closefile;
+                millisleep(100);
+                openexportfile(filename,true);
+                ExportCashInvoicesEn(RepSpec);
+                
+                RepSpec.f1 = "SAMSUNG_OLYMP2";
+                filename = "Buh/2/" & RepSpec.f1 & ".txt";
+                RepSpec.f1 = "S2";
+                RepSpec.f2 = filename;
+                CreateFile(filename);
+                closefile;
+                millisleep(100);
+                openexportfile(filename,true);
+                ExportCashInvoicesEn(RepSpec);
+                
+              /*RepSpec.f1 = "IPOINT_SM";
+                filename = "Buh/2/" & RepSpec.f1 & ".txt";
+                RepSpec.f1 = "P2";
+                RepSpec.f2 = filename;
+                CreateFile(filename);
+                closefile;
+                millisleep(100);
+                openexportfile(filename,true);
+                ExportCashInvoicesEn(RepSpec);
+            
+              RepSpec.f1 = "IPOINT_KH_MG";
+                filename = "Buh/2/" & RepSpec.f1 & ".txt";
+                RepSpec.f1 = "P3";
+                RepSpec.f2 = filename;
+                CreateFile(filename);
+                closefile;
+                millisleep(100);
+                openexportfile(filename,true);
+                ExportCashInvoicesEn(RepSpec);*/
+              
+              RunProgram("Buh/2/BuhExport.sh", "");
+              SetFileOnServer(false);
+             
+      end;
+  closefile;
+return;
+end;
+
+
+global procedure ORtoBuhDsm()
+begin
+  integer wn,i,mtrw;
+  record ORVc ORr;
+  row ORVc ORrw;
+  string 100 filename;
+  area aBuh;
+  
+  
+    filename = "ORtoParus.txt";
+    CreateFile(filename);
+    closefile;
+    wn = curwindow;
+    GetWindowRecord(wn,ORr);
+    mtrw = matrowcnt(ORr);
+    millisleep(100);
+    openexportfile(filename,true);
+    SetExportCodepage("CP1251");
+    
+    SetAreaZeroSize(aBuh);
+    
+    AddTextToArea("номер накл=123720" & chr(9) & chr(10),aBuh);
+  
+    AddTextToArea("Готівка (кінцевий споживач)" & chr(9) & chr(10),aBuh);
+  
+    AddTextToArea("Термінал (кінцевий споживач)" & chr(9) & chr(10),aBuh);
+  
+    AddTextToArea("Картка (Сертифікат)" & chr(9) & chr(10),aBuh);
+    
+    for(i=0;i<mtrw;i=i+1)begin
+      matrowget(ORr,i,ORrw);
+      
+      AddTextToArea(ORrw.ArtCode & chr(9),aBuh);
+      AddTextToArea(0 & chr(9),aBuh);
+      AddTextToArea(ORrw.Quant & chr(9),aBuh);
+      AddTextToArea(0 & chr(9),aBuh);
+
+      AddTextToArea(0 & chr(9),aBuh);
+      AddTextToArea(ORrw.Sum & chr(9),aBuh);
+      AddTextToArea(0 & chr(9) & chr(10),aBuh);
+      
+    end;
+    
+    WriteAreaToFile(aBuh,filename,0);
+    
+    closefile;
+return;
+end;
+

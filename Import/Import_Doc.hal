@@ -1,0 +1,19 @@
+Global updating procedure ImportDocIn()
+begin
+		RegisterImport("DocVc");
+ return;
+end;
+
+Global updating procedure ImportCashFlowIn()
+begin
+		RegisterImport("MyCashFlowBlock");
+ return;
+end;	 
+
+Global updating procedure ImportCashFlowDirectIn()
+begin
+		RegisterImport("MyCashFlowDRBlock");
+ return;
+end;	 
+	
+	 

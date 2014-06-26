@@ -1,0 +1,181 @@
+external procedure GetEmplName(string,var string);
+external procedure HT2Per(Date, Date , var string);
+external procedure HTOKF(Integer,Integer, var string);
+external function Integer DaysInMonth(Integer,Integer);//------------------
+external procedure GetFullCurncyRate(var string,Date,var val,var val,var val,var val,var val);
+
+//----------------------------------------------
+global
+procedure WLJRn(var record RcVc RepSpec)
+BEGIN
+  record WayListVc WayListr;
+  row WayListVc WayListrw;
+  Boolean TrHs,testf;
+  LongInt fn,ln;
+  string 255 tstr,empname;
+  Integer i,ar,rw;
+  record WLCarVc WLCarr;
+  date sdate,edate;
+  record GasObjectsAccBlock GOAb;//---------------------
+  row GasObjectsAccBlock GOArw;//=====================
+  val credit,debit,res,deal;
+  integer dayinmonth,mtrw;
+  date sEndDate;
+  record ObjBalVc OBr;
+  string 20 curncy;
+  val fr,to1,to2,br1,br2,myval1,myval2,myval3,myval4,myval5,myval6;
+  
+  sEndDate = RepSpec.sEndDate;
+  blockload(GOAb);
+  dayinmonth = DaysInMonth(sEndDate.year,sEndDate.month);
+  mtrw = matrowcnt(GOAb);
+  debit = 0;
+  credit = 0;
+  for(i=0;i<mtrw;i=i+1)begin
+    matrowget(GOAb,i,GOArw);
+    OBr.AccNumber = GOArw.AccCode;
+    OBr.Object = GOArw.Objects;
+    debit = debit + getturnover(OBr,"transdebit",RepSpec.sStartDate,RepSpec.sEndDate);
+    credit = credit + getturnover(OBr,"transcredit",RepSpec.sStartDate,RepSpec.sEndDate);
+  end;
+  res = debit-credit;//---------temp +400$
+  if((currentcompany == 1) or (currentcompany == 1))then begin
+    res = res +400;//----------------temp
+  end;
+  
+  deal = round(res/dayinmonth,5);
+  
+  sdate=RepSpec.sStartDate;
+  edate=RepSpec.sEndDate;
+  fn=FirstInRange(RepSpec.f1,10);
+  ln=LastInRange(RepSpec.f1,10);
+     
+  StartReportJob(USetStr(10100));
+  rw=1;
+  HT2Per(sdate,edate,tstr);
+  Header(rw,tstr,1);
+  rw = rw + 1;
+  if (nonblank(RepSpec.f1)) then begin
+    tstr=UsetStr(10108) & ": " & RepSpec.f1; 
+  	Header(rw,tstr,1);
+    rw = rw + 1;
+  end;
+  if (nonblank(RepSpec.f2)) then begin
+    tstr=UsetStr(10103) & ": " & RepSpec.f2; 
+  	Header(rw,tstr,1);
+    rw = rw + 1;
+  end;
+  if (nonblank(RepSpec.f3)) then begin
+    tstr=UsetStr(10109) & ": " & RepSpec.f3; 
+  	Header(rw,tstr,1);
+    rw = rw + 1;
+  end;
+  HTOKF(RepSpec.flags[2],RepSpec.flags[1],tstr);
+  Header(rw,tstr,1);
+  EndHeader;
+  
+  SetRepCol(2,40);
+  SetRepCol(7,100);  
+  SetRepCol(3,140); 
+  SetRepCol(6,190);    
+  SetRepCol(4,400);
+  SetRepCol(5,440);
+  StartFormat(15);
+	OutString(0,0,USetStr(10101),false);	
+	OutString(2,0,USetStr(10102),false);
+	OutString(7,0,USetStr(10109),false);	
+	OutString(3,0,USetStr(10103),false);	
+	OutString(6,0,USetStr(10104),false);	
+	OutString(4,0,USetStr(10105),true);	
+	
+	OutString(5,0,USetStr(31004),true);
+	OutString(6,0,USetStr(31005),true);
+	OutString(7,0,USetStr(31006),true);
+	OutString(8,0,USetStr(31007),true);
+	OutString(9,0,USetStr(31008),true);
+	OutString(9,0,USetStr(31009),true);
+	OutString(9,0,USetStr(31010),true);
+	OutString(1,0,USetStr(31011),true);
+	//OutString(5,0,USetStr(10106),true);	
+	//OutString(1,0,USetStr(10107),true);	
+	
+	EndFormat;
+	Black_Divider(0,1);
+  
+  WayListr.TransDate=sdate;
+  TrHs=true;
+  
+  While (LoopKey("TransDate",WayListr,1,true)) begin
+  	testf=true;
+  	if (WayListr.TransDate>edate) then begin
+  		TrHs=false;testf=false;
+  	end;
+  	if (nonblank(RepSpec.f1)) then begin
+  		if (WayListr.SerNr<fn) or (WayListr.SerNr>ln) then begin
+  			testf=false;
+  		end; 
+  	end;
+  	if (nonblank(RepSpec.f2)) and (RepSpec.f2<>WayListr.Driver) then begin
+  	  testf=false; 
+  	end;
+  	if (nonblank(RepSpec.f3)) and (RepSpec.f3<>WayListr.CarCode) then begin
+  	  testf=false; 
+  	end;
+  	if (WayListr.OKFlag==0 and  RepSpec.flags[2]==0) or
+       (WayListr.OKFlag==1 and  RepSpec.flags[1]==0) then begin
+  	  testf=false;
+  	end;  
+  	
+  	if (testf) then begin
+  	  StartFormat(15);
+  	  OutString(0,"DblWLVc",WayListr.SerNr,false);	
+  	  OutString(2,0,WayListr.TransDate,false);	
+  	  OutString(7,0,WayListr.CarCode,false);	
+  	  OutString(3,0,WayListr.Driver,false);	
+  	  GetEmplName(WayListr.Driver,empname);
+  	  OutString(6,0,empname,false);	
+  	  OutString(4,0,WayListr.Totalkm,true);	
+  	  //OutString(5,0,WayListr.Totall,true);	
+  	  //OutString(1,0,WayListr.TotalCost,true);	
+  	  EndFormat;
+  	  if (RepSpec.ArtMode==1) then begin
+  	  	ar=matrowcnt(WayListr);
+  	  	for (i=0;i<ar;i=i+1) begin
+  	  		MatRowGet(WayListr,i,WayListrw);
+  	  		StartFormat(15);
+					OutString(2,0,WayListrw.WDate,false);	
+					OutString(3,0,WayListrw.WDistCode,false);	
+					OutString(6,0,WayListrw.WComment,false);	
+					OutString(4,0,WayListrw.WDistVal,true);	
+					OutString(1,"DblCUVc",WayListrw.CUCode,true);	
+					OutString(1,0,"",true);
+		      
+		      myval1 = round(WayListrw.WDistVal/WayListr.Totalkm,5);
+					Outval(5,0,myval1,M4Val,true);
+					myval2 = round(myval1*deal,5);
+          OutVal(6,0,myval2,M4Val,true);
+          curncy = "UAH";
+          GetFullCurncyRate(curncy,WayListr.TransDate,fr,to1,to2,br1,br2);
+          OutString(7,0,WayListr.CostPerkm,true);
+          OutString(8,0,fr,true);
+          myval3 = round(WayListr.CostPerkm/fr,5);
+          Outval(9,0,myval3,M4val,true);
+          myval4 = round(WayListr.NormAmount/100*WayListrw.WDistVal,5);
+          Outval(9,0,myval4,M4Val,true);
+          myval5 = myval3*myval4;
+          Outval(9,0,myval5,M4Val,true);
+          myval6 = (myval5+myval2)*1.15;
+          Outval(1,0,myval6,M4Val,true);
+					
+  	  		EndFormat;
+  	  	end;
+  	  	Gray_Divider(0,1);
+  	  end;
+  	end;
+     
+  end;
+  
+  
+  EndJob;
+  return;
+END;

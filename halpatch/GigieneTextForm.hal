@@ -1,0 +1,114 @@
+external function Boolean FindFormcode(Integer,Integer);
+external function Boolean Getformcode(Integer,Integer,string,string,string,LongInt,LongInt,string,string,Integer,string,var string);
+
+
+procedure PrintOrderRows(record RcVc RepSpec,record DocVc Docr,record GigieneTextVc GGr,record LangNrVc LangNrr,record SysFormatBlock SysFormatRec,Integer rwcnt)
+BEGIN
+  record INVc INr;
+  row GigieneTextVc GGrw;
+  Integer i,mtrw;
+  string 255 tstr;
+  val t,t2,v,qtyconv1,qtyconv2,qtyconv3;
+  Integer rownr,r,valtyp;
+   
+  
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(GGr,i,GGrw);
+      
+      OUTFORMFIELD("F_COMMENT",GGrw.Str1);
+      OUTFORMFIELD("F_KOMMENTAR2",GGrw.Str3);
+      OUTFORMFIELD("F_KOMMENTAR",GGrw.Str2);
+      EndFormRow;        
+
+  end;
+	
+  RETURN;
+END;
+
+
+procedure PrintOrder(string formcode,record RcVc RepSpec,record GigieneTextVc GGr,record SysFormatBlock SysFormatRec,record LangNrVc LangNrr)
+BEGIN
+  record DocVc Docr;
+  record INVc INr;
+  row GigieneTextVc GGrw;
+  Integer i,rwcnt,rwcnt2;
+
+  rwcnt2 = Matrowcnt(GGr);
+  
+  if (FIELDINFORM("F_ARTNR2")) then begin
+    INr.Code = GGr.ArtCode;
+    If(readfirstmain(INr,1,true))begin
+      OUTFORMFIELD("F_ARTNR2",INr.Name);
+    end;
+  end;    
+  OUTFORMFIELD("F_ITEMCODE",GGr.ArtCode);  
+  
+  
+  PrintOrderRows(RepSpec,Docr,GGr,LangNrr,SysFormatRec,rwcnt2);  
+  
+  RETURN;        
+END;
+
+
+global
+procedure DoGigieneTextForm(record RcVc RepSpec,record GigieneTextVc GGr)
+BEGIN
+  record GigieneTextFormBlock GGFr;
+  row GigieneTextFormBlock GGFrw;
+  record SysFormatBlock SysFormatRec;
+  record LangNrVc LangNrr;
+  Integer i,rwcnt;  
+  Boolean printf,langf;
+  Integer intdocnr;
+  string 30 formcode,langcode;  
+  
+  BlockLoad(SysFormatRec);  
+  BlockLoad(GGFr);
+  rwcnt = MatRowCnt(GGFr);
+  langcode = "";
+  for (i=rwcnt-1;i>=0;i=i-1) begin
+    MatRowGet(GGFr,i,GGFrw);
+    if (GGFrw.LangCode==langcode) then begin
+      i = -1;
+      langf = true;
+    end;
+  end;
+  if (langf==false) then begin langcode = ""; end;
+  intdocnr = 1;
+  printf = true;
+  while (printf) begin  
+    formcode = "";
+			for (i=rwcnt-1;i>=0;i=i-1) begin
+					MatRowGet(GGFr,i,GGFrw);
+					if (FindFormcode(0,GGFrw.Typ)) then begin 
+						if (Getformcode(i,GGFrw.intdocnr,GGFrw.FPCode,GGFrw.UserGroup,GGFrw.LangCode,GGFrw.SerNr,0,GGFrw.PrintGroupCode,
+														langcode,intdocnr,"GigieneTextVc",formcode)) then
+						begin
+							goto LBREAKOrd;
+						end else begin
+						end;
+					end;
+			end;
+	LBREAKOrd:;
+				if (nonblank(formcode)) then begin
+					if (OpenForm(formcode)) then begin
+						PrintOrder(formcode,RepSpec,GGr,SysFormatRec,LangNrr);
+						
+						CloseForm;
+					end else begin
+						printf = false;
+						MessageBox(1546,formcode);
+					end;
+				end else begin
+					printf = false;
+					if (intdocnr==1) then begin
+						MessageBox(1624, " " & USetStr(1623));
+					end;
+				end;
+		intdocnr = intdocnr + 1;
+  end;
+  RETURN;
+END;
+
+
+

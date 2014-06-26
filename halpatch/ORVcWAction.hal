@@ -1,0 +1,1070 @@
+remote function Boolean CostPriceForGP(string,string,string,string,var val);
+external procedure RecalcORSubtotal(var record ORVc);
+external procedure CalcSum(val,val,val,val,var val,Integer);
+external procedure RoundRowSum(string,string,var val);
+external procedure SendArtStat(string,string,string,val,val,val,Date);
+external procedure CalcProc(val,val,var val);
+external procedure FindSalesExVat(string,val,Integer,Integer,var val);
+external procedure AddVATBase(var record SMVc,string,val,val,Integer,Integer,Integer);
+external procedure GetCurncyRoundoff(string,string,var Integer,var LongInt,var Integer);
+external function val FindVAT(string,val,Integer,Integer);
+external procedure AddTAX2Base(record SMVc,string,val,val,val,Integer,string);
+external procedure CalcVATBaseVAT(record SMVc,Integer,Integer,Integer,var val,var val);
+external function val CalcTax2BaseTax2(record SMVc,Integer);
+external procedure SetupVATBase(var record SMVc,var Integer);
+external function Boolean TestForMATVARINS(Integer);
+external function Boolean ORDchrsum(var record ORVc,Integer);
+external function val MulRateToBase1(var string,val,val,val,val,val,val,Integer);
+external function Boolean ORDClassSwitchRow(Integer,Integer);
+external procedure ORVc_PasteBasePrice(var record ORVc,Integer,var Boolean);
+remote procedure ORVc_PasteVATCode(var record ORVc,Integer,var Boolean);
+external procedure ORVc_PastevRebate(var record ORVc,Integer,var Boolean);
+external procedure ORVc_PastePrice(var record ORVc,Integer,var Boolean);
+external procedure ORVc_PastePriceFactor(var record ORVc,Integer,var Boolean);
+external procedure ORVc_PasteRecepy(var record ORVc,Integer,var Boolean);
+remote function Boolean ORVc_PasteUnitFactQuant(var record ORVc,Integer);
+remote procedure ORVc_PasteUnitFactPrice(var record ORVc,Integer);
+remote procedure ORVc_PasteUnitCode(var record ORVc,Integer);
+remote procedure ORVc_PastePriceList(var record ORVc);
+external procedure ORVc_PasteCommision(var record ORVc,var Boolean);
+remote procedure ORVc_PasteCurncyCode(var record ORVc,string);
+remote procedure ORVc_PastePRCode(var record ORVc);
+remote procedure ORVc_PastePayDeal(var record ORVc);
+external procedure MulM4ProcVal(val,val,var val);
+remote procedure ORVc_PasteDelAddrCode(var record ORVc);
+external procedure RemoveOldUserObjects(string,var string);
+external procedure GetSalesGroup(string,var string);
+remote procedure ORVc_PasteFrPrice(var record ORVc);
+remote procedure ORVc_PasteOrdDate(var record ORVc);
+remote procedure ORVc_PasteQuant(var record ORVc,Integer,var Boolean);
+remote function Boolean ORVc_PasteArtCode(var record ORVc,Integer,var string,Boolean);
+remote function Boolean PasteCustInOrder(var record ORVc,string,string,var string,var string);
+external function Boolean SetUnitFactor(string,var val,val,val,val,var val,var val,var val,Boolean);
+external procedure SerialNrDimensions(string,string,var val,var val,var val);
+external function Integer CheckSerialStatus(string,string,var string);
+remote function val CalculateSerialNrQuantity(string,string,string,Boolean,val,val,val,val);
+
+global
+procedure ORSumup(var record ORVc ORp)
+BEGIN
+  row ORVc ORrw;
+  val s,ms,ms2,temp,s2,tax1sum,tax2sum,t;
+  Integer i,rwcnt;
+  Integer rndtotal;
+  LongInt roundlines;
+  Integer roundvat;
+  record SMVc SMr;/*VATBaseRowType*/
+  record SMVc SMTax2r;
+  Integer vatcnt;  
+  val subtotv,tax1reb;
+  record Tax1RebVc Tax1Rebr;
+  val tms,ttax1sum;
+
+  SetupVATBase(SMr,vatcnt);
+  ORp.TotGP = 0;
+  rwcnt = MatRowCnt(ORp);
+  for (i = 0 ; i<rwcnt ;i=i+1) begin
+    MatRowGet(ORp,i,ORrw);
+    if (ORrw.stp!=9) then begin
+      tax1reb = ORrw.TAX1Reb;
+//      tax1reb = 0;
+//      Tax1Rebr.Code = ORrw.VATCode;
+//      Tax1Rebr.CustCode = ORp.CustCode;
+//      if (ReadFirstMain(Tax1Rebr,2,true)) then begin end;
+//      if (ORp.OrdDate>=Tax1Rebr.From) then begin
+//        tax1reb = Tax1Rebr.TAX1Reb;
+//      end;
+      ORp.TotGP = ORp.TotGP + ORrw.rowGP;
+      temp = MulRateToBase1(ORp.CurncyCode,ORrw.Sum,ORp.FrRate,ORp.ToRateB1,ORp.ToRateB2,ORp.BaseRate1,ORp.BaseRate2,DefaultCurRoundOff);        
+      s = s + ORrw.Sum;
+      s2 = s2 + temp;
+      AddVATBase(SMr,ORrw.VATCode,ORrw.Sum,tax1reb,vatcnt,ORp.InclVAT,ORp.NoTAXonVAT);
+      AddTAX2Base(SMTax2r,ORrw.TAX2Code,ORrw.TAX2Prc,ORrw.TAX2Reb,ORrw.Sum,ORp.InclVAT,ORrw.VATCode);        
+      MatRowPut(ORp,i,ORrw);
+      subtotv = subtotv + ORrw.Sum;
+    end else begin
+      if (ORrw.Sum!=subtotv) then begin
+        ORrw.Sum = subtotv;
+        MatRowPut(ORp,i,ORrw);
+      end;
+      subtotv = blankval;
+    end;
+  end;
+
+  CalcVATBaseVAT(SMr,ORp.InclVAT,ORp.NoTAXonVAT,vatcnt,ms,tax1sum);
+
+  tax2sum = CalcTax2BaseTax2(SMTax2r,ORp.InclVAT);  
+  ORp.TAX1Sum = Round(tax1sum,DefaultCurRoundOff);
+  ORp.TAX2Sum = Round(tax2sum,DefaultCurRoundOff);  
+  if (ORp.TAX1Sum==0) then begin ORp.TAX1Sum = blankval; end;
+  if (ORp.TAX2Sum==0) then begin ORp.TAX2Sum = blankval; end;
+  if (ORp.NoTax1!=0) then begin  ORp.TAX1Sum = blankval; end;
+  if (ORp.NoTax2!=0) then begin  ORp.TAX2Sum = blankval; end;
+  GetCurncyRoundoff(ORp.CurncyCode,ORp.PayDeal,rndtotal,roundlines,roundvat);
+  ms = Round(ms,roundvat);
+  
+
+  if ((ORp.ExportFlag==1) or (ORp.ExportFlag==2)) then begin
+    if (ORp.InclVAT>0) then begin
+      ms2 = s - ms;
+    end else begin
+      ms2 = s;
+    end;  
+    ms = blankval;
+  end else begin
+    if (ORp.InclVAT>0) then begin
+      ms2 = s;
+    end else begin
+      ms2 = s + ms;
+    end;  
+
+  switch (ORp.InclVAT) begin
+    case 1:
+      switch (ORp.NoTAXonVAT) begin
+        case 1:
+        case 2:
+        otherwise
+      end;
+    case 2:
+      switch (ORp.NoTAXonVAT) begin
+        case 2:
+          if (ORp.TotalwoTAX==0) then begin
+            ms2 = ms2 + tax1sum;
+          end;
+          CalcVATBaseVAT(SMr,ORp.InclVAT,1,vatcnt,tms,ttax1sum);  
+          ms2 = ms2 + ms-tms;
+        otherwise
+          if (ORp.TotalwoTAX==0) then begin
+            ms2 = ms2 + tax1sum;
+          end;
+      end;
+    otherwise
+      switch (ORp.NoTAXonVAT) begin
+        otherwise
+          if (ORp.TotalwoTAX==0) then begin
+            ms2 = ms2 + tax1sum;
+          end;
+      end;
+  end;
+
+  end;
+  if (ORp.FrPrice!=0) then begin
+    tax1reb = 0;
+    Tax1Rebr.Code = ORp.FrVATCode;
+    Tax1Rebr.CustCode = ORp.CustCode;
+    if (ReadFirstMain(Tax1Rebr,2,true)) then begin end;
+    if (ORp.OrdDate>=Tax1Rebr.From) then begin
+      tax1reb = Tax1Rebr.TAX1Reb;
+    end;
+    if (ORp.InclVAT==0) then begin
+      s = ORp.FrPrice + s;
+      if ((ORp.ExportFlag==0) or (ORp.ExportFlag==3) or (ORp.ExportFlag==4)) then begin
+        t = FindVAT(ORp.FrVATCode,ORp.FrPrice,ORp.InclVAT,ORp.NoTAXonVAT);
+        if (t==0) then begin
+          s2 = ORp.FrPrice + s2;
+        end;  
+        ms = t + ms;
+        AddVATBase(SMr,ORp.FrVATCode,ORp.FrPrice,tax1reb,vatcnt,ORp.InclVAT,ORp.NoTAXonVAT);
+      end;
+    end else begin
+      if ((ORp.ExportFlag==0) or (ORp.ExportFlag==3) or (ORp.ExportFlag==4)) then begin
+        ms2 = ORp.FrPrice + ms2;
+        t = FindVAT(ORp.FrVATCode,ORp.FrPrice,ORp.InclVAT,ORp.NoTAXonVAT);
+        ms = t + ms;
+        AddVATBase(SMr,ORp.FrVATCode,ORp.FrPrice,tax1reb,vatcnt,ORp.InclVAT,ORp.NoTAXonVAT);
+        if (t==0) then begin
+          s2 = ORp.FrPrice + s2;
+        end else begin
+          s = ORp.FrPrice + s;
+        end;  
+      end else begin
+        ms2 = ORp.FrPrice + ms2;      
+        t = FindVAT(ORp.FrVATCode,ORp.FrPrice,ORp.InclVAT,ORp.NoTAXonVAT);
+        ms = t + ms;
+        AddVATBase(SMr,ORp.FrVATCode,ORp.FrPrice,tax1reb,vatcnt,ORp.InclVAT,ORp.NoTAXonVAT);
+        ms2 = ms2 - t;
+        if (t==0) then begin
+          s2 = ORp.FrPrice + s2;
+        end else begin
+          s = ORp.FrPrice + s;
+        end;  
+      end;
+    end;
+  end;
+
+  t = ms2;
+  ms2 = Round(t,rndtotal);
+  t = ms2 - t;
+  ORp.Sum0 = t + ORp.Sum0;
+    
+  ms2 = ms2 + ORp.TAX2Sum;
+  s = Round(s,rndtotal);
+  ms = Round(ms,roundvat);
+  ms2 = Round(ms2,rndtotal);
+  if (ORp.DiscPerc!=blankval) then begin    
+    MulM4ProcVal(ORp.DiscPerc,s,temp);
+    ORp.DiscSum = temp;
+  end;  
+  ORp.DiscSum = Round(ORp.DiscSum,DefaultCurRoundOff);
+  ORp.Sum1 = s;
+  ORp.Sum3 = ms;
+  ORp.Sum4 = ms2;
+  if (ORp.InclVAT==0) then begin
+    temp = ORp.TotGP/s2;
+  end else begin
+    temp = ORp.TotGP/(s2-MulRateToBase1(ORp.CurncyCode,ORp.Sum3,ORp.FrRate,ORp.ToRateB1,ORp.ToRateB2,ORp.BaseRate1,ORp.BaseRate2,DefaultCurRoundOff));
+  end;
+  ORp.GPProc = temp*100;
+  if (nonblank(ORp.CurncyCode)) then begin
+    ORp.BaseSum4 = MulRateToBase1(ORp.CurncyCode,ORp.Sum4,ORp.FrRate,ORp.ToRateB1,ORp.ToRateB2,ORp.BaseRate1,ORp.BaseRate2,DefaultCurRoundOff);
+  end;  
+  ORp.SumIncCom = ORp.Sum4 + ORp.Commision;
+  RecalcORSubtotal(ORp);
+  RETURN;
+END;
+
+global
+procedure ORDchsum(var record ORVc ORp,Integer rownr)
+BEGIN  
+  row ORVc ORrw;
+  val t,s,rowsum,tproc,unitprdisc;
+  val qty,sum;
+
+  if (rownr>=0) then begin
+    MatRowGet(ORp,rownr,ORrw);
+  end;
+  qty = ORrw.Quant;
+  if (nonblank(ORrw.ArtCode)) then begin
+    t = qty*ORrw.BasePrice;   /* cost  */
+    if (ORrw.PriceFactor!=0) then begin
+      t = t/ORrw.PriceFactor;
+    end;
+    sum = ORrw.Sum;
+    s = MulRateToBase1(ORp.CurncyCode,sum,ORp.FrRate,ORp.ToRateB1,ORp.ToRateB2,ORp.BaseRate1,ORp.BaseRate2,DefaultCurRoundOff);
+    FindSalesExVat(ORrw.VATCode,s,ORp.InclVAT,ORp.NoTAXonVAT,rowsum);    
+    ORrw.rowGP = rowsum - t;          /* GP    */
+  end else begin
+    ORrw.rowGP = blankval;
+    ORrw.BasePrice = blankval;
+  end;
+  CalcProc(rowsum,ORrw.rowGP,tproc);
+  unitprdisc = Round(ORrw.Sum / ORrw.Quant,DefaultCurRoundOff);
+  if (rownr>=0) then begin
+    MatRowPut(ORp,rownr,ORrw);
+  end;
+  SendArtStat(ORrw.ArtCode,ORp.Location,"",ORrw.rowGP,tproc,unitprdisc,ORp.OrdDate);  
+  RETURN;
+END;
+
+global
+procedure ORVc_PasteSum(var record ORVc ORp,Integer rownr,var Boolean chsum)
+BEGIN
+  val s,t;
+  row ORVc ORrw;
+  record GeneralOptionBlock GenOptr;
+  
+  MatRowGet(ORp,rownr,ORrw);
+  if ((ORrw.Quant!=0) and (ORrw.Price!=0)) then begin  
+    chsum = true;
+    ORrw.vRebate = blankval;
+    BlockLoad(GenOptr);      
+    CalcSum(ORrw.Quant,ORrw.Price,ORrw.PriceFactor,ORrw.vRebate,t,GenOptr.UseDiscount);
+    RoundRowSum(ORp.CurncyCode,ORp.PayDeal,t);
+    s = ORrw.Sum;// /ORrw.Quant not good
+    s = t - s;
+    s = s*100;
+    s = s/t;
+    ORrw.vRebate = Round(s,1);
+    if (ORrw.vRebate==0) then begin ORrw.vRebate = blankval; end;
+    MatRowPut(ORp,rownr,ORrw);
+  end;
+  RETURN;
+END;
+
+function Boolean ORDClassUnitXvalEFAfter(Integer wn,Integer fn, Integer rownr,Integer changed)
+BEGIN
+  row ORVc ORrw;
+  record ORVc ORr;
+  Boolean res,chsum,chrsum;
+  val unitqty,unitprice,qty,price;
+  
+  res = true;
+  if ((changed!=0) and (rownr>=0)) then begin
+    GetWindowRecord(wn,ORr);
+    MatRowGet(ORr,rownr,ORrw);
+    ORrw.Quant = CalculateSerialNrQuantity(ORrw.ArtCode,"","",false,ORrw.UnitXval,ORrw.UnitYval,ORrw.UnitZval,ORrw.Quant);
+    MatRowPut(ORr,rownr,ORrw);
+    MatRowGet(ORr,rownr,ORrw);
+    unitqty = ORrw.UnitFactQuant;
+    unitprice = ORrw.UnitFactPrice;
+    qty = ORrw.Quant;
+    price = ORrw.Price;
+    if (SetUnitFactor(ORrw.UnitCode,unitqty,ORrw.UnitXval,ORrw.UnitYval,ORrw.UnitZval,unitprice,qty,price,false)) then begin
+      ORrw.UnitFactQuant = unitqty;
+      ORrw.UnitFactPrice = unitprice;
+      ORrw.Quant = qty;
+      ORrw.Price = price;
+      chrsum = true;
+      MatRowPut(ORr,rownr,ORrw);
+    end;
+    if (chrsum) then begin
+      chsum = ORDchrsum(ORr,rownr);
+    end;
+    if (chsum) then begin
+      ORDchsum(ORr,rownr);
+      ORSumup(ORr);
+    end;    
+    PutWindowRecord(wn,ORr);    
+  end;
+  ORDClassUnitXvalEFAfter = res;
+  RETURN;
+END;
+
+function Boolean ORDClassUnitYvalEFAfter(Integer wn,Integer fn, Integer rownr,Integer changed)
+BEGIN
+  row ORVc ORrw;
+  record ORVc ORr;
+  Boolean res,chsum,chrsum;
+  val unitqty,unitprice,qty,price;
+  
+  res = true;
+  if ((changed!=0) and (rownr>=0)) then begin
+    GetWindowRecord(wn,ORr);
+    MatRowGet(ORr,rownr,ORrw);
+    ORrw.Quant = CalculateSerialNrQuantity(ORrw.ArtCode,"","",false,ORrw.UnitXval,ORrw.UnitYval,ORrw.UnitZval,ORrw.Quant);
+    MatRowPut(ORr,rownr,ORrw);
+    MatRowGet(ORr,rownr,ORrw);
+    unitqty = ORrw.UnitFactQuant;
+    unitprice = ORrw.UnitFactPrice;
+    qty = ORrw.Quant;
+    price = ORrw.Price;
+    if (SetUnitFactor(ORrw.UnitCode,unitqty,ORrw.UnitXval,ORrw.UnitYval,ORrw.UnitZval,unitprice,qty,price,false)) then begin
+      ORrw.UnitFactQuant = unitqty;
+      ORrw.UnitFactPrice = unitprice;
+      ORrw.Quant = qty;
+      ORrw.Price = price;
+      chrsum = true;
+      MatRowPut(ORr,rownr,ORrw);
+    end;
+    if (chrsum) then begin
+      chsum = ORDchrsum(ORr,rownr);
+    end;
+    if (chsum) then begin
+      ORDchsum(ORr,rownr);
+      ORSumup(ORr);
+    end;    
+    PutWindowRecord(wn,ORr);    
+  end;
+  ORDClassUnitYvalEFAfter = res;
+  RETURN;
+END;
+
+function Boolean ORDClassUnitZvalEFAfter(Integer wn,Integer fn, Integer rownr,Integer changed)
+BEGIN
+  row ORVc ORrw;
+  record ORVc ORr;
+  Boolean res,chsum,chrsum;
+  val unitqty,unitprice,qty,price;
+  
+  res = true;
+  if ((changed!=0) and (rownr>=0)) then begin
+    GetWindowRecord(wn,ORr);
+    MatRowGet(ORr,rownr,ORrw);
+    ORrw.Quant = CalculateSerialNrQuantity(ORrw.ArtCode,"","",false,ORrw.UnitXval,ORrw.UnitYval,ORrw.UnitZval,ORrw.Quant);    
+    MatRowPut(ORr,rownr,ORrw);
+    MatRowGet(ORr,rownr,ORrw);
+    unitqty = ORrw.UnitFactQuant;
+    unitprice = ORrw.UnitFactPrice;
+    qty = ORrw.Quant;
+    price = ORrw.Price;
+    if (SetUnitFactor(ORrw.UnitCode,unitqty,ORrw.UnitXval,ORrw.UnitYval,ORrw.UnitZval,unitprice,qty,price,false)) then begin
+      ORrw.UnitFactQuant = unitqty;
+      ORrw.UnitFactPrice = unitprice;
+      ORrw.Quant = qty;
+      ORrw.Price = price;
+      chrsum = true;
+      MatRowPut(ORr,rownr,ORrw);
+    end;
+    if (chrsum) then begin
+      chsum = ORDchrsum(ORr,rownr);
+    end;
+    if (chsum) then begin
+      ORDchsum(ORr,rownr);
+      ORSumup(ORr);
+    end;    
+    PutWindowRecord(wn,ORr);    
+  end;
+  ORDClassUnitZvalEFAfter = res;
+  RETURN;
+END;
+
+function Boolean ORDClassSerialNrEFAfter(Integer wn,Integer fn, Integer rownr,Integer changed)
+BEGIN
+  row ORVc ORrw;
+  record ORVc ORr;
+  Boolean res;
+  val UnitXval,UnitYval,UnitZval,oldquant,t;
+  string 255 tstr;
+  Boolean chsum;
+  
+  res = true;
+  if ((changed!=0) and (rownr>=0)) then begin
+    GetWindowRecord(wn,ORr);
+    MatRowGet(ORr,rownr,ORrw);
+    SerialNrDimensions(ORrw.ArtCode,ORrw.SerialNr,UnitXval,UnitYval,UnitZval);
+    ORrw.UnitXval = UnitXval;
+    ORrw.UnitYval = UnitYval;
+    ORrw.UnitZval = UnitZval;
+    if (CheckSerialStatus(ORrw.ArtCode,ORrw.SerialNr,tstr)==1) then begin
+      MessageBox(0,tstr);
+    end;
+    t = ORrw.BasePrice;
+    chsum = CostPriceForGP(ORrw.ArtCode,ORrw.SerialNr,ORr.PriceList,ORr.CustCode,t);
+    ORrw.BasePrice = t;
+    oldquant = ORrw.Quant;
+    ORrw.Quant = CalculateSerialNrQuantity(ORrw.ArtCode,"","",false,ORrw.UnitXval,ORrw.UnitYval,ORrw.UnitZval,ORrw.Quant);    
+    if (ORrw.Quant!=oldquant) then begin
+      chsum = true;
+    end;
+    MatRowPut(ORr,rownr,ORrw);
+    if (chsum) then begin
+      ORDchsum(ORr,rownr);
+      ORSumup(ORr);
+    end;
+    PutWindowRecord(wn,ORr);    
+  end;
+  ORDClassSerialNrEFAfter = res;
+  RETURN;
+END;
+
+function Boolean ORDClassPlanShipEFAfter(Integer wn,Integer fn, Integer rownr,Integer changed)
+begin
+  record ORVc ORr;
+  record PlanDeliveryBlock PlanDelRec;
+  LongInt week;
+  date d;
+  
+  if (changed!=0) then begin
+    BlockLoad(PlanDelRec);
+    GetWindowRecord(wn,ORr);
+    switch (PlanDelRec.FieldType) begin
+      case 1:  /* date */
+        d = ORr.PlanShip;
+        ORr.PlanShip = d;
+        ORr.PlanShipDate = StringToDate(ORr.PlanShip);
+      case 2:  /* week number (nn) */
+        week = ORr.PlanShip;
+        ORr.PlanShip = week;
+      case 3:  /* week number (yynn */
+        if (nonblank(ORr.PlanShip)) then begin
+          week = StringToLongInt(ORr.PlanShip);
+          ORr.PlanShip = week;
+          if (len(ORr.PlanShip)<4) then begin
+            ORr.PlanShip = "0" & ORr.PlanShip;
+          end;
+          if (len(ORr.PlanShip)>4) then begin
+            ORr.PlanShip = Left(ORr.PlanShip,4);
+          end;
+        end;
+    end;
+    PutWindowRecord(wn,ORr);    
+  end;
+  ORDClassPlanShipEFAfter = true;
+  return;
+end;
+
+function Boolean ORDClassOrdDateEFAfter(Integer wn,Integer fn, Integer rownr,Integer changed)
+begin
+  record ORVc ORr;
+  
+  if (changed!=0) then begin
+    GetWindowRecord(wn,ORr);
+    ORVc_PasteOrdDate(ORr);
+    PutWindowRecord(wn,ORr);    
+  end;
+  ORDClassOrdDateEFAfter = true;
+  return;
+end;
+ 
+function Boolean ORDClassArtCodeEFAfter(Integer wn,Integer rownr,Integer changedf)
+begin  
+  record ORVc ORr;
+  string 255 inwarning;
+ 
+  if (changedf!=0) then begin
+    GetWindowRecord(wn,ORr);
+    DeselectWindow(wn,false);
+    if (ORVc_PasteArtCode(ORr,rownr,inwarning,false)) then begin
+      if (nonblank(inwarning)) then begin
+        MessageBox(0,inwarning);
+      end;
+    end else begin
+      Beep;
+    end;
+    PutWindowRecord(wn,ORr);
+    if (ORDClassSwitchRow(wn,rownr)) then begin end;
+  end;
+  ORDClassArtCodeEFAfter = true;
+  return;
+end;
+ 
+function Boolean ORDClassQuantEFAfter(Integer wn,Integer fn,Integer rownr,Integer changedf)
+begin   
+  record ORVc ORr;
+  Boolean chsum;
+  record ModuleBlock OptFeature;
+
+  if (changedf!=0) then begin 
+    GetWindowRecord(wn,ORr);
+    DeselectWindow(wn,false);
+    BlockLoad(OptFeature);
+    if (OptFeature.NoQtyDepPrices==0) then begin
+      ORVc_PasteQuant(ORr,rownr,chsum);
+    end else begin
+      chsum = ORDchrsum(ORr,rownr);
+    end;
+    if (chsum) then begin
+      ORDchsum(ORr,rownr);
+      ORSumup(ORr);
+    end;    
+    PutWindowRecord(wn,ORr);
+  end;
+  ORDClassQuantEFAfter = true;
+  return;
+end;
+ 
+function Boolean ORDClassCustCodeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changedf)
+begin  
+  record ORVc ORr;
+  string 255 warning,errstr;
+ 
+  GetWindowRecord(wn,ORr);    
+  if ((changedf!=0) or ((blank(ORr.Addr0)) and (nonblank(ORr.CustCode)))) then begin
+    if (PasteCustInOrder(ORr,ORr.CustCode,WindEFstr(wn),warning,errstr)) then begin
+      if (nonblank(warning)) then begin
+        MessageBox(0,warning);
+      end;
+      if (nonblank(errstr)) then begin
+        MessageBox(0,errstr);
+      end;
+      PutWindowRecord(wn,ORr);
+    end else begin
+      Beep;
+    end;
+  end;
+  ORDClassCustCodeEFAfter = true;
+  return;
+end;
+ 
+function Boolean ORDClassFrPriceEFAfter(Integer wn,Integer changed)
+begin  
+  record ORVc ORr;
+  val t;
+
+  if (changed!=0) then begin  
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,ORr);
+    ORVc_PasteFrPrice(ORr);
+    PutWindowRecord(wn,ORr);
+  end;  
+  ORDClassFrPriceEFAfter = true;
+  return;
+end;
+
+function Boolean ORDClassSalesManEFAfter(Integer wn,Integer changed)
+begin  
+  record ORVc ORr;
+  record UserVc Userr;
+  string 255 efstr,tstr;
+
+  if (changed!=0) then begin  
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,ORr);
+    Userr.Code = ORr.SalesMan;
+    if (ReadFirstMain(Userr,1,true)) then begin
+      //ORr.SalesGroup = Userr.SalesGroup;// Edit ************************** Wednesday, 17 October 2012 17:34:47
+      efstr = WindEFstr(wn);
+      if ((efstr!=ORr.SalesMan) and (nonblank(efstr))) then begin
+        tstr = ORr.Objects;
+        RemoveOldUserObjects(efstr,tstr);
+        ORr.Objects = tstr;
+      end;
+      tstr = ORr.Objects;
+      if ((nonblank(tstr)) and (nonblank(Userr.PersObjx))) then begin
+        tstr = tstr & ",";
+      end;
+      tstr = tstr & Userr.PersObjx;
+      ORr.Objects = tstr;          
+    end;
+    GetSalesGroup(ORr.SalesMan,tstr);
+    //ORr.SalesGroup = tstr;// Edit ************************** Wednesday, 17 October 2012 17:41:25
+    PutWindowRecord(wn,ORr);
+  end;
+  ORDClassSalesManEFAfter = true;
+  return;
+end;
+
+function Boolean ORDClassDelAddrCodeEFAfter(Integer wn,Integer changed)
+begin  
+  record ORVc ORr;
+  val t;
+
+  if (changed!=0) then begin  
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,ORr);
+    ORVc_PasteDelAddrCode(ORr);
+    PutWindowRecord(wn,ORr);
+  end;  
+  ORDClassDelAddrCodeEFAfter = true;
+  return;
+end;
+
+function Boolean ORDClassDiscPercEFAfter(Integer wn,Integer changed)
+begin  
+  record ORVc ORr;
+  val t;
+
+  if (changed!=0) then begin  
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,ORr);
+    MulM4ProcVal(ORr.DiscPerc,ORr.Sum1,t);
+    ORr.DiscSum = t;
+    if (ORr.DiscPerc==0) then begin ORr.DiscSum = blankval; end;
+    PutWindowRecord(wn,ORr);
+  end;  
+  ORDClassDiscPercEFAfter = true;
+  return;
+end;
+
+function Boolean ORDClassPayDealEFAfter(Integer wn,Integer changed)
+begin  
+  record ORVc ORr;
+
+  if (changed!=0) then begin  
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,ORr);
+    ORVc_PastePayDeal(ORr);
+    PutWindowRecord(wn,ORr);
+  end;  
+  ORDClassPayDealEFAfter = true;
+  return;
+end;
+
+function Boolean ORDClassPRCodeEFAfter(Integer wn,Integer changed)
+begin  
+  record ORVc ORr;
+
+  if (changed!=0) then begin  
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,ORr);
+    ORVc_PastePRCode(ORr);
+    PutWindowRecord(wn,ORr);
+  end;  
+  ORDClassPRCodeEFAfter = true;
+  return;
+end;
+ 
+function Boolean ORDClassCurncyCodeEFAfter(Integer wn,Integer changed)
+begin  
+  record ORVc ORr;
+
+  if (changed!=0) then begin  
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,ORr);
+    ORVc_PasteCurncyCode(ORr,WindEFstr(wn));
+    PutWindowRecord(wn,ORr);
+  end;  
+  ORDClassCurncyCodeEFAfter = true;
+  return;
+end;
+
+function Boolean ORDClassBaseRate2EFAfter(Integer wn,Integer changed)
+begin  
+  record ORVc ORr;
+
+  if (changed!=0) then begin  
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,ORr);
+    ORr.BaseSum4 = MulRateToBase1(ORr.CurncyCode,ORr.Sum4,ORr.FrRate,ORr.ToRateB1,ORr.ToRateB2,ORr.BaseRate1,ORr.BaseRate2,DefaultCurRoundOff);
+    PutWindowRecord(wn,ORr);
+  end;  
+  ORDClassBaseRate2EFAfter = true;
+  return;
+end;
+
+function Boolean ORDClassBaseRate1EFAfter(Integer wn,Integer changed)
+begin  
+  record ORVc ORr;
+
+  if (changed!=0) then begin  
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,ORr);
+    ORr.BaseSum4 = MulRateToBase1(ORr.CurncyCode,ORr.Sum4,ORr.FrRate,ORr.ToRateB1,ORr.ToRateB2,ORr.BaseRate1,ORr.BaseRate2,DefaultCurRoundOff);
+    PutWindowRecord(wn,ORr);
+  end;  
+  ORDClassBaseRate1EFAfter = true;
+  return;
+end;
+
+function Boolean ORDClassFrRateEFAfter(Integer wn,Integer changed)
+begin  
+  record ORVc ORr;
+
+  if (changed!=0) then begin  
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,ORr);
+    ORr.BaseSum4 = MulRateToBase1(ORr.CurncyCode,ORr.Sum4,ORr.FrRate,ORr.ToRateB1,ORr.ToRateB2,ORr.BaseRate1,ORr.BaseRate2,DefaultCurRoundOff);
+    PutWindowRecord(wn,ORr);
+  end;  
+  ORDClassFrRateEFAfter = true;
+  return;
+end;
+
+function Boolean ORDClassToRateB1EFAfter(Integer wn,Integer changed)
+begin  
+  record ORVc ORr;
+
+  if (changed!=0) then begin  
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,ORr);
+    ORr.BaseSum4 = MulRateToBase1(ORr.CurncyCode,ORr.Sum4,ORr.FrRate,ORr.ToRateB1,ORr.ToRateB2,ORr.BaseRate1,ORr.BaseRate2,DefaultCurRoundOff);
+    PutWindowRecord(wn,ORr);
+  end;  
+  ORDClassToRateB1EFAfter = true;
+  return;
+end;
+
+function Boolean ORDClassToRateB2EFAfter(Integer wn,Integer changed)
+begin  
+  record ORVc ORr;
+
+  if (changed!=0) then begin  
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,ORr);
+    ORr.BaseSum4 = MulRateToBase1(ORr.CurncyCode,ORr.Sum4,ORr.FrRate,ORr.ToRateB1,ORr.ToRateB2,ORr.BaseRate1,ORr.BaseRate2,DefaultCurRoundOff);
+    PutWindowRecord(wn,ORr);
+  end;  
+  ORDClassToRateB2EFAfter = true;
+  return;
+end;
+ 
+function Boolean ORDClassCommisionEFAfter(Integer wn,Integer changed)
+begin  
+  record ORVc ORr;
+  Boolean chsum;
+
+  if (changed!=0) then begin  
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,ORr);
+    ORVc_PasteCommision(ORr,chsum);
+    if (chsum) then begin
+      ORSumup(ORr);
+    end;    
+    PutWindowRecord(wn,ORr);
+  end;  
+  ORDClassCommisionEFAfter = true;
+  return;
+end;
+
+function Boolean ORDClassPriceListEFAfter(Integer wn,Integer changed)
+begin  
+  record ORVc ORr;
+
+  if (changed!=0) then begin  
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,ORr);
+    ORVc_PastePriceList(ORr);
+    PutWindowRecord(wn,ORr);
+  end;  
+  ORDClassPriceListEFAfter = true;
+  return;
+end;
+
+global
+procedure ORVc_PastePlanShipRow(var record ORVc ORp,Integer rownr)
+BEGIN
+  row ORVc ORrw;
+  record PlanDeliveryBlock PlanDelRec;
+  LongInt week;
+  Date d;
+  
+  MatRowGet(ORp,rownr,ORrw);
+  BlockLoad(PlanDelRec);
+  switch (PlanDelRec.FieldType) begin
+    case 1:
+      d = StringToDate(ORrw.PlanShipRow);
+      ORrw.PlanShipRow = d;
+    case 2: 
+      week = StringToLongInt(ORrw.PlanShipRow);
+      ORrw.PlanShipRow = week;
+    case 3: 
+      week = StringToLongInt(ORrw.PlanShipRow);
+      ORrw.PlanShipRow = week;
+      if (len(ORrw.PlanShipRow)<4) then begin
+        ORrw.PlanShipRow = "0" & ORrw.PlanShipRow;
+      end;
+      if (len(ORrw.PlanShipRow)>4) then begin
+        ORrw.PlanShipRow = Left(ORrw.PlanShipRow,4);
+      end;
+  end;
+  MatRowPut(ORp,rownr,ORrw);
+  RETURN;
+END;
+
+function Boolean ORDClassPlanShipRowEFAfter(Integer wn,Integer rownr,Integer changed)
+begin  
+  record ORVc ORr;
+
+  if (changed!=0) then begin  
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,ORr);
+    ORVc_PastePlanShipRow(ORr,rownr);
+    PutWindowRecord(wn,ORr);
+  end;  
+  ORDClassPlanShipRowEFAfter = true;
+  return;
+end;
+ 
+function Boolean ORDClassUnitCodeEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin  
+  record ORVc ORr;
+
+  if (changed!=0) and (rownr>=0) then begin  
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,ORr);
+    ORVc_PasteUnitCode(ORr,rownr);
+    PutWindowRecord(wn,ORr);
+  end;  
+  ORDClassUnitCodeEFAfter = true;
+  return;
+end;
+
+function Boolean ORDClassUnitFactQuantEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin  
+  record ORVc ORr;
+  Boolean chsum;
+
+  if (changed!=0) and (rownr>=0) then begin  
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,ORr);
+    chsum = ORVc_PasteUnitFactQuant(ORr,rownr);
+    if (chsum) then begin
+      ORDchsum(ORr,rownr);
+      ORSumup(ORr);
+    end;    
+    PutWindowRecord(wn,ORr);
+  end;  
+  ORDClassUnitFactQuantEFAfter = true;
+  return;
+end;
+
+function Boolean ORDClassUnitFactPriceEFAfter(Integer wn,Integer fn,Integer rownr,Integer changed)
+begin  
+  record ORVc ORr;
+
+  if (changed!=0) and (rownr>=0) then begin  
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,ORr);
+    ORVc_PasteUnitFactPrice(ORr,rownr);
+    PutWindowRecord(wn,ORr);
+  end;  
+  ORDClassUnitFactPriceEFAfter = true;
+  return;
+end;
+
+function Boolean ORDClassRecepyEFAfter(Integer wn,Integer rownr,Integer changed)
+begin  
+  record ORVc ORr;
+  Boolean chsum;
+
+  if (changed!=0) and (rownr>=0) then begin  
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,ORr);
+    ORVc_PasteRecepy(ORr,rownr,chsum);
+    if (chsum) then begin
+      ORDchsum(ORr,rownr);
+    end;    
+    PutWindowRecord(wn,ORr);
+  end;  
+  ORDClassRecepyEFAfter = true;
+  return;
+end;
+
+function Boolean ORDClassPriceFactorEFAfter(Integer wn,Integer rownr,Integer changed)
+begin  
+  record ORVc ORr;
+  Boolean chsum;
+
+  if (changed!=0) and (rownr>=0) then begin  
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,ORr);
+    ORVc_PastePriceFactor(ORr,rownr,chsum);
+    if (chsum) then begin
+      ORDchsum(ORr,rownr);
+      ORSumup(ORr);
+    end;    
+    PutWindowRecord(wn,ORr);
+  end;  
+  ORDClassPriceFactorEFAfter = true;
+  return;
+end;
+
+function Boolean ORDClassPriceEFAfter(Integer wn,Integer rownr,Integer changed)
+begin  
+  record ORVc ORr;
+  Boolean chsum;
+
+  if (changed!=0) and (rownr>=0) then begin  
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,ORr);
+    ORVc_PastePrice(ORr,rownr,chsum);
+    if (chsum) then begin
+      ORDchsum(ORr,rownr);
+      ORSumup(ORr);
+    end;
+    PutWindowRecord(wn,ORr);
+  end;  
+  ORDClassPriceEFAfter = true;
+  return;
+end;
+
+function Boolean ORDClassvRebateEFAfter(Integer wn,Integer rownr,Integer changed)
+begin  
+  record ORVc ORr;
+  Boolean chsum;
+
+  if (changed!=0) and (rownr>=0) then begin  
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,ORr);
+    ORVc_PastevRebate(ORr,rownr,chsum);
+    if (chsum) then begin
+      ORDchsum(ORr,rownr);
+      ORSumup(ORr);
+    end;    
+    PutWindowRecord(wn,ORr);
+  end;  
+  ORDClassvRebateEFAfter = true;
+  return;
+end;
+
+function Boolean ORDClassBasePriceEFAfter(Integer wn,Integer rownr,Integer changed)
+begin  
+  record ORVc ORr;
+  Boolean chsum;
+
+  if (changed!=0) and (rownr>=0) then begin  
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,ORr);
+    ORVc_PasteBasePrice(ORr,rownr,chsum);
+    if (chsum) then begin
+      ORDchsum(ORr,rownr);
+      ORSumup(ORr);
+    end;    
+    PutWindowRecord(wn,ORr);
+  end;  
+  ORDClassBasePriceEFAfter = true;
+  return;
+end;
+
+function Boolean ORDClassVATCodeEFAfter(Integer wn,Integer rownr,Integer changed)
+begin  
+  record ORVc ORr;
+  Boolean chsum;
+
+  if (changed!=0) and (rownr>=0) then begin  
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,ORr);
+    ORVc_PasteVATCode(ORr,rownr,chsum);
+    if (chsum) then begin
+      ORDchsum(ORr,rownr);
+    end;    
+    ORSumup(ORr);
+    PutWindowRecord(wn,ORr);
+  end;  
+  ORDClassVATCodeEFAfter = true;
+  return;
+end;
+
+function Boolean ORDClassSumEFAfter(Integer wn,Integer rownr,Integer changed)
+begin  
+  record ORVc ORr;
+  Boolean chsum;
+
+  if (changed!=0) and (rownr>=0) then begin  
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,ORr);
+    ORVc_PasteSum(ORr,rownr,chsum);
+    if (chsum) then begin      
+//      chsum = ORDchrsum(ORr,rownr);
+      ORDchsum(ORr,rownr);
+      ORSumup(ORr);
+    end;
+    PutWindowRecord(wn,ORr);
+  end;  
+  ORDClassSumEFAfter = true;
+  return;
+end;
+
+global
+function Boolean ORDClassAfterEditField(Integer wn,string fieldname,Integer fn, Integer rownr,Integer changed)
+BEGIN
+  Boolean res;
+
+  switch (fieldname) begin
+    case "Sum": res = ORDClassSumEFAfter(wn,rownr,changed);
+    case "Recepy": res = ORDClassRecepyEFAfter(wn,rownr,changed);
+    case "PriceFactor": res = ORDClassPriceFactorEFAfter(wn,rownr,changed);
+    case "Price": res = ORDClassPriceEFAfter(wn,rownr,changed);
+    case "vRebate": res = ORDClassvRebateEFAfter(wn,rownr,changed);
+    case "BasePrice": res = ORDClassBasePriceEFAfter(wn,rownr,changed);
+    case "VATCode": res = ORDClassVATCodeEFAfter(wn,rownr,changed);
+    case "UnitFactPrice": res = ORDClassUnitFactPriceEFAfter(wn,fn,rownr,changed);
+    case "UnitFactQuant": res = ORDClassUnitFactQuantEFAfter(wn,fn,rownr,changed);
+    case "UnitCode": res = ORDClassUnitCodeEFAfter(wn,fn,rownr,changed);
+    case "PlanShipRow": res = ORDClassPlanShipRowEFAfter(wn,rownr,changed);
+    case "PriceList": res = ORDClassPriceListEFAfter(wn,changed);
+    case "Commision": res = ORDClassCommisionEFAfter(wn,changed);
+    case "FrRate": res = ORDClassFrRateEFAfter(wn,changed);
+    case "ToRateB1": res = ORDClassToRateB1EFAfter(wn,changed);
+    case "ToRateB2": res = ORDClassToRateB2EFAfter(wn,changed);
+    case "BaseRate1": res = ORDClassBaseRate1EFAfter(wn,changed);
+    case "BaseRate2": res = ORDClassBaseRate2EFAfter(wn,changed);
+    case "CurncyCode": res = ORDClassCurncyCodeEFAfter(wn,changed);
+    case "PRCode": res = ORDClassPRCodeEFAfter(wn,changed);
+    case "PayDeal": res = ORDClassPayDealEFAfter(wn,changed);
+    case "DiscPerc": res = ORDClassDiscPercEFAfter(wn,changed);
+    case "DelAddrCode": res = ORDClassDelAddrCodeEFAfter(wn,changed);
+    case "SalesMan": res = ORDClassSalesManEFAfter(wn,changed);
+    case "FrPrice": res = ORDClassFrPriceEFAfter(wn,changed);
+    case "OrdDate": res = ORDClassOrdDateEFAfter(wn,fn,rownr,changed);
+    case "PlanShip": res = ORDClassPlanShipEFAfter(wn,fn,rownr,changed);
+    case "SerialNr": res = ORDClassSerialNrEFAfter(wn,fn,rownr,changed);
+    case "UnitZval": res = ORDClassUnitZvalEFAfter(wn,fn,rownr,changed);
+    case "UnitYval": res = ORDClassUnitYvalEFAfter(wn,fn,rownr,changed);
+    case "UnitXval": res = ORDClassUnitXvalEFAfter(wn,fn,rownr,changed);
+    case "CustCode": res = ORDClassCustCodeEFAfter(wn,fn,rownr,changed);
+    case "Quant": res = ORDClassQuantEFAfter(wn,fn,rownr,changed);
+    case "ArtCode": res = ORDClassArtCodeEFAfter(wn,rownr,changed);
+  end;
+  ORDClassAfterEditField = res;
+  RETURN;
+END;
+
+global
+function Boolean ORDClassBeforeEditField(Integer wn,string fieldname,Integer fn, Integer rownr)
+BEGIN
+  Boolean res;
+  record ORVc ORr;
+  row ORVc ORrw;
+
+  switch (fieldname) begin  
+    case "Quant":     
+      GetWindowRecord(wn,ORr);      
+      MatRowGet(ORr,rownr,ORrw);
+      if (ORrw.Quant==0) then begin
+        if (TestForMATVARINS(wn)) then begin end;
+      end;
+  end;
+  ORDClassBeforeEditField = res;
+  return;
+end;

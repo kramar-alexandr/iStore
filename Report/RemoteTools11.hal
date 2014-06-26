@@ -1,0 +1,857 @@
+external function Boolean GetPurchaseItem(string,var record PIVc);
+external function val DfncyStockForStockReserv(Integer,LongInt,string);
+external procedure GetSalesGroup(string,var string);
+external procedure GetARAcc(string,var string);
+external function Integer DaysInMonth(Integer,Integer);
+external function Boolean CheckIfIVOpen(Date,record IVVc,string,var val,Boolean,Boolean);
+external function Boolean IVVc_PasteArtCode(var record IVVc,Integer,var string,Boolean);
+external procedure IVOpenPrepExists(string);
+external procedure IVGetRate(var record IVVc);
+external procedure CalcSum(val,val,val,val,var val,Integer);
+external procedure CalculateFreightWeight(record IVVc,Boolean);
+external procedure GetFullCurncyRate (var string,Date,var val,var val,var val,var val,var val);
+external procedure GetPriceList(string,var string,var Integer);
+external procedure SetSalesMan(var string,string);
+external procedure RemoveOldCustObjects(string,var string);
+external procedure RemoveOldPersObjects(string,var string);
+external function Boolean GetCustAndBal(var record CUVc,var val,var val,Integer,Integer,Integer,Integer,Integer,Integer);
+external function Boolean DateWarned(Date,string);
+external function val DivRateToBase1(string,val,val,val,val,val,val,Integer);
+external procedure GetUserObject(string,var string);
+external function string 255 FindNextLegalSerNr(LongInt,Date,string);
+external procedure IVSumup(var record IVVc,Boolean);
+external function val FindVAT(string,val,Integer,Integer);
+external function val MulRateToBase1(var string,val,val,val,val,val,val,Integer);
+external procedure GetItemSalesAcc(string,Integer,var string);
+external function Boolean GetItemNameStr(Integer,var string,string,string,string);
+external procedure FindSalesExVat(string,val,Integer,Integer,var val);
+external procedure GetItemVATCode(string,Integer,var string,Boolean);
+external procedure PastePDInInv(var record IVVc,string);
+external function Boolean PasteCustInInv(var record IVVc);
+external function LongInt GetCurUserLastNr(string);
+
+procedure DownPayMul(val a,val b,var val c)
+BEGIN
+  if (b!=100) then begin
+    c = a*b;
+    c = c/100;
+    c = Round(c,2);//0
+  end else begin
+    c = a;
+  end;
+  RETURN;
+END;
+
+procedure GetCustCatPerc(string custcode,var val percentagep)
+BEGIN
+  record CCatVc CCr;
+  record CUVc CUr;
+
+  CUr.Code = custcode;
+  if (ReadFirstMain(CUr,1,true)) then begin
+    CCr.Code = CUr.CustCat;
+    if (ReadFirstMain(CCr,1,true)) then begin
+      if (CCr.DownPayPerc!=0) then begin percentagep = CCr.DownPayPerc; end;
+    end;
+  end;
+  RETURN;
+END;
+
+procedure AddPreviousDownpayment(record IVVc IVp)
+begin
+  row IVVc IVrw;
+  record IVVc dIVr;
+  Boolean found,testf;
+  
+  found = true;
+  dIVr.OrderNr = IVp.OrderNr;
+  while (LoopKey("OrderNr",dIVr,1,found)) begin
+    if (dIVr.OrderNr!=IVp.OrderNr) then begin
+      found = false;
+    end;
+    if (found) then begin
+      testf = true;
+      if (dIVr.InvType!=6) then begin testf = false; end;
+      if (dIVr.OKFlag==0) then begin testf = false; end;
+      if (testf) then begin
+        ClearRow(IVp,IVrw,kInvoiceRowTypePreviousDownpayment);
+        IVrw.CUPNr = dIVr.SerNr;
+        IVrw.ServiceDelDate = dIVr.InvDate;
+        IVrw.Sum = dIVr.Sum4;
+        IVrw.Price = dIVr.Sum1;
+        MatRowInsert(IVp,0,IVrw);
+      end;
+    end;
+  end;
+  return;
+end;
+
+function string 255 OrdDownPay(record IVVc IVp,LongInt ordnr,var val sum,val perc)
+BEGIN
+  string 255 res;
+  record DownPayBlock DPb;
+  record INVc INr;
+  record CUVc CUr;
+  record ORVc ORr;
+  row ORVc ORrw;
+  row IVVc IVrw;
+  val t,t2,baseprice;
+  val percentage;
+  Integer i,rwcnt,srw;
+  string 255 tstr;
+  string 10 VATCode;
+  string 5 ipcurncy;
+  
+  ipcurncy = IVp.CurncyCode;
+  IVp.OrderNr = ordnr;
+  ORr.SerNr = IVp.OrderNr;  
+  if (ReadFirstMain(ORr,1,true)) then begin end;
+  IVp.OrderNr = ORr.SerNr;
+  IVp.InclVAT = ORr.InclVAT;
+  IVp.NoTAXonVAT = ORr.NoTAXonVAT;
+  IVp.TotalwoTAX = ORr.TotalwoTAX;
+  IVp.SVONr = -1;  
+  if (nonblank(ORr.InvoiceToCode)) then begin
+    IVp.CustCode = ORr.InvoiceToCode;
+  end else begin
+    IVp.CustCode = ORr.CustCode;
+  end;
+  if (PasteCustInInv(IVp)) then begin
+  end;
+  GetARAcc(IVp.CustCode,IVp.ARAcc);
+  if (nonblank(ORr.InvoiceToCode)) then begin
+    CUr.Code = ORr.InvoiceToCode;
+    if (ReadFirstMain(CUr,1,true)) then begin
+      IVp.CustCode = CUr.Code;
+      IVp.Addr0 = CUr.Name;
+      IVp.Addr1 = CUr.InvAddr0;
+      IVp.Addr2 = CUr.InvAddr1;
+      IVp.Addr3 = CUr.InvAddr2;
+      IVp.InvAddr3 = CUr.InvAddr3;
+      IVp.InvAddr4 = CUr.InvAddr4;
+      IVp.CustCat = CUr.CustCat;
+      IVp.OrgCust = ORr.CustCode;
+      IVp.PayDeal = CUr.PayDeal;
+      IVp.ExportFlag = CUr.ExportFlag;
+    end else begin
+      goto L20OrdDownPay; 
+    end;
+  end else begin
+L20OrdDownPay:;
+    IVp.CustCode = ORr.CustCode;
+    IVp.Addr0 = ORr.Addr0;
+    IVp.Addr1 = ORr.Addr1;
+    IVp.Addr2 = ORr.Addr2;
+    IVp.Addr3 = ORr.Addr3;
+    IVp.InvAddr3 = ORr.InvAddr3;
+    IVp.InvAddr4 = ORr.InvAddr4;
+    IVp.CustCat = ORr.CustCat;
+    IVp.PayDeal = ORr.PayDeal;
+    IVp.OrgCust = "";
+    IVp.ExportFlag = ORr.ExportFlag;
+  end;
+  IVp.InvComment = ORr.Comment;
+  IVp.CustOrdNr = ORr.CustOrdNr;
+  IVp.LangCode = ORr.LangCode;
+  IVp.OurContact = ORr.OurContact;
+  IVp.ClientContact = ORr.CustContact;
+  IVp.Objects = ORr.Objects;
+  IVp.ExportFlag = ORr.ExportFlag;
+  IVp.SalesMan = ORr.SalesMan;
+  IVp.CurncyCode = ORr.CurncyCode;
+  IVp.PRCode = ORr.PRCode;
+  IVp.PriceList = ORr.PriceList;
+  IVp.FrRate = ORr.FrRate;
+  IVp.ToRateB1 = ORr.ToRateB1;
+  IVp.ToRateB2 = ORr.ToRateB2;
+  IVp.BaseRate1 = ORr.BaseRate1;
+  IVp.BaseRate2 = ORr.BaseRate2;
+  BlockLoad(DPb);
+  if (nonblank(DPb.PayDeal)) then begin
+    IVp.PayDeal = DPb.PayDeal;
+  end;
+  IVp.ServiceDelDate = CurrentDate;
+  PastePDInInv(IVp,"");
+  IVp.InvType = 6;
+  srw = 0;
+  percentage = perc;
+  if (DPb.DetailsOnIV==0) then begin
+    rwcnt = MatRowCnt(ORr);
+    VATCode = DPb.VATCode;
+    if (blank(VATCode)) then begin
+      GetItemVATCode(DPb.ArtCode,IVp.ExportFlag,VATCode,true);
+    end;
+    if (blank(VATCode)) then begin VATCode = IVp.CustVATCode; end;
+    INr.Code = DPb.ArtCode;
+    if (ReadFirstMain(INr,1,true)) then begin end;
+    baseprice = INr.InPrice + INr.ExtraCost;
+    if (sum==0) then begin
+      if (percentage==0) then begin
+        percentage = DPb.Percentage;
+        GetCustCatPerc(ORr.CustCode,percentage);
+      end;
+      switch (DPb.CalcMode) begin
+        case 2:
+          if (ORr.InclVAT!=0) then begin
+            t2 = ORr.Sum4 - ORr.Sum3;
+            DownPayMul(t2,percentage,t);
+            DownPayMul(baseprice,percentage,baseprice);
+          end else begin
+            DownPayMul(ORr.Sum1,percentage,t);
+            DownPayMul(baseprice,percentage,baseprice);
+          end;
+        case 1:
+          if (ORr.InclVAT!=0) then begin
+            t2 = ORr.Sum4 - ORr.Sum3;
+            DownPayMul(t2,percentage,t);
+            DownPayMul(baseprice,percentage,baseprice);
+          end else begin
+            DownPayMul(ORr.Sum1,percentage,t);
+            DownPayMul(baseprice,percentage,baseprice);
+          end;
+        otherwise
+          DownPayMul(ORr.Sum4,percentage,t);
+          DownPayMul(baseprice,percentage,baseprice);
+      end;
+    end else begin
+      FindSalesExVat(VATCode,sum,1,0,t);
+    end;
+    ClearRow(IVp,IVrw,5);
+    if (nonblank(DPb.TextA)) then begin
+      IVrw.Spec = DPb.TextA;
+    end else begin
+      if (GetItemNameStr(1,tstr,ORr.LangCode,INr.Name,INr.Code)) then begin end;
+      IVrw.Spec = tstr;
+    end;
+    IVrw.Spec = IVrw.Spec & " ";
+    IVrw.Spec = IVrw.Spec & ORr.SerNr;
+    t = t - ORr.DownPaySent;
+    if (t<0) then begin t = 0; end;
+    IVrw.Sum = t;
+    GetItemSalesAcc(DPb.ArtCode,IVp.ExportFlag,tstr);
+    IVrw.SalesAcc = tstr;
+    IVrw.VATCode = VATCode;
+    IVrw.Objects = "";
+    IVrw.BasePrice = baseprice;
+    t2 = MulRateToBase1(IVp.CurncyCode,IVrw.Sum,IVp.FrRate,IVp.ToRateB1,IVp.ToRateB2,IVp.BaseRate1,IVp.BaseRate2,DefaultCurRoundOff);  
+    FindSalesExVat(IVrw.VATCode,t2,IVp.InclVAT,IVp.NoTAXonVAT,t2);
+    t = IVrw.Quant*IVrw.BasePrice;
+    if (IVrw.PriceFactor!=0) then begin
+      t = t/IVrw.PriceFactor;
+    end;
+    IVrw.rowGP = t2 - t;    
+    MatRowPut(IVp,srw,IVrw);
+  end else begin
+    if (percentage==0) then begin
+      percentage = DPb.Percentage;
+      GetCustCatPerc(ORr.CustCode,percentage);
+    end;
+    if (sum!=0) then begin
+      percentage = (sum/ORr.Sum4)*100;
+    end;
+    rwcnt = MatRowCnt(ORr);
+    for (i=0;i<rwcnt;i=i+1) begin
+      MatRowGet(ORr,i,ORrw);
+      if (ORrw.stp==10) then begin
+        goto LOrdDownPay;
+      end;
+      if (ORrw.stp==1) then begin
+        INr.Code = ORrw.ArtCode;
+        if (ReadFirstMain(INr,1,true)) then begin end;
+        baseprice = INr.InPrice + INr.ExtraCost;
+        switch (DPb.CalcMode) begin
+          case 1:
+            if (ORr.InclVAT!=0) then begin
+              t2 = ORrw.Sum - FindVAT(ORrw.VATCode,ORrw.Sum,ORr.InclVAT,ORr.NoTAXonVAT);
+              DownPayMul(t2,percentage,t);
+              DownPayMul(baseprice,percentage,baseprice);
+            end else begin
+              DownPayMul(ORrw.Sum,percentage,t);
+              DownPayMul(baseprice,percentage,t2);
+              baseprice = t2;
+            end;
+          otherwise
+            if (ORr.InclVAT!=0) then begin
+//              t2 = ORrw.Sum + FindVAT(ORrw.VATCode,ORrw.Sum,ORr.InclVAT,ORr.NoTAXonVAT);//wierd stuff, it is already including VAT
+              t2 = ORrw.Sum;
+              DownPayMul(t2,percentage,t);
+              DownPayMul(baseprice,percentage,baseprice);
+            end else begin
+              DownPayMul(ORrw.Sum,percentage,t);
+              DownPayMul(baseprice,percentage,t2);
+              baseprice = t2;
+            end;
+        end;
+        if (t!=0) then begin
+          ClearRow(IVp,IVrw,5);
+          IVrw.Sum = t;
+          IVrw.ArtCode = ORrw.ArtCode;
+          IVrw.Quant = ORrw.Quant;
+          IVrw.Spec = ORrw.Spec;
+          IVrw.SalesAcc = ORrw.SalesAcc;
+          GetItemSalesAcc(DPb.ArtCode,IVp.ExportFlag,tstr);
+          if (nonblank(tstr)) then begin
+            IVrw.SalesAcc = tstr;
+          end;
+          IVrw.VATCode = ORrw.VATCode;
+          IVrw.OrdRow = i;
+          IVrw.BasePrice = baseprice;
+          t2 = MulRateToBase1(IVp.CurncyCode,IVrw.Sum,IVp.FrRate,IVp.ToRateB1,IVp.ToRateB2,IVp.BaseRate1,IVp.BaseRate2,DefaultCurRoundOff);  
+          FindSalesExVat(IVrw.VATCode,t2,IVp.InclVAT,IVp.NoTAXonVAT,t2);
+          t = IVrw.Quant*IVrw.BasePrice;
+          if (IVrw.PriceFactor!=0) then begin
+            t = t/IVrw.PriceFactor;
+          end;
+          IVrw.rowGP = t2 - t;    
+          MatRowPut(IVp,srw,IVrw);
+          srw = srw + 1;
+        end;
+      end;
+    end;
+//    AddPreviousDownpayment(IVp);
+LOrdDownPay:;
+  end;
+  IVSumup(IVp,true);
+  if ((IVp.Sum4+ORr.DownPaySent)>ORr.Sum4) then begin
+    res = USetStr(20406);
+    res = res & ORr.Sum4 - ORr.DownPaySent;
+  end;
+  IVp.OfficialSerNr = FindNextLegalSerNr(IVp.SerNr,IVp.TransDate,CUr.Classification);
+  OrdDownPay = res;
+  RETURN;
+END;
+
+global
+updating function Integer RecordAction_raOrdDownPay(LongInt ordnr,val percentage,val prepaidsum,var record IVVc IVp,var string errstr)
+BEGIN
+  Integer res;
+  LongInt newnr;
+  record SRBlock SRRec;
+  string 255 tstr;
+  val temp;
+  
+  res = -1;
+  RecordNew(IVp);
+  IVp.SerNr = -1;
+  IVp.OrderNr = ordnr;
+  if (IVp.SerNr==-1) then begin
+    BlockLoad(SRRec);
+    newnr = GetCurUserLastNr("IVVc");
+    if (newnr==-1) then begin
+      newnr = SRRec.LastInvNr;
+    end;
+    IVp.SerNr = NextSerNr("IVVc",IVp.TransDate,newnr,false,"");
+    if (IVp.SerNr==-1) then begin
+      errstr = USetStr(1747);
+      goto LRecordAction_raOrdDownPay;
+    end;
+  end;
+  errstr = OrdDownPay(IVp,ordnr,prepaidsum,percentage);
+  if (blank(errstr)) then begin
+    if ((MatRowCnt(IVp)>0) and (IVp.SerNr!=-1)) then begin
+      IVSumup(IVp,true);
+      if (RecordInsert(IVp,false)) then begin
+        res = 1;
+      end;
+    end;
+  end;
+LRecordAction_raOrdDownPay:;
+  RecordAction_raOrdDownPay = res;
+  RETURN;
+END;
+
+global
+procedure PasteCompulsoryINtoIV(string compitem,record IVVc IVp)
+BEGIN
+  record CompItemVc CIr;
+  record INVc INr;
+  row CompItemVc CIrw;
+  row IVVc IVrw;
+  Integer i,cicnt;  
+  Integer ivcnt;
+  string 255 inwarning;
+
+  CIr.Code = compitem;
+  if (ReadFirstMain(CIr,1,true)) then begin
+    cicnt = MatRowCnt(CIr);
+    ivcnt = MatRowCnt(IVp);
+    for (i=0;i<cicnt;i=i+1) begin
+      if (ivcnt>=199) then begin goto LPasteCompulsoryINtoIV; end;
+      MatRowGet(CIr,i,CIrw);
+      ClearRow(IVp,IVrw,1);
+      IVrw.stp = 1;
+      INr.Code = CIrw.ArtCode;
+      if (ReadFirstMain(INr,1,true)) then begin
+        IVrw.ArtCode = INr.Code;
+        MatRowPut(IVp,ivcnt,IVrw);      
+        if (IVVc_PasteArtCode(IVp,ivcnt,inwarning,false)) then begin    
+        end;
+        ivcnt = ivcnt + 1;
+      end;      
+    end;
+  end;
+LPasteCompulsoryINtoIV:;
+  RETURN;
+END;
+
+global
+function Boolean PasteCust2InInv(var record IVVc IVp,string efstr,Boolean waf,var string warning,var string errstr,var string prepstr,var string invdatewarn,var string transdatewarn)
+BEGIN
+  record CUVc CUr;
+  record INVc INr;
+  record RebVc Rebr;
+  Boolean found;
+  Boolean iscred;
+  val x,pr,bal,limit,t;
+  record IIBlock IIRec;
+  record FreightBlock FreightRec;
+  record CreditLimitBlock CreditLimitRec;
+  string 255 tstr,tstr2;
+  record GeneralOptionBlock GenOptRec;
+  Integer InclVAT;
+  val fr,to1,to2,br1,br2;
+  string 5 curcode,oldSalesMan;
+  record AccBlock ARAccRec;
+  record CCatVc CCatr;
+
+  warning = "";
+  errstr = "";
+  prepstr = "";
+  invdatewarn = "";
+  transdatewarn = "";
+  if (waf==false) then begin
+  if (IVp.OKFlag!=0) then begin
+    CUr.Code = IVp.CustCode;
+    if (ReadFIrstMain(CUr,1,true)) then begin
+      found = true;
+      IVp.Addr0 = CUr.Name;
+      IVp.Addr1 = CUr.InvAddr0;
+      IVp.Addr2 = CUr.InvAddr1;
+      IVp.Addr3 = CUr.InvAddr2;
+      IVp.InvAddr3 = CUr.InvAddr3;
+      IVp.InvAddr4 = CUr.InvAddr4;
+      IVp.ClientContact = CUr.Person;
+    end;
+    goto LPasteCust2InInv;
+  end;
+  end;
+  BlockLoad(GenOptRec);
+  BlockLoad(CreditLimitRec);
+  if ((efstr!=IVp.CustCode) and (nonblank(efstr))) then begin
+    tstr = IVp.Objects;
+    RemoveOldCustObjects(efstr,tstr);
+    IVp.Objects = tstr;
+  end;
+  if (IVp.InvType==3) then begin
+    iscred = true;
+  end;  
+  CUr.Code = IVp.CustCode;
+  if (GetCustAndBal(CUr,limit,bal,CreditLimitRec.Base,CreditLimitRec.OwnCheques,CreditLimitRec.ThirdCheques,CreditLimitRec.IOUCheques,CreditLimitRec.ThirdIOUCheques,CreditLimitRec.ORSaveWarn)) then begin
+    BlockLoad(IIRec);
+    BlockLoad(FreightRec);
+    BlockLoad(ARAccRec);
+    CCatr.Code = CUr.CustCat;
+    if (ReadFirstMain(CCatr,1,true)) then begin end;
+//    if (blank(IVp.ARAcc)) then begin
+      IVp.ARAcc = CCatr.ARAcc;
+//    end;
+    if (blank(IVp.ARAcc)) then begin
+      IVp.ARAcc = ARAccRec.ARAcc;
+    end;    
+    found = true;
+    Rebr.Code = CUr.RebCode;
+    if (blank(Rebr.Code)) then begin
+      Rebr.Code = CCatr.RebCode;
+    end;
+    if (ReadFirstMain(Rebr,1,true)) then begin
+      IVp.DiscPerc = Rebr.DiscPerc;
+    end;
+    IVp.Addr0 = CUr.Name;
+    IVp.Addr1 = CUr.InvAddr0;
+    IVp.Addr2 = CUr.InvAddr1;
+    IVp.Addr3 = CUr.InvAddr2;
+    IVp.InvAddr3 = CUr.InvAddr3;
+    IVp.InvAddr4 = CUr.InvAddr4;
+    IVp.ClientContact = CUr.Person;
+    IVp.CustCat = CUr.CustCat;
+    IVp.IntCode = IIRec.IntRate;
+    if (CUr.IntRate!=0) then begin
+      IVp.IntCode = CUr.IntRate;
+    end;
+    tstr = IVp.Objects;
+    if ((nonblank(tstr)) and (nonblank(CUr.Objects))) then begin
+      tstr = tstr & ",";
+    end;
+    tstr = tstr & CUr.Objects;
+    IVp.Objects = tstr;    
+    IVp.CurncyCode = CUr.CurncyCode;
+    oldSalesMan = IVp.SalesMan;
+    SetSalesMan(tstr,CUr.SalesMan);
+    IVp.SalesMan = tstr;
+    GetSalesGroup(IVp.SalesMan,IVp.SalesGroup);
+    GetUserObject(IVp.SalesMan,tstr);    
+    if ((IVp.SalesMan!=oldSalesMan)) then begin
+      tstr2 = IVp.Objects;
+      RemoveOldPersObjects(oldSalesMan,tstr2);
+      IVp.Objects = tstr2;
+      if ((nonblank(IVp.Objects)) and (nonblank(tstr))) then begin
+        IVp.Objects = IVp.Objects & ",";
+      end;
+      IVp.Objects = IVp.Objects & tstr;
+    end;
+    IVp.LangCode = CUr.LangCode;
+    IVp.ShipDeal = CUr.ShipDeal;
+    IVp.ShipMode = CUr.ShipMode;
+    IVp.OrgCust = "";
+    IVp.PriceList = CUr.PLCode;
+    IVp.RebCode = CUr.RebCode;
+    if (blank(IVp.RebCode)) then begin
+      IVp.RebCode = CCatr.RebCode;
+    end;
+    IVp.CustVATCode = CUr.VATCode;
+    IVp.Phone = CUr.Phone;
+    IVp.Fax = CUr.Fax;
+    InclVAT = IVp.InclVAT;
+    tstr = CUr.PLCode;
+    GetPriceList(IVp.CustCat,tstr,InclVAT);
+    IVp.InclVAT = InclVAT;
+    IVp.PriceList = tstr;
+    if (nonblank(CUr.DelAddr0)) then begin
+      IVp.ShipAddr0 = CUr.Name;
+      IVp.ShipAddr1 = CUr.DelAddr0;
+      IVp.ShipAddr2 = CUr.DelAddr1;
+      IVp.ShipAddr3 = CUr.DelAddr2;
+      IVp.DelAddr3 = CUr.DelAddr3;
+      IVp.DelAddr4 = CUr.DelAddr4;
+    end else begin
+      IVp.ShipAddr0 = "";
+      IVp.ShipAddr1 = "";
+      IVp.ShipAddr2 = "";
+      IVp.ShipAddr3 = "";
+      IVp.DelAddr3 = "";
+      IVp.DelAddr4 = "";
+    end;
+    IVp.FiscalFlag = CUr.FiscalFlag;
+    IVp.VATNr = CUr.VATNr;
+    IVp.InvComment = CUr.OrderComment;
+    IVSumup(IVp,true);
+    IVp.ExportFlag = CUr.ExportFlag;
+    IVp.Region = CUr.Region;
+    IVp.NoRemndrFlag = 0;
+    IVp.NoInterestFlag = 0;
+    IVp.NoTax1 = CUr.NoTax1;
+    IVp.NoTax2 = CUr.NoTax2;
+    if (iscred==false) then begin
+      IVp.PayDeal = CUr.PayDeal;
+      PastePDInInv(IVp,"");
+    end;
+    curcode = IVp.CurncyCode;
+    GetFullCurncyRate(curcode,IVp.InvDate,fr,to1,to2,br1,br2);
+    IVp.CurncyCode = curcode;
+    IVp.FrRate = fr;
+    IVp.ToRateB1 = to1;
+    IVp.ToRateB2 = to2;
+    IVp.BaseRate1 = br1;
+    IVp.BaseRate2 = br2;
+    IVp.FrItem = FreightRec.FrItem;
+    IVp.FrGPPercent = FreightRec.FrGPPercent;
+    INr.Code = IVp.FrItem;
+    if (ReadFirstMain(INr,1,true)) then begin
+      GetItemVATCode(IVp.FrItem,IVp.ExportFlag,tstr,true);
+      IVp.FrVATCode = tstr;
+      GetItemSalesAcc(IVp.FrItem,IVp.ExportFlag,tstr);
+      IVp.FrSalesAcc = tstr;
+      IVp.FrBase = INr.UPrice1;
+    end else begin
+      IVp.FrItem = "";
+      IVp.FrGPPercent = blankval;
+      IVp.FrBase = blankval;
+      IVp.FrPrice = blankval;
+      IVp.FrGP = blankval;
+      IVp.FrVATCode = "";
+      IVp.FrSalesAcc = "";
+    end;
+    if (FreightRec.UseWeight!=0) then begin
+      CalculateFreightWeight(IVp,true);
+    end else begin
+      IVp.FrPrice = DivRateToBase1(IVp.CurncyCode,IVp.FrBase,IVp.FrRate,IVp.ToRateB1,IVp.ToRateB2,IVp.BaseRate1,IVp.BaseRate2,DefaultCurRoundOff);
+      pr = 100;
+      pr = pr - IVp.FrGPPercent;
+      CalcSum(1,IVp.FrBase,0,pr,t,GenOptRec.UseDiscount);
+      IVp.FrGP = t;
+    end;
+    IVSumup(IVp,true);
+    if (nonblank(CUr.WarnText1)) then begin
+      warning = CUr.WarnText1;
+    end;
+    if (CreditLimitRec.IVPaste==1) then begin
+      if (limit>0) then begin
+        if (bal>limit) then begin
+          errstr = USetStr(1164);
+        end;
+      end;
+    end;
+    if (nonblank(CUr.CompItemCode)) then begin
+      PasteCompulsoryINtoIV(CUr.CompItemCode,IVp);
+    end;
+    IVGetRate(IVp);
+    IVOpenPrepExists(IVp.CustCode);//prepstr, no such string
+    if (DateWarned(IVp.TransDate,"IVVc")) then begin
+      transdatewarn = USetStr(1045);
+    end;
+    if (DateWarned(IVp.InvDate,"IVVc")) then begin
+      invdatewarn = USetStr(1045);
+    end;  
+  end;
+LPasteCust2InInv:;  
+  PasteCust2InInv = found;
+  RETURN;
+END;
+
+function val CUGetStartBalanceNotFullMonth(record CUVc CUr,string colns,Date sd,Boolean basecurf)
+BEGIN
+  val res;
+  record IPrsVc IPrsr;
+  record IVVc IVr;
+  record IPVc IPr;
+  row IPVc IPrw;
+  Integer i,rwcnt;
+  Boolean TrHs,testf;
+  val opensum;
+  val t;
+  val fr,to1,to2,br1,br2;
+  record BaseCurBlock bcur;
+  record CLInVc CLInr;
+  row CLInVc CLInrw;
+  record CLOutVc CLOutr;
+  row CLOutVc CLOutrw;
+
+  BlockLoad(bcur);
+  TrHs = true;
+  IPrsr.CustCode = CUr.Code;
+  IPrsr.TransDate = AddYear(IPrsr.TransDate,1980);
+  IPrsr.TransDate = AddMonth(IPrsr.TransDate,1);
+  IPrsr.TransDate = AddDay(IPrsr.TransDate,1);
+  while (LoopKey("CustTransKey",IPrsr,2,TrHs)) begin
+    if (TrHs) then begin
+      if (IPrsr.CustCode!=CUr.Code) then begin
+        TrHs = false;
+      end;
+    end;
+    if (TrHs) then begin
+      if (IPrsr.TransDate>=sd) then begin TrHs = false; end;
+    end;
+//StopAlert(".IPrsr.TransType " & IPrsr.TransType & " IPrsr.TransNr " & IPrsr.TransNr & " IPrsr.IVNr " & IPrsr.IVNr);
+    if (TrHs) then begin
+      switch (IPrsr.TransType) begin
+        case 0:
+          testf = true;
+          IVr.SerNr = IPrsr.TransNr;
+          if (ReadFirstMain(IVr,1,true)==false) then begin testf = false; end;        
+          if (IVr.Invalid!=0) then begin testf = false; end;          
+          if (IVr.OKFlag==0) then begin testf = false; end;          
+          if (IVr.InvType==3) then begin
+            if (IVr.CredInv>0) then begin testf = false; end;
+          end;
+          if (IVr.InvType==2) then begin testf = false; end;
+          switch (colns) begin
+            case "paidvalue": testf = false;
+          end;
+          if (testf) then begin
+            if (CheckIfIVOpen(sd,IVr,colns,opensum,false,basecurf)) then begin 
+              res = res + opensum;
+            end;
+          end;
+        case 1:
+          if (IPrsr.IVNr==-1) then begin
+            IPr.SerNr = IPrsr.TransNr;
+            if (ReadFirstMain(IPr,1,true)) then begin
+              if (IPr.RejectedFlag==0) then begin
+                rwcnt = MatRowCnt(IPr);
+                for (i=0;i<rwcnt;i=i+1) begin
+                  MatRowGet(IPr,i,IPrw);
+                  if (IPrw.ovst==0) then begin
+                    if (IPrw.InvoiceNr==IPrsr.IVNr and IPrw.CustCode==CUr.Code) then begin// Edit ************************** Thursday, 21 October 2010 09:40:29
+                      if (IPrw.stp==1) then begin
+                        if (IPrw.PayDate==IPrsr.CustDate) then begin
+                          switch (colns) begin
+                            case "grossprofit":
+                            case "salesexclvat":
+                            case "paidvalue":
+                              t = IPrw.InvVal;
+                              if ((blank(CUr.CurncyCode)) or (CUr.CurncyCode==bcur.BaseCur1)) then begin          
+                                GetFullCurncyRate(CUr.CurncyCode,IPr.TransDate,fr,to1,to2,br1,br2);
+                                t = MulRateToBase1(CUr.CurncyCode,t,fr,to1,to2,br1,br2,DefaultCurRoundOff);
+                              end;
+                              res = res - t;
+                            otherwise res = res - IPrw.InvVal;
+                          end;
+                        end;
+                      end;
+                    end;
+                  end;
+                end;
+              end;              
+            end;
+          end;
+        case 3:            
+          if (IPrsr.IVNr==-1) then begin
+            CLInr.SerNr = IPrsr.TransNr;
+            if (ReadFirstMain(CLInr,1,true)) then begin
+              if (CLInr.Invalid==0) then begin
+                rwcnt = MatRowCnt(CLInr);
+                for (i=0;i<rwcnt;i=i+1) begin
+                  MatRowGet(CLInr,i,CLInrw);
+                  if (CLInrw.Type==4) then begin
+                    if (CLInr.CUCode==IPrsr.CustCode) then begin
+                      switch (colns) begin
+                        case "grossprofit":
+                        case "salesexclvat":
+                        case "paidvalue":
+                          t = CLInrw.Sum;
+                          if ((blank(CUr.CurncyCode)) or (CUr.CurncyCode==bcur.BaseCur1)) then begin          
+                            t = MulRateToBase1(CLInr.CurncyCode,t,CLInr.FrRate,CLInr.ToRateB1,CLInr.ToRateB2,CLInr.BaseRate1,CLInr.BaseRate2,DefaultCurRoundOff);
+                          end;
+                          res = res - t;
+                        otherwise res = res - CLInrw.Sum;
+                      end;
+                    end;
+                  end;
+                end;
+              end;
+            end;
+          end;
+        case 5:            
+          if (true) then begin
+//          if (IPrsr.IVNr==-1) then begin
+            CLOutr.SerNr = IPrsr.TransNr;
+            if (ReadFirstMain(CLOutr,1,true)) then begin
+              if (CLOutr.Invalid==0) then begin
+                rwcnt = MatRowCnt(CLOutr);
+                for (i=0;i<rwcnt;i=i+1) begin
+                  MatRowGet(CLOutr,i,CLOutrw);
+                  if (CLOutrw.Type==5) then begin
+                    if (CLOutr.CUCode==IPrsr.CustCode) then begin
+                      switch (colns) begin
+                        case "grossprofit":
+                        case "salesexclvat":
+                        case "paidvalue":
+                          t = CLOutrw.Sum;
+                          if ((blank(CUr.CurncyCode)) or (CUr.CurncyCode==bcur.BaseCur1)) then begin          
+                            t = MulRateToBase1(CLOutr.CurncyCode,t,CLOutr.FrRate,CLOutr.ToRateB1,CLOutr.ToRateB2,CLOutr.BaseRate1,CLOutr.BaseRate2,DefaultCurRoundOff);
+                          end;
+                          res = res + t;
+                        otherwise res = res + CLOutrw.Sum;
+                      end;
+                    end;
+                  end;
+                end;
+              end;
+            end;
+          end;
+      end;
+    end;
+  end;  
+  CUGetStartBalanceNotFullMonth = res;          
+  RETURN;
+END;
+
+global
+procedure CUGetStartBalance(record CUVc CUr,string colns,Date sd,var val v,Boolean basecurf)
+BEGIN
+  Date ld;
+  
+  if (GetDay(sd)!=1) then begin
+    v = CUGetStartBalanceNotFullMonth(CUr,colns,sd,basecurf);
+  end else begin
+    ld = AddDay(sd,-1);
+    v = GetBalance(CUr,colns,ld);
+  end;
+  RETURN;
+END;
+
+global
+procedure CUGetEndBalance(record CUVc CUr,string colns,Date sd,var val v)
+BEGIN  
+  if (sd.day!=DaysInMonth(sd.year,sd.month)) then begin
+    v = CUGetStartBalanceNotFullMonth(CUr,colns,sd,true);
+  end else begin
+    v = GetBalance(CUr,colns,sd);
+  end;
+  RETURN;
+END;
+
+global
+procedure VEGetStartBalance(record CUVc VEr,string colns,Date sd,var val v)
+BEGIN
+  Date ld;
+  
+  ld = AddDay(sd,-1);
+  v = GetBalance(VEr,colns,ld);
+  RETURN;
+END;
+
+global
+updating procedure AddORtoDfncyStock(LongInt FromSerNr)
+begin
+  record StockReservVc SResr;
+  Boolean found,testf;
+  val q;
+  record DfncyStockVc DSr;
+  record PIVc PIr;
+
+  found = true;
+  SResr.Donef = 0;
+  SResr.FromFileName = 0;      
+  SResr.FromSerNr = FromSerNr;      
+  while (LoopKey("FromItem",SResr,3,found)) begin
+    if (SResr.Donef!=0) then begin found = false; end;
+    if (SResr.FromFileName!=0) then begin found = false; end;
+    if (SResr.FromSerNr!=FromSerNr) then begin found = false; end;
+    if (found) then begin
+      testf = true;
+      q = SResr.Quant - DfncyStockForStockReserv(SResr.FromFileName,SResr.FromSerNr,SResr.ArtCode);
+      if (q<=0) then begin testf = false; end;
+      if (SResr.ToFileName!=kResTypeMakeNewPO) then begin
+        testf = false;
+      end;
+      if (testf) then begin
+        RecordNew(DSr);
+        DSr.StockReservNr = SResr.SerNr;
+        DSr.ArtCode = SResr.ArtCode;
+        DSr.Location = SResr.FromLocation;
+        GetPurchaseItem(SResr.ArtCode,PIr);
+        DSr.FromFileName = SResr.FromFileName;
+        DSr.FromSerNr = SResr.FromSerNr;
+        DSr.Quant = q;
+        DSr.PICode = PIr.VEItemCode;
+        DSr.VECode = PIr.VECode;
+        RecordStore(DSr,false);
+        StepForward(DSr,1);
+      end;      
+    end;
+  end;
+  return;
+end;
+
+global
+function Boolean DblDfncyStockVcExists(string artcode,string location)
+begin
+  Boolean found,res;
+  record DfncyStockVc DSr;
+
+  DSr.ArtCode = artcode;
+  DSr.Location = location;
+  found = true;
+  while (LoopKey("ActArtCode",DSr,1,found)) begin
+    if (DSr.ArtCode!=artcode) then begin found = false; end;
+    if (found) then begin
+      if (DSr.Location==location) then begin
+        res = true;
+        found = false;
+      end;
+    end;
+  end;
+  DblDfncyStockVcExists = res;
+  return;
+end;

@@ -1,0 +1,23 @@
+Global updating procedure ImportAssIn()
+begin
+	record PLVc CUr;
+    record SuppVc Suppr;
+	record PLVc Accr;
+	Integer flg,i,k;
+	string 5 sfield128;
+	string 100 sfield129;	
+	array string 255 sfield;
+	string 511 textmy;
+	Boolean testf,testin;
+	string 5 flag;
+	Integer coun;
+	
+		SetImportCodepage("UTF-8");
+		RegisterImport("AT2UnitVc");
+ return;
+end;
+	 
+
+	 
+	
+	 

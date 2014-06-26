@@ -1,0 +1,858 @@
+external inner procedure GetFullCurncyRate(var string,Date,var val,var val,var val,var val,var val);
+remote inner function string 20 GetPostavschik(string ,string);
+remote inner procedure GetItemName(string,var string,var string);
+external inner function val AbsoluteVal(val);
+
+global
+procedure POSUpdStockVClassReportDefaults(Integer wn)
+BEGIN
+  record RcVc RepSpec;
+  record LocalMachineBlock LMb;
+  
+  blockload(LMb);
+  DeselectWindow(wn,false);
+  GetWindowRecord(wn,RepSpec);
+  ReportDefaults(RepSpec,"POSUpdStockVClass");  
+  RepSpec.Period2Str = CurrentDate;
+  RepSpec.Period2Str = RepSpec.Period2Str & ":";
+  RepSpec.Period2Str = RepSpec.Period2Str & CurrentDate;
+  RepSpec.FirstAcc = LMb.LocalMachineCode; 
+  PutWindowRecord(wn,RepSpec);
+  SelectWindow(wn);
+  RETURN;
+END;
+
+/*global function string 20 GetPostavschik(string ArtCode,string serialno)
+begin
+  record PUVc PUr;
+  row PUVc PUrw;
+  boolean TrHs,testf;
+  integer i;
+  string 20 res;
+  record ItemHistVc IHr;
+  
+//MessageBox(0,serialno);
+  res = "";
+  IHr.ArtCode = ArtCode;
+  IHr.SerialNr = serialno;
+  IHr.FileName = "PUVc";
+  TrHs = true;
+  While (loopKey("ArtCodeSerialNr",IHr,3,TrHs)) begin
+    if((IHr.ArtCode == ArtCode) and (IHr.SerialNr == serialno) and (IHr.FileName == "PUVc")) then begin
+      //StopAlert(IHr.TransNr);
+      PUr.SerNr = IHr.TransNr;
+      if(ReadFirstMain(PUr,1,true)) then begin
+       res = PUr.VECode;
+      end;
+       TrHs = false;
+    end;
+  end;
+ 
+GetPostavschik = res;
+  return;
+end;*/
+
+global function string 255 GetClassificationString(string ArtCode)
+begin
+record INVc INr;
+string 255 res;
+integer lenth,i;
+string 10 char;
+
+  res = "";
+  INr.Code = ArtCode;
+  If(readfirstmain(INr,1,true)) begin
+    lenth = len(INr.DispGroups);
+      
+
+    for(i=0;i<lenth;i=i+1) begin
+     char = "";
+     char = MID(INr.DispGroups,i,1);
+     if(char==",") then begin ExportString(res); Res = ""; Char = ""; end;
+     res = res & char;
+    end;
+  end;
+  if (nonblank(res)) then begin ExportString(res); end;
+GetClassificationString = res;
+return;
+end;
+
+function val convToUAH(date curdate)
+begin
+val frrate,to1,to2,br1,br2;
+String 5 curcode;
+
+curcode="UAH";
+GetFullCurncyRate(curcode,curdate,frrate,to1,to2,br1,br2);
+convToUAH=frrate/to1;
+return;
+end;
+
+function val conv(date curdate)
+begin
+val frrate,to1,to2,br1,br2;
+String 5 curcode;
+
+curcode="UAH";
+GetFullCurncyRate(curcode,curdate,frrate,to1,to2,br1,br2);
+conv=frrate/to1;
+return;
+end;
+
+function val convToUSD(date curdate)
+begin
+val frrate,to1,to2,br1,br2;
+String 5 curcode;
+
+curcode="UAH";
+GetFullCurncyRate(curcode,curdate,frrate,to1,to2,br1,br2);
+convToUSD=to1/frrate;
+return;
+end;
+
+
+
+global function val  GetCost(string partno,string sernum,date invdate,integer qant,string location)
+begin
+record INVc INr;
+record SDVc SDr;
+row SDVc SDrw;
+Boolean TrHs,testf;
+integer mtrw,i;
+val cost,num;
+record PUVc PUr;
+row PUVc PUrw;
+record ItemHistVc IHr;
+
+cost = blankval;
+
+
+
+INr.Code=partno;
+if(readfirstmain(INr,1,true))then begin
+	if(INr.SerNrf>0)then begin
+		if (qant<0) then begin goto l1; end;
+		TrHs=true;
+		SDr.TransDate = invdate;
+		while(loopbackkey("TransDate",SDr,1,TrHs))	begin
+			if (TrHs) then begin
+				mtrw=matrowcnt(SDr);
+				for (i=0;i<mtrw;i=i+1) begin
+					MatRowGet(SDr,i,SDrw);
+					if ((SDrw.SerialNr == sernum) and (SDrw.ArtCode == partno)) then begin
+						TrHs = false;
+						cost =SDrw.FIFO;
+					end;
+				end;
+			end;
+		end;
+		resetloop(SDr);
+		if(cost==0)then begin
+			TrHs = true;
+			SDr.TransDate = invdate;
+			while(loopkey("TransDate",SDr,1,TrHs))	begin
+				if (TrHs) then begin
+					mtrw=matrowcnt(SDr);
+					for (i=0;i<mtrw;i=i+1) begin
+						MatRowGet(SDr,i,SDrw);
+						if ((SDrw.SerialNr == sernum) and (SDrw.ArtCode == partno)) then begin
+							TrHs = false;
+							cost =SDrw.FIFO;
+						end;
+					end;
+				end;
+			end;
+		end;
+		if (nonblank(cost)) then	begin
+			GetCost = cost;
+		end	else	begin
+			l1:
+			TrHs=true;
+			cost = 0;
+			if (nonblank(sernum)) then begin
+				IHr.ArtCode = partno;
+				IHr.SerialNr = sernum;
+				IHr.FileName = "SDVc";
+				If(ReadLastKey("ArtCodeSerialNr",IHr,3,true)) then begin
+					if((IHr.ArtCode == partno) and (IHr.SerialNr == sernum) and (IHr.FileName == "SDVc")) then begin
+						cost = IHr.TotCostPrice;
+					end;
+				end;
+			end;
+			if (cost == 0) then begin
+				if (nonblank(sernum)) then begin
+					IHr.ArtCode = partno;
+					IHr.SerialNr = sernum;
+					IHr.FileName = "PUVc";
+					If(ReadLastKey("ArtCodeSerialNr",IHr,3,true)) then begin
+						if((IHr.ArtCode == partno) and (IHr.SerialNr == sernum) and (IHr.FileName == "PUVc")) then begin
+							cost = IHr.TotCostPrice;
+						end;
+					end;
+				end;
+			end;	
+		end;
+	end else begin
+		if (cost == 0) then begin
+			IHr.ArtCode = partno;
+			IHr.TransDate = invdate;
+			IHr.Location = location;
+			TrHs = true;
+			num = 0;
+			while(loopkey("ArtCodeLoc",IHr,3,TrHs))begin
+				testf=true;
+				if(IHr.ArtCode!=partno or IHr.TransDate!=invdate or IHr.Location!=location)then begin Trhs = false; testf = false; end;
+				if(IHr.FileName!="SDVc" and IHr.FileName!="PUVc")then begin testf = false; end;
+				if(testf)then begin
+					cost = cost + IHr.TotCostPrice;
+					num = num + AbsoluteVal(IHr.Qty);
+				end;
+			end;
+		end;
+		cost=cost/num;
+	end;
+end;
+
+GetCost = cost;
+
+return;
+end;
+
+
+
+global procedure StoreRepRClassReportDefaults (integer wn)
+begin
+Record RcVc RepSpec;
+
+//StopAlert("sdf");
+DeselectWindow(wn,false);
+GetWindowRecord(wn,RepSpec);
+RepSpec.d1 = Stringtodate("1/1/2009");
+RepSpec.d2 = CurrentDate;
+PutWindowRecord(wn,RepSpec);
+SelectWindow(wn);
+
+return;
+end;
+
+global procedure StoreRepEClassReportDefaults (integer wn)
+begin
+Record RcVc RepSpec;
+
+//StopAlert("sdf");
+DeselectWindow(wn,false);
+GetWindowRecord(wn,RepSpec);
+RepSpec.d1 = Stringtodate("1/1/2009");
+RepSpec.d2 = CurrentDate;
+PutWindowRecord(wn,RepSpec);
+SelectWindow(wn);
+
+return;
+end;
+
+global procedure StoreRepEn(record RcVc RepSpec)
+begin
+string 20 customer,name,group,Groupe,artcode,vender,vend;
+record IVCashVc IVCr;
+row IVCashVc IVCrw;
+record IVVc IVr;
+row IVVc IVrw;
+boolean TrHs,testf,testf1;
+integer mtrw,i,k;
+val cost,costua,sum,sumusd;
+val pusd,puah,susd,suah,fifouah;
+string 100 Spec,class;
+val CredFIFO;
+record IVVc IVCredr;
+row IVVc IVCredrw;
+integer matrow,ii;
+record INVc INr;
+record ItemHistVc IHr;
+Record CUVc CUr;// Edit ************************** вторник, 20 июля 2010 г. 11:07:18
+
+artcode = RepSpec.f3;
+vender = RepSpec.f4;
+Groupe = RepSpec.f2;
+class = RepSpec.f5;
+        ExportString("Invoice Type");
+        ExportString("Invoice_No");
+   			ExportString("Customer");
+   			ExportString("Supplier");
+   			ExportString("Date");
+   			ExportString("Part_No.");
+   			ExportString("Description");
+   			ExportString("Quant");
+   			ExportString("Price");
+   			ExportString("Price(UAH)");
+   			ExportString("Rebate");
+   			ExportString("Sum");
+   			ExportString("Sum(UAH)");
+   			ExportString("Cost");
+   			ExportString("Cost(UAH)");
+   			ExportString("Profit");
+   			ExportString("Profit(UAH)");
+   			ExportString("Curncy");
+   			ExportString("Region");
+   			ExportString("Group");
+   			ExportString("Classification");
+			  NewLine;
+customer = RepSpec.f1;
+	If (nonblank(customer)) then begin
+		IVCr.CustCode = customer;
+	end
+	else
+	begin
+		IVCr.CustCode = "";
+	end;
+
+TrHs = true;
+
+while (loopkey("CustCode",IVCr,1,TrHs)) begin
+testf1 = true;
+	if (nonblank(customer)) then begin
+		if (IVCr.CustCode!=customer) then begin TrHs = false; testf1 = false; end;
+	end;
+	
+	if(IVCr.Invalid==1) then begin testf1 = false; end;
+  if(IVCr.OKFlag==0) then begin testf1 = false; end;
+  
+if (testf1) then begin
+ if ((IVCr.InvDate>=RepSpec.d1) and (IVCr.InvDate<=RepSpec.d2) and (IVCr.OKFlag>0)) then
+ begin
+	mtrw = matrowcnt(IVCr);
+	if (mtrw>0) then begin
+ 		for (i=0;i<mtrw;i=i+1) 
+		  begin
+		 	matrowget(IVCr,i,IVCrw);
+		 	  GetItemName(IVCrw.ArtCode,name,group);
+		 	  testf = true;
+		 	  if(nonblank(Groupe) and (Groupe != group)) then begin testf = false; end;
+   			if(nonblank(artcode) and (artcode != IVCrw.ArtCode)) then begin testf = false; end;
+   			INr.Code = IVCrw.ArtCode;
+   			if(readfirstmain(INr,1,true)) then begin
+          if(nonblank(class) and (not(SetInSet(class,INr.DispGroups)))) then begin testf = false; end;// Edit ************************** Thursday, 22 April 2010 1:05:56 PM
+   			end;   			
+   			vend = GetPostavschik(IVCrw.ArtCode,IVCrw.SerialNr);
+   			if(nonblank(vender) and (vender != vend)) then begin testf = false; end;
+   			if (testf) begin
+          ExportString("POS INVOICE");
+          ExportString(IVCr.SerNr);
+          ExportString(IVCr.CustCode);
+          ExportString(vend);
+          //ExportString(IVCrw.SerialNr);
+          ExportString(IVCr.InvDate);
+          ExportString(IVCrw.ArtCode);
+          ExportString(IVCrw.Spec);
+          ExportString(IVCrw.Quant);
+          ExportString(IVCrw.Price*convToUSD(IVCr.InvDate));  			
+          ExportString(IVCrw.Price);
+          ExportString(IVCrw.vRebate);
+          sumusd=IVCrw.Sum*convToUSD(IVCr.InvDate);
+          ExportString(sumusd);
+          ExportString(IVCrw.Sum);
+          cost = GetCost(IVCrw.ArtCode,IVCrw.SerialNr,IVCr.InvDate,IVCrw.Quant,IVCr.Location);
+          ExportString(cost);
+          costua=cost*convToUAH(IVCr.InvDate);
+          ExportString(costua);
+          ExportString(sumusd-cost);
+          ExportString(IVCrw.Sum-costua);
+          ExportString(IVCr.CurncyCode);
+          
+          // Edit Start ---------------------------------------------- Edit Start
+	//вторник, 20 июля 2010 г. 11:07:09
+	CUr.Code = IVCr.CustCode;
+          ReadFirstMain(CUr,1,true);
+          ExportString(CUr.Region);
+	// Edit End ---------------------------------------------- Edit End
+	
+          ExportString(group);
+          GetClassificationString(IVCrw.ArtCode);
+          NewLine;
+        end;
+  		end;
+	end;
+ end;
+end;
+end;
+
+
+//********************************************************
+	If (nonblank(customer)) then begin
+		IVr.CustCode = customer;
+	end
+	else
+	begin
+		IVr.CustCode = "";
+	end;
+
+
+
+
+TrHs = true;
+while (loopkey("CustCode",IVr,1,TrHs)) begin
+testf1 = true;
+	if (nonblank(customer)) then begin
+		if (IVr.CustCode!=customer) then begin TrHs = false; testf1 = false; end;
+	end;
+  if(IVr.Invalid==1) then begin testf1 = false; end;
+  if(IVr.OKFlag==0) then begin testf1 = false; end;
+  
+if (testf1) then begin
+ if ((IVr.InvDate>=RepSpec.d1) and (IVr.InvDate<=RepSpec.d2) and (IVr.OKFlag>0)) then
+ begin
+ k=1;
+ Spec = "";
+	mtrw = matrowcnt(IVr);
+	if (mtrw>0) then begin
+ 		for (i=0;i<mtrw;i=i+1) 
+		  begin
+   			matrowget(IVr,i,IVrw);
+   			
+   			GetItemName(IVrw.ArtCode,name,group);
+		 	  testf = true;
+		 	  if(nonblank(Groupe) and (Groupe != group)) then begin testf = false; end;
+		 	  if(nonblank(artcode) and (artcode != IVrw.ArtCode)) then begin testf = false; end;
+   			INr.Code = IVrw.ArtCode;
+   			if(readfirstmain(INr,1,true)) then begin
+          if(nonblank(class) and (not(SetInSet(class,INr.DispGroups)))) then begin testf = false; end;// Edit ************************** Thursday, 22 April 2010 1:05:56 PM
+   			end;
+   			vend = GetPostavschik(IVrw.ArtCode,IVrw.SerialNr);
+   			if(nonblank(vender) and (vender != vend)) then begin testf = false; end;
+   			
+   			if (testf) begin
+          if (IVrw.stp==3) then begin 
+          k=-1; 
+          Spec = IVrw.OrdRow;
+          //StopAlert(IVrw.OrdRow);
+          IVCredr.SerNr = IVrw.OrdRow;
+          if (readfirstmain(IVCredr,1,true)) begin
+          end;
+          end;
+          
+          ExportString("INVOICE");
+          ExportString(IVr.SerNr);
+          ExportString(IVr.CustCode);
+          ExportString(vend);
+          //ExportString(IVrw.SerialNr);
+          ExportString(IVr.InvDate);
+          ExportString(IVrw.ArtCode);
+          ExportString(IVrw.Spec);
+          ExportString(IVrw.Quant*k);
+          
+          
+                  
+          
+          If (IVr.CurncyCode == "UAH") then begin
+          pusd=IVrw.Price*k*IVr.ToRateB1/IVr.FrRate;
+          ExportString(pusd);//USD
+          puah=IVrw.Price*k;
+          ExportString(puah);//UAH
+          end
+          else
+          begin
+          pusd=IVrw.Price*k;
+          ExportString(pusd);
+          puah=0;
+          ExportString(puah);//UAH
+          end;
+          
+          ExportString(IVrw.vRebate);
+          
+          If (IVr.CurncyCode == "UAH") then begin
+          susd=IVrw.Sum*k*IVr.ToRateB1/IVr.FrRate;
+          ExportString(susd);//USD
+          suah=IVrw.Sum*k;
+          ExportString(suah);//UAH
+          end
+          else
+          begin
+          susd=IVrw.Sum*k;
+          ExportString(susd);
+          suah=0;
+          ExportString(suah);//UAH
+          end;
+          fifouah = 0;
+          if (k>0) then begin
+            if(IVrw.FIFO==0) then begin
+              IHr.ArtCode = IVrw.ArtCode;
+              IHr.SerialNr = IVrw.SerialNr;
+              IHr.FileName = "SHVc";
+              If(ReadFirstKey("ArtCodeSerialNr",IHr,3,true)) then begin
+                IVrw.FIFO = IHr.TotCostPrice;
+              end;
+            end;
+             ExportString(IVrw.FIFO*k);//USD
+            //costua=cost*convToUAH(IVCr.InvDate);
+              If (IVr.CurncyCode == "UAH") then begin
+                fifouah=IVrw.FIFO*IVr.FrRate/IVr.ToRateB1*k;
+                ExportString(fifouah);//UAH
+              end
+              else
+              begin
+                fifouah=0;
+                ExportString(fifouah*k);//USD
+              end;
+          end
+          else
+          begin
+            //**************************************************************
+            matrow = matrowcnt(IVCredr);
+            for (ii=0;ii<matrow;ii=ii+1) 
+            begin
+              matrowget(IVCredr,ii,IVCredrw);
+                if (IVCredrw.SerialNr==IVrw.SerialNr) then 
+                begin
+                  IVrw.FIFO=IVCredrw.FIFO;
+                  ExportString(IVrw.FIFO*k);//USD
+                If (IVr.CurncyCode == "UAH") then 
+                 begin
+                    fifouah=IVrw.FIFO*IVr.FrRate/IVr.ToRateB1*k;
+                    ExportString(fifouah);//UAH
+                  end
+                  else
+                  begin
+                    fifouah=0;
+                    ExportString(fifouah*k);//USD
+                  end;
+              end;
+            end;
+          end;
+          
+          if (k>0) then begin 
+          ExportString(susd-IVrw.FIFO*k);  //usd
+          ExportString(suah-fifouah);//uah
+          end
+          else
+          begin
+          
+          ExportString(susd-IVrw.FIFO*k);  //usd
+          ExportString(suah-fifouah);//uah
+          if (suah!=0) begin ExportString(IVr.CurncyCode); end;
+          //ExportString("0");  //usd
+          //ExportString("0");//uah
+          end;
+          if (k>0) then begin
+          ExportString(IVr.CurncyCode);
+          
+         // Edit Start ---------------------------------------------- Edit Start
+	//вторник, 20 июля 2010 г. 11:08:08
+	 CUr.Code = IVr.CustCode;
+          ReadFirstMain(CUr,1,true);
+          ExportString(CUr.Region);
+	// Edit End ---------------------------------------------- Edit End
+	
+          
+          ExportString(group);
+          GetClassificationString(IVrw.ArtCode);
+          end;
+          NewLine;
+        end;
+  		end;
+	end;
+ end;
+end;
+end;
+
+
+return
+end;
+
+
+
+
+global procedure StoreRpRn(record RcVc RepSpec)
+begin
+string 20 customer;
+record IVCashVc IVCr;
+row IVCashVc IVCrw;
+boolean TrHs;
+integer mtrw,i;
+val cost;
+
+StartReportJob("ItemStatistic");
+
+EndHeader;
+
+SetRepCol(2,0);
+SetRepCol(3,90);
+SetRepCol(4,280);
+SetRepCol(5,350);
+SetRepCol(6,430);
+SetRepCol(7,520);
+
+StartFormat(15);
+      OutString(2,0,"Invoice No.",false);
+      OutString(3,0,"Customer.",false);
+      OutString(4,0,"Date",false);
+EndFormat;
+StartFormat(15);
+      OutString(2,0,"Part No.",false);
+      OutString(3,0,"Description",false);
+      OutString(4,0,"Quantity",false);
+      OutString(5,0,"Unit Price",false);
+      OutString(6,0,"Unit Cost",false);
+      OutString(7,0,"Profit",false);
+EndFormat;
+
+customer = RepSpec.f1;
+If (nonblank(customer)) then begin
+IVCr.CustCode = customer;
+end
+else
+begin
+IVCr.CustCode = "";
+end;
+
+TrHs = true;
+while (loopkey("CustCode",IVCr,1,TrHs)) begin
+
+if (nonblank(customer)) then begin
+if (IVCr.CustCode!=customer) then begin TrHs = false; end;
+end;
+
+if (TrHs) then begin
+StartFormat(15);
+      OutString(2,0,"",false);
+
+EndFormat;
+
+StartFormat(15);
+      OutString(2,0,IVCr.SerNr,false);
+      OutString(3,0,IVCr.CustCode,false);
+      OutString(4,0,IVCr.InvDate,false);
+      //OutString(5,0,IVCr.Sum4,false);
+EndFormat;
+
+mtrw = matrowcnt(IVCr);
+if (mtrw>0) then begin
+ for (i=0;i<mtrw;i=i+1) 
+  begin
+   matrowget(IVCr,i,IVCrw);
+   StartFormat(15);
+   	  OutString(2,0,IVCrw.ArtCode,false);
+      OutString(3,0,IVCrw.Spec,false);
+      OutString(4,0,IVCrw.Quant,false);
+      OutString(5,0,IVCrw.Sum,false);
+      //cost = GetCost(IVCrw.ArtCode);
+      OutString(6,0,IVCrw.FIFORowVal,false);
+      OutString(7,0,(IVCrw.Sum-cost),false);
+   EndFormat;
+  
+   
+  end;
+end;
+
+ Gray_Divider(0,550);
+ StartFormat(15);
+      OutString(2,0,"",false);
+
+EndFormat;
+end;
+
+end;
+
+
+//Gray_Divider(0,1);
+
+
+Black_Divider(0,550);
+
+
+endJob;
+
+return;
+end;
+
+global procedure Sump(Record CUVc CUr,string Item,var val sum,var integer qty)
+begin
+Record IVVc IVr;
+row IVVc IVrw;
+Boolean flag3, flag4;
+integer i,rw;
+string 100 iv1,iv2;
+
+
+flag3=true;
+flag4=true;
+IVr.SerNr=-1;
+//stopAlert(CUr.Code);
+ While (flag3) 
+	   begin
+	   //StopAlert(IVr.SerNr);
+		iv1=IVr.SerNr;
+		 LoopMain(IVr,1,flag4);
+		 iv2=IVr.SerNr;
+		// StopAlert(IVr.CustCode);
+		 if (iv1==iv2)then begin flag3=false; flag4=false; GOTO LSump; end;
+		//end;
+		//StopAlert(IVr.CustCode);
+		  if (IVr.CustCode==CUr.Code)then
+		   begin
+		    //StopAlert(IVr.CustCode);
+		   if (IVr.OKFlag==1) then
+		   begin
+		   
+		    rw=MatRowCnt(IVr);
+		   // StopAlert(rw);
+		    for(i=0;i<rw;i=i+1) 
+		     begin
+		     MatRowGet(IVr,i,IVrw);
+		  //   StopAlert(IVrw.ArtCode);
+		      If(IVrw.ArtCode==Item) then 
+		       begin
+		       //stopalert(rw & "--"&CUr.Code);
+		        qty=qty+IVrw.Quant;
+		        sum=sum+IVrw.Sum;		       
+		       end;
+		      end;
+		   end;
+		end;
+		end;
+		LSump:;
+		
+	//Sump=sum;
+return
+end;
+
+global function val qtyy(Record CUVc CUr,string Item)
+begin
+Record IVVc IVr;
+row IVVc IVrw;
+Boolean flag3, flag4;
+integer i,rw,qty;
+string 100 iv1,iv2;
+val sum;
+
+flag3=true;
+flag4=true;
+IVr.SerNr=-1;
+//stopAlert(CUr.Code);
+ While (flag3) 
+	   begin
+	   //StopAlert(IVr.SerNr);
+		iv1=IVr.SerNr;
+		 LoopMain(IVr,1,flag4);
+		 iv2=IVr.SerNr;
+		// StopAlert(IVr.CustCode);
+		 if (iv1==iv2)then begin flag3=false; flag4=false; GOTO Lqtyy; end;
+		//end;
+		//StopAlert(IVr.CustCode);
+		  if (IVr.CustCode==CUr.Code)then
+		   begin
+		    //StopAlert(IVr.CustCode);
+		   if (IVr.OKFlag==1) then
+		   begin
+		   
+		    rw=MatRowCnt(IVr);
+		   // StopAlert(rw);
+		    for(i=0;i<rw;i=i+1) 
+		     begin
+		     MatRowGet(IVr,i,IVrw);
+		  //   StopAlert(IVrw.ArtCode);
+		      If(IVrw.ArtCode==Item) then 
+		       begin
+		       //stopalert(rw & "--"&CUr.Code);
+		        qty=qty+IVrw.Quant;
+		        sum=sum+IVrw.Sum;		       
+		       end;
+		      end;
+		   end;
+		end;
+		end;
+		Lqtyy:;
+		
+	qtyy=qty;
+return
+end;
+
+
+global procedure MyRn(record RcVc recSpec)
+begin
+//Record RcVc RecSpec;
+string 100 Item,cust,iv1,iv2,cu1,cu2;
+integer rw,i,qty;
+Boolean flag1,flag2,flag3,flag4;
+Record CUVc CUr;
+Record IVVc IVr;
+row IVVc IVrw;
+val sum;
+
+StartReportJob("ItemStatistic");
+
+EndHeader;
+
+SetRepCol(2,0);
+SetRepCol(3,90);
+SetRepCol(4,180);
+
+StartFormat(15);
+      OutString(2,0,"Customer",false);
+      OutString(3,0,"q-ty",false);
+      OutString(4,0,"Sum",false);
+EndFormat;
+
+Black_Divider(0,1);
+
+Item=RecSpec.f1;
+//StopAlert(Item);
+CUr.Code=0;
+flag1=true;
+flag2=true;
+flag3=true;
+flag4=true;
+qty=0;
+sum=0;
+cu1=0;
+	while (flag1) begin
+	cu1=CUr.Code;
+	LoopMain(CUr,1,flag2);
+	//StopAlert(CUr.Code);//********************************
+	 //IVr.CustCode=CUr.Code;
+	 cu2=CUr.Code;
+	if (Cu1==cu2) then begin goto LMyRn; End;
+	 flag3=true;
+	 flag4=true;
+
+	 qty=0;
+	 sum=0;	
+	 IVr.SerNr=0;
+	
+	  	Sump(CUr,Item,sum,qty);
+		
+		 If (sum!=0) then 
+		 begin
+		 //StopAlert("222");
+		  StartFormat(15);
+          OutString(2,"DblCUStat",CUr.Code,false);
+          OutString(3,0,qty,false);
+          OutString(4,0,sum,false);
+		  EndFormat;
+		  Gray_Divider(0,1);
+		 end;
+		 
+		 
+		  //StopAlert("1");
+		 //Cu1=cu2;
+	end;
+	LMyRn:;
+	flag1=false;
+	flag2=false;
+//StopAlert(CUr.Code);
+endJob;
+
+return;
+end;
+
+
+global
+procedure INRClassReportDefaults(Integer wn) 
+Begin
+  record RcVc RepSpec;
+  
+  GetWindowRecord(wn,RepSpec);
+  ReportDefaults(RepSpec,"INRClass");
+	RepSpec.flags[18] = 1;
+//  RepSpec.flags[5] = 1;
+  PutWindowRecord(wn,RepSpec);
+  return;
+end;

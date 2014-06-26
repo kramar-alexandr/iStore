@@ -1,0 +1,37 @@
+event startup
+begin
+
+	SetLangMode(LangRussian,"RUS",0);
+  
+//Setting("Отчет по стоку",MyRepSenderTClass,modIN);
+//Setting("Отчет по складам отдельно",MyRepSenderStockTClass,modIN);
+//Setting("Отчет по складам без коста",MyRepSenderManyStockTClass,modIN);
+//Setting("Отчет по стоку без коста",MyRepSenderStockNoCostTClass,modIN);
+//Setting("Отчет по транзитному складу",MyRepTransStockTClass,modIN);
+//Export("Cash Flow",MyCashFlowEClass,MyCashFlowEn,modNL);
+//Export("Резерв по клиентам",MyCustReservEClass,MyCustReservRn,modSO);
+Report("Резерв по клиентам",MyCustReservRClass,MyCustReservRn,0,modSO);
+Report("Залишки/постачальник/цiна",MyStockCustRClass,MyStockCustRn,0,modIN);
+//Report("Отчет по продажам(Computek)",MySaleRepRClass,MySaleRepRn,0,modIN);
+//Report("Отчет по продажам(Computek)",MySaleRepRClass,MySaleRepRn,0,modSL);
+Report("Отчет по продажам(Phototek)",MySaleRepRClass,MySalerepPhotoTeck,0,modSL);
+Report("Відомість розрахунків з клієнтами (новий)",CuPer2RClass,MyCuPerRn,0,modSL);
+Report("Відомість розрахунків з клієнтами (новий)",CuPer2RClass,MyCuPerRn,0,modSO);
+Report("Отчет по гарантии (iStore)",MyGarRClass,MyGarRn,0,modIN);
+Report("История серийных номеров 2",MySerhistRClass,MySerHistRn,0,modIN);
+Report("История серийных номеров 2",MySerhistRClass,MySerHistRn,0,modMSVO);
+Report("Пошук замовлень на обслуговування",MySearchSVORClass,MySearchSVORn,0,modMSVO);
+Report("Retail Sales (iStore)",MyRetailSalesRClass,MyRetailSalesRn,0,modNL);
+Report("Stock/Cash (iStore)",MyStockCashRClass,MyStockCashRn,0,modNL);
+Report("Vendor/Stock (GPhTk)",MyVendorStockRClass,MyVendorStockRn,0,modIN);
+
+Report("Движение средств",MyCashFlowRClass,MyCashFlowRn,0,modNL);
+
+
+Maintenance("Отчет по стоку",MyRepSenderVClass,MyItemReport,modIN);
+Maintenance("Отчет по складам отдельно",MyRepSenderStockVClass,MyItemReportForEachStock,modIN);
+Maintenance("Отчет по складам без коста",MyRepSenderManyStockVClass,LocManyStock,modIN);
+Maintenance("Отчет по стоку без коста",MyRepSenderStockNoCostVClass,MyItemReportNoCost,modIN);
+Maintenance("Отчет по транзитному складу",MyRepTransStockVClass,RunTransReportRemote,modIN);
+ return;
+end;  

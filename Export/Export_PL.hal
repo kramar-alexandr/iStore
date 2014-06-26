@@ -1,0 +1,26 @@
+
+global
+procedure MyExportPLEn(record RcVc RepSpec)
+  begin
+  record PLVc MyRecordR;
+  Boolean TrHs;
+  string 2 separator;
+  string 255 tempstr;
+  Integer coun;
+  
+  SetExportCodePage("UTF-8");
+  RegisterExport("PLVc");
+
+return;
+end;
+	
+	 
+global
+procedure MyExportGigieneTextEn(record RcVc RepSpec)
+begin
+  
+  SetExportCodePage("UTF-8");
+  RegisterExport("GigieneTextVc");
+
+return;
+end;

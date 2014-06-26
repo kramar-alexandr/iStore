@@ -1,0 +1,633 @@
+external procedure CutDecimals(val, var string);
+external procedure HT2Per(Date, Date , var string);
+external procedure GetCurRateText(var string,val,val,val);
+
+global
+procedure StockMovJRn(record RcVc RepSpec)
+begin
+  Record StockMovVc SMr;
+  Boolean TrHs, testf;
+  LongInt afr,ato;
+  Integer i,rwcnt,rw;
+  Row  StockMovVc StockMovRw;
+  record INVc INr;
+  Boolean found,rowheaderf,trhs1;// Edit ************************** Friday, 22 October 2010 14:24:17
+  string 200 tstr,vend,pudate;// Edit ************************** Friday, 30 March 2012 11:07:00
+  longInt puno;
+  Val sumqty,totqty,rowsum,docsum,totsum,orsum;
+  val t;
+  record MainStockBlock MainStockRec;
+  // Edit Start ---------------------------------------------- Edit Start
+	//Friday, 22 October 2010 14:24:10
+	  record RLinkVc RLr;
+  Integer notenr,mtws,z,k;
+  record ORVc ORr;
+  row ORVc ORrw;
+  record ItemHistVc IHr;
+  record  PUVc PUr;
+  record ITVc ITr;
+  record ItemHistVc IH2r;
+  boolean ihtestf,ihTrHs;
+	// Edit End ---------------------------------------------- Edit End
+	
+  
+  BlockLoad(MainStockRec);
+  afr = FirstInRange(RepSpec.f1,50);
+  ato = LastInRange(RepSpec.f1,50);
+  StartReportJob(USetStr(5240));
+   rw = 1;
+   HT2Per(RepSpec.sStartDate,RepSpec.sEndDate,tstr);
+   Header(rw,tstr,1);
+   rw = rw +1;
+   tstr = "";
+   if (nonblank(RepSpec.f1)) then begin
+     tstr = USetStr(1141);
+     tstr = tstr & RepSpec.f1;
+     Header(rw,tstr,1);
+     rw = rw + 1;
+   end;
+   if (RepSpec.flags[3]==0) then begin
+      if (nonblank(RepSpec.f2)) then begin
+         tstr = USetStr(5244);
+         tstr = tstr & ": " & RepSpec.f2;
+         Header(rw,tstr,1);
+         rw = rw + 1;
+      end;
+      if (nonblank(RepSpec.f3)) then begin
+         tstr = USetStr(5245);
+         tstr = tstr & ": " & RepSpec.f3;
+         Header(rw,tstr,1);
+         rw = rw + 1;
+      end;
+      if (nonblank(RepSpec.FirstAcc)) then begin
+         tstr = USetStr(5265);
+         tstr = tstr & ": " & RepSpec.FirstAcc;
+         Header(rw,tstr,1);
+         rw = rw + 1;
+      end;
+  end;
+  if (RepSpec.flags[3]==1) then begin
+      if (nonblank(RepSpec.f2) or nonblank(RepSpec.f3) or nonblank(RepSpec.FirstAcc)) then begin
+         tstr = USetStr(7582);
+         tstr = tstr & ": " & RepSpec.f2 & ", " & RepSpec.f3 & ", " & RepSpec.FirstAcc;
+         Header(rw,tstr,1);
+         rw = rw + 1;
+      end;
+  end;
+  tstr = USetStr(2696) & ":";
+  if (RepSpec.flags[1]==0) then begin
+    tstr = tstr &  USetStr(5259) & " " & USetStr(1319) & " " & USetStr(5258) ;
+  end;
+  if (RepSpec.flags[1]==1) then begin
+    tstr = tstr & USetStr(5259);
+  end;
+  if (RepSpec.flags[1]==2) then begin
+    tstr = tstr & USetStr(5258);
+  end;
+  
+  tstr = tstr & ", ";
+  if (RepSpec.flags[2]==0) then begin
+    tstr = tstr &  USetStr(5257) & " " & USetStr(1319) & " " & USetStr(5256) ;
+  end;
+  if (RepSpec.flags[2]==1) then begin
+    tstr = tstr & USetStr(5257);
+  end;
+  if (RepSpec.flags[2]==2) then begin
+    tstr = tstr & USetStr(5256);
+  end;
+  
+  tstr = tstr & ", ";
+  if (RepSpec.flags[5]==0) then begin
+    tstr = tstr &  USetStr(5255) & " " & USetStr(1319) & " " & USetStr(5254) ;
+  end;
+  if (RepSpec.flags[5]==1) then begin
+    tstr = tstr & USetStr(5255);
+  end;
+  if (RepSpec.flags[5]==2) then begin
+    tstr = tstr & USetStr(5254);
+  end;
+  
+  Header(rw,tstr,0);
+  rw = rw + 1;
+  EndHeader;
+  if (RepSpec.ArtMode==1) then begin         //  Detailed
+      
+      if(RepSpec.Media==2 or RepSpec.Media==20)then begin
+        StartFormat(15);
+          OutString(0,0,USetStr(12421),false);//Nomer
+          OutString(0,0,USetStr(13840),false);//Data oper
+          OutString(0,0,USetStr(11588),false);//Kod tovaru
+          OutString(0,0,USetStr(11589),false);//Naimenov
+          OutString(0,0,USetStr(9747),false);//Otr kilkist
+          OutString(0,0,USetStr(11584),false);//Serial no
+          OutString(0,0,USetStr(9746),false);//Postachalnik
+          OutString(0,0,USetStr(5472),false);//Data postavki
+          OutString(0,0,USetStr(15194),false);//Nomer nadhodjenna
+          OutString(0,0,USetStr(5270),false);//Nakl vitrati
+          OutString(0,0,USetStr(5266),false);//Nova cina per
+          OutString(0,0,USetStr(5262),false);//Summa
+          OutString(0,0,USetStr(5253),false);//Vidp cina
+          OutString(0,0,USetStr(11585),false);//Client
+          OutString(0,0,USetStr(5244),false);//Z
+          OutString(0,0,USetStr(5239),false);//Cherez
+          OutString(0,0,USetStr(5245),false);//na
+          OutString(0,0,USetStr(13509),false);//Gruppa
+          OutString(0,0,USetStr(5243),false);//Comantar
+          
+        EndFormat;
+      end else begin
+        StartFormat(15);
+        OutString(0,0,USetStr(5241),false);
+        OutString(130,0,USetStr(5242),false);
+        OutString(300,0,USetStr(5244),false);    // From Stock
+        OutString(365,0,USetStr(5239),false);   // Via Stock
+        OutString(430,0,USetStr(5245),false);   // To Stock
+        EndFormat;
+        StartFormat(15);
+        OutString(0,0,USetStr(5243),false);
+        OutString(330,0,USetStr(5246),false);   // Currency
+        OutString(400,0,USetStr(5247),false);   // Rate
+        
+        EndFormat;
+        Gray_Divider(0,1);
+      end;
+  end;
+  if (RepSpec.ArtMode==0) then begin         //Overview
+      StartFormat(15);
+      OutString(0,0,USetStr(5241),false);    //Ser.No
+      //OutString(0,0,USetStr(7820),true);    // Vendor// Edit ************************** Friday, 30 September 2011 15:02:11
+      OutString(65,0,USetStr(5242),false);   //Trans. Date
+      OutString(135,0,USetStr(5243),false);  //Comment
+      OutString(225,0,USetStr(5244),false);  //From Stock
+      OutString(275,0,USetStr(5239),false);  //Via Stock
+      OutString(330,0,USetStr(5245),false);  //To Stock
+      //OutString(330,0,USetStr(2338),false);  //Group// Edit ************************** Friday, 30 September 2011 15:02:08
+      OutString(415,0,USetStr(5249),true);   //Qty
+      switch (RepSpec.flags[4]) begin
+        case 0: OutString(1,0,USetStr(5266),true);
+        case 1: OutString(1,0,USetStr(5267),true);
+        case 2: OutString(1,0,USetStr(5253),true);
+      end;
+      EndFormat;
+      Gray_Divider(0,1);
+  end;
+
+  totqty = 0;
+  totsum = 0;
+
+  //SMr.SerNr = afr;
+  TrHs = true;
+  SMr.TransDate=RepSpec.sStartDate;// Edit ************************** Friday, 30 March 2012 10:23:54
+  
+  while (LoopKey("TransDate",SMr,1,TrHs)) begin// Edit ************************** Friday, 30 March 2012 10:24:37
+    testf = true;
+    /*if (TrHs) then begin
+      if (ato<>-1) then begin
+          if (SMr.SerNr>ato) then begin
+           //TrHs = false;
+          end;
+      end;
+    end;*/
+    if ((SMr.TransDate<RepSpec.sStartDate) or (SMr.TransDate>RepSpec.sEndDate)) then begin
+      testf = false;
+      TrHs = false;// Edit ************************** Friday, 30 March 2012 10:24:35
+    end;
+    
+    /*if (nonblankdate(SMr.TransDate)) then begin
+      if ((SMr.TransDate<RepSpec.sStartDate) or (SMr.TransDate>RepSpec.sEndDate)) then begin
+        testf = false;
+        TrHs = false;// Edit ************************** Friday, 30 March 2012 10:24:35
+      end;
+    end else begin
+      if (nonblankdate(SMr.SentTransDate)) then begin
+        if ((SMr.OrdTransDate<RepSpec.sStartDate) or (SMr.OrdTransDate>RepSpec.sEndDate)) then begin
+          testf = false;
+        end;
+      end else begin
+        if (nonblankdate(SMr.OrdTransDate)) then begin
+          if ((SMr.OrdTransDate<RepSpec.sStartDate) or (SMr.OrdTransDate>RepSpec.sEndDate)) then begin
+            testf = false;
+          end;
+        end;
+      end;
+    end;*/
+    if (RepSpec.flags[3]==0) then begin
+        if (nonblank(RepSpec.f2) and (RepSpec.f2<>SMr.FrLocation)) then begin
+           testf = false;
+        end;
+        if (nonblank(RepSpec.f3) and (RepSpec.f3<>SMr.ToLocation)) then begin
+           testf = false;
+        end;
+        if (nonblank(RepSpec.FirstAcc) and (RepSpec.FirstAcc<>SMr.ThrouLocation)) then begin
+           testf = false;
+        end;
+      end else begin
+        if (nonblank(RepSpec.f2) and (RepSpec.f2<>SMr.FrLocation) and (RepSpec.f2<>SMr.ToLocation)) then begin
+           testf = false;
+        end;
+        if (nonblank(RepSpec.f3) and (RepSpec.f3<>SMr.ToLocation) and (RepSpec.f3<>SMr.FrLocation)) then begin
+           testf = false;
+        end;
+    end;
+    if (RepSpec.long1<>-1) then begin
+      if (SMr.SerNr<>RepSpec.long1) then begin
+        testf = false;
+      end;
+    end;
+
+    if (testf) then begin
+      if ((RepSpec.flags[1]==1) and (SMr.OrdFlag!=0)) then begin
+        testf = false;
+      end;
+      if ((RepSpec.flags[1]==2) and (SMr.OrdFlag==0)) then begin
+        testf = false;
+      end;
+      if ((RepSpec.flags[2]==1) and (SMr.SentOKFlag!=0)) then begin
+        testf = false;
+      end;
+      if ((RepSpec.flags[2]==2) and (SMr.SentOKFlag==0)) then begin
+        testf = false;
+      end;
+      if ((RepSpec.flags[5]==1) and (SMr.OKFlag!=0)) then begin
+        testf = false;
+      end;
+      if ((RepSpec.flags[5]==2) and (SMr.OKFlag==0)) then begin
+        testf = false;
+      end;
+    end;
+
+    if ((TrHs==true) and (testf==true)) then begin
+       if (RepSpec.ArtMode==1) then begin
+        if(RepSpec.Media!=2 and RepSpec.Media!=20)then begin
+           StartFormat(15);
+           OutLongInt(0,"DblStockMov",SMr.SerNr,false);
+           OutDate(130,0,SMr.TransDate,false);
+           OutDate(220,0,SMr.RegDate,false);
+           OutString(300,0,SMr.FrLocation,false);
+           OutString(365,0,SMr.ThrouLocation,false);
+           OutString(430,0,SMr.ToLocation,false);
+           EndFormat;
+           StartFormat(15);
+           OutString(0,0,SMr.Comment,false);
+           OutString(330,0,SMr.CurncyCode,false);
+           GetCurRateText(tstr,SMr.FrRate,SMr.ToRateB1,SMr.ToRateB2);
+           OutString(400,0,tstr,false);
+           EndFormat;
+           sumqty = 0;
+           docsum = 0;
+           rowheaderf = true;
+           rwcnt = MatRowCnt(SMr);
+           for (i = 0 ; i<rwcnt ;i=i+1) begin
+               MatRowGet(SMr,i,StockMovrw);
+               if (rowheaderf) then begin
+                  StartFormat(5);
+                  EndFormat;
+                  StartFormat(15);
+                  OutString(1,0,USetStr(5462),true);// Edit ************************** Tuesday, 26 October 2010 16:30:10
+                  OutString(1,0,USetStr(5242),true);// Edit ************************** Tuesday, 26 October 2010 16:30:20
+                  OutString(15,0,USetStr(5248),false);
+                  OutString(110,0,USetStr(5249),true);
+                  OutString(115,0,USetStr(5250),false);   // Item Descr.
+                  OutString(270,0,USetStr(5252),true);    // Serial.No.
+                  OutString(270,0,USetStr(7820),true);    // Vendor
+                  OutString(350,0,USetStr(5270),true);
+                  switch (RepSpec.flags[4]) begin
+                    case 0: OutString(420,0,USetStr(5266),true);
+                    case 1: OutString(420,0,USetStr(5267),true);
+                    case 2: OutString(420,0,USetStr(5253),true);
+                  end;
+                  OutString(1,0,USetStr(4005),true);    // Row total
+                  OutString(1,0,USetStr(5253),true);// Edit ************************** Tuesday, 26 October 2010 16:28:08
+                  OutString(1,0,USetStr(5552),true);// Edit ************************** Tuesday, 26 October 2010 16:28:07
+                  OutString(1,0,USetStr(5244),true);// Edit ************************** Tuesday, 26 October 2010 16:30:02
+                  OutString(1,0,USetStr(5239),true);// Edit ************************** Tuesday, 26 October 2010 16:29:46
+                  OutString(1,0,USetStr(5245),true);// Edit ************************** Tuesday, 26 October 2010 16:30:03
+                  OutString(1,0,USetStr(2338),true);// Edit ************************** Tuesday, 26 October 2010 16:30:03
+                  
+                  EndFormat;
+                  Gray_Divider(0,1);
+                  rowheaderf = false;
+               end;
+               StartFormat(15);
+               OutString(2,0,SMr.SerNr,false);// Edit ************************** Tuesday, 26 October 2010 16:22:31
+               OutString(3,0,SMr.TransDate,false);// Edit ************************** Tuesday, 26 October 2010 16:22:56
+               OutString(15,0,StockMovrw.ArtCode,false);
+               OutVal(110,0,StockMovrw.Quant,M4UVal,true);
+               t = 0;
+               if (nonblank(StockMovrw.Coefficient) and (StockMovrw.Coefficient>0)) then begin
+                   if (MainStockRec.UnitConvCalc==0) then begin
+                     t = StockMovrw.Quant*StockMovrw.Coefficient;
+                   end else begin
+                     t = StockMovrw.Quant/StockMovrw.Coefficient;
+                   end;
+                   OutVal(140,0,t,M4UVal,true);
+               end;
+               OutString(115,0,StockMovrw.Spec,false);
+               OutString(270,0,StockMovrw.SerialNr,true);
+               
+               // Edit Start ---------------------------------------------- Edit Start
+  //Friday, 30 September 2011 14:53:47
+               IHr.ArtCode = StockMovrw.ArtCode;
+               IHr.SerialNr = StockMovrw.SerialNr;
+               IHr.FileName = "PUVc";
+               if(readfirstkey("ArtCodeSerialNr",IHr,3,true))then begin
+                  PUr.SerNr = IHr.TransNr;
+                  readfirstmain(PUr,1,true);
+                  OutString(270,0,PUr.VECode,true);
+               end else begin
+                  OutString(270,0,"",true);
+               end;
+  // Edit End ---------------------------------------------- Edit End
+	
+               
+               if (RepSpec.flags[4]==2) then begin
+                  OutVal(420,0,StockMovrw.BasePrice,M45Val,true);
+                  rowsum = Round(StockMovrw.Quant*StockMovrw.BasePrice,DefaultCurRoundOff);
+               end;
+               if (RepSpec.flags[4]==1) then begin
+                  OutString(350,0,StockMovrw.ExtraSCost,true);
+                  OutVal(420,0,StockMovrw.OldPrice,M45Val,true);
+                  rowsum = Round(StockMovrw.Quant*StockMovrw.OldPrice,DefaultCurRoundOff);
+               end;
+               if (RepSpec.flags[4]==0) then begin
+                  OutString(350,0,StockMovrw.ExtraSCost,true);
+                  OutVal(420,0,StockMovrw.NewPrice,M45Val,true);
+                  rowsum = Round(StockMovrw.Quant*StockMovrw.NewPrice,DefaultCurRoundOff);
+               end;
+               OutVal(1,0,rowsum,M4Val,true);
+               sumqty = sumqty + StockMovrw.Quant;
+               docsum = docsum + rowsum;
+               // Edit Start ---------------------------------------------- Edit Start
+	//Friday, 22 October 2010 14:23:59
+               trhs1=true;
+               notenr = 1;
+               while (ReadRecordLink(SMr,notenr,ORr,RLr) and trhs1) begin
+                  mtws = matrowcnt(ORr);
+                  for(z=0;z<mtws;z=z+1) begin
+                    MatRowGet(ORr,z,ORrw);
+                    if(ORrw.ArtCode==StockMovrw.ArtCode and trhs1)then begin
+                      OutVal(1,0,ORrw.Price,M45Val,true);
+                      OutString(1,0,ORr.CustCode,true);
+                      trhs1 = false;
+                    end;
+                  end;
+                  notenr=notenr+1;
+                end;
+                If(trhs1) then begin
+	                OutString(1,0,"",true);
+	                OutString(1,0,"",true);
+                end;
+                OutString(1,0,SMr.FrLocation,true);
+                OutString(1,0,SMr.ThrouLocation,true);
+                OutString(1,0,SMr.ToLocation,true);
+                
+                INr.Code = StockMovrw.ArtCode;
+                readfirstmain(INr,1,true);
+                
+                OutString(1,0,INr.Group,true);
+                
+	// Edit End ---------------------------------------------- Edit End
+	
+               
+               EndFormat;
+           end;
+           Gray_Divider(0,1);
+           StartFormat(5);
+           EndFormat;
+           StartFormat(15);
+           OutString(50,0,USetStr(2617),false);
+           OutVal(110,0,sumqty,M4Qty,true);
+           OutVal(1,0,docsum,M4Val,true);
+           EndFormat;
+           totsum = totsum + docsum;
+           totqty = totqty + sumqty;
+           StartFormat(15);
+           EndFormat;
+       end else begin
+       
+           // Edit Start ---------------------------------------------- Edit Start
+      //Friday, 30 March 2012 10:49:42
+         sumqty = 0;
+         docsum = 0;
+         rowheaderf = true;
+         rwcnt = MatRowCnt(SMr);
+        for (i = 0 ; i<rwcnt ;i=i+1) begin
+          MatRowGet(SMr,i,StockMovrw);
+          INr.Code = StockMovrw.ArtCode;
+          if(readfirstmain(INr,1,true) and INr.SerNrf>0)then begin
+            StartFormat(15);
+              OutString(0,0,SMr.SerNr,false);//Nomer
+              OutString(0,0,SMr.TransDate,false);//Data oper
+              OutString(0,0,StockMovrw.ArtCode,false);//Kod tovaru
+              OutString(0,0,StockMovrw.Spec,false);//Naimenov
+              OutString(0,0,StockMovrw.Quant,false);//Otr kilkist
+              OutString(0,0,StockMovrw.SerialNr,false);//Serial no
+              IHr.ArtCode = StockMovrw.ArtCode;
+              IHr.SerialNr = StockMovrw.SerialNr;
+              IHr.FileName = "PUVc";
+              puno = 0;
+              vend = "";
+              pudate = "";
+              if(readfirstkey("ArtCodeSerialNr",IHr,3,true))then begin
+                PUr.SerNr = IHr.TransNr;
+                readfirstmain(PUr,1,true);
+                puno = PUr.SerNr;
+                vend = PUr.VECode;
+                pudate = PUr.TransDate;
+              end;
+              OutString(0,0,vend,false);//Postachalnik
+              OutString(0,0,pudate,false);//Data postavki
+              OutString(0,0,puno,false);//Nomer nadhodjenna
+              OutString(1,0,StockMovrw.ExtraSCost,true);
+              OutString(1,0,StockMovrw.NewPrice,true);
+              OutString(1,0,StockMovrw.NewPrice*StockMovrw.Quant,true);
+              orsum = 0;
+              vend = "";
+              trhs1=true;
+              notenr = 1;
+              while (ReadRecordLink(SMr,notenr,ORr,RLr) and trhs1) begin
+                mtws = matrowcnt(ORr);
+                for(z=0;z<mtws;z=z+1) begin
+                  MatRowGet(ORr,z,ORrw);
+                  if(ORrw.ArtCode==StockMovrw.ArtCode and trhs1)then begin
+                    orsum = ORrw.Price;
+                    vend = ORr.CustCode;
+                  end;
+                end;
+                notenr=notenr+1;
+              end;
+              OutString(0,0,orsum,false);//Vidp cina
+              OutString(0,0,vend,false);//Client
+              OutString(1,0,SMr.FrLocation,true);
+              OutString(1,0,SMr.ThrouLocation,true);
+              OutString(1,0,SMr.ToLocation,true);
+                INr.Code = StockMovrw.ArtCode;
+                readfirstmain(INr,1,true);
+              OutString(0,0,INr.Group,false);//Gruppa
+              OutString(0,0,SMr.Comment,false);//Comantar
+            endformat; 
+          end else begin// Edit ************************** Friday, 6 April 2012 10:22:34// Edit ************************** Friday, 6 April 2012 10:22:35// Edit ************************** Friday, 6 April 2012 10:25:15
+            IHr.FileName = "StockMovVc";
+            IHr.TransNr = SMr.SerNr;
+            ihTrHs = true;
+            while(loopkey("FNTransNr",IHr,2,ihTrHs))begin
+              ihtestf = true;
+              if((IHr.FileName!="StockMovVc") or (IHr.TransNr!=SMr.SerNr))then begin 
+                ihtestf = false; 
+                ihTrHs = false; 
+              end;
+              if(IHr.Source<0)then begin ihtestf = false; end;
+              if(IHr.ArtCode!=StockMovrw.ArtCode)then begin ihtestf = false; end;
+              if(IHr.Row!=i)then begin ihtestf = false; end;
+              if(IHr.Location!=SMr.FrLocation)then begin ihtestf = false; end;
+              if(ihtestf)then begin
+                StartFormat(15);
+                  OutString(0,0,SMr.SerNr,false);//Nomer
+                  OutString(0,0,SMr.TransDate,false);//Data oper
+                  OutString(0,0,StockMovrw.ArtCode,false);//Kod tovaru
+                  OutString(0,0,StockMovrw.Spec,false);//Naimenov
+                  OutString(0,0,-IHr.Qty,false);//Otr kilkist
+                  OutString(0,0,"",false);//Serial no
+                  
+                  
+                  
+                  IH2r.SerNr = IHr.Source;
+                  LHistLoop:;
+                  puno = 0;
+                  vend = "";
+                  pudate = "";
+                  if(readfirstmain(IH2r,1,true) and IH2r.FileName=="PUVc")then begin
+                    PUr.SerNr = IH2r.TransNr;
+                    readfirstmain(PUr,1,true);
+                    puno = PUr.SerNr;
+                    vend = PUr.VECode;
+                    pudate = PUr.TransDate;
+                  end else begin
+                    if(IH2r.FileName=="StockMovVc")then begin
+                      IH2r.SerNr = IH2r.SerNr-1;
+                      readfirstmain(IH2r,1,true);
+                      IH2r.SerNr = IH2r.Source;
+                      //resetloop(IH2r);
+                      goto LHistLoop;
+                    end;
+                  end;
+                  OutString(0,0,vend,false);//Postachalnik
+                  OutString(0,0,pudate,false);//Data postavki
+                  OutString(0,0,puno,false);//Nomer nadhodjenna
+                  OutString(1,0,IHr.TotCostPrice,true);
+                  OutString(1,0,StockMovrw.NewPrice,true);
+                  OutString(1,0,StockMovrw.NewPrice*StockMovrw.Quant,true);
+                  orsum = 0;
+                  vend = "";
+                  trhs1=true;
+                  notenr = 1;
+                  while (ReadRecordLink(SMr,notenr,ORr,RLr) and trhs1) begin
+                    mtws = matrowcnt(ORr);
+                    for(z=0;z<mtws;z=z+1) begin
+                      MatRowGet(ORr,z,ORrw);
+                      if(ORrw.ArtCode==StockMovrw.ArtCode and trhs1)then begin
+                        orsum = ORrw.Price;
+                        vend = ORr.CustCode;
+                      end;
+                    end;
+                    notenr=notenr+1;
+                  end;
+                  OutString(0,0,orsum,false);//Vidp cina
+                  OutString(0,0,vend,false);//Client
+                  OutString(1,0,SMr.FrLocation,true);
+                  OutString(1,0,SMr.ThrouLocation,true);
+                  OutString(1,0,SMr.ToLocation,true);
+                    INr.Code = StockMovrw.ArtCode;
+                    readfirstmain(INr,1,true);
+                  OutString(0,0,INr.Group,false);//Gruppa
+                  OutString(0,0,SMr.Comment,false);//Comantar
+                endformat;
+              end;
+            end;
+            resetloop(IHr);
+          end;
+        end; 
+      end;
+      // Edit End ---------------------------------------------- Edit End
+      
+       end;
+       if (RepSpec.ArtMode==0) then begin
+           rwcnt = MatRowCnt(SMr);
+           sumqty = 0;
+           rowsum = 0;
+           for (i = 0 ; i<rwcnt ;i=i+1) begin
+               MatRowGet(SMr,i,StockMovrw);
+               sumqty = sumqty + StockMovrw.Quant;
+               if (RepSpec.flags[4]==2) then begin
+                  rowsum = rowsum + StockMovrw.Quant*StockMovrw.BasePrice;
+               end;
+               if (RepSpec.flags[4]==1) then begin
+                  rowsum = rowsum + StockMovrw.Quant*StockMovrw.OldPrice;
+               end;
+               if (RepSpec.flags[4]==0) then begin
+                  rowsum = rowsum + StockMovrw.Quant*StockMovrw.NewPrice;
+               end;
+           end;
+           StartFormat(15);
+           OutLongInt(0,"DblStockMov",SMr.SerNr,false);
+           OutDate(65,0,SMr.TransDate,false);
+           OutString(135,0,Left(SMr.Comment,20),false);
+           OutString(225,0,SMr.FrLocation,false);
+           OutString(275,0,SMr.ThrouLocation,false);
+           OutString(330,0,SMr.ToLocation,false);
+           OutVal(415,0,sumqty,M4Qty,true);
+           OutVal(1,0,rowsum,M4Val,true);
+           EndFormat;
+           totqty = totqty + sumqty;
+           totsum = totsum + rowsum;
+       end;
+   end;
+  end;
+  Black_Divider(0,1);  
+  StartFormat(5);
+  EndFormat;
+  if(RepSpec.Media!=2 and RepSpec.Media!=20)then begin
+  StartFormat(15);
+  if (RepSpec.ArtMode==1) then begin
+      OutString(50,0,USetStr(2617),false);
+      OutVal(110,0,totqty,M4Qty,true);
+    end else begin
+      OutString(280,0,USetStr(2617),false);
+      OutVal(420,0,totqty,M4Qty,true);
+  end;
+  OutVal(1,0,totsum,M4Val,true);
+  EndFormat;
+  end;
+
+  EndJob;
+  return;
+end;
+
+global procedure StockMovJEn(integer compnr)
+begin
+record RcVc RepSpec;
+string 50 filename;
+      
+      //if(GetDateID(currentdate)==1 or GetDateID(currentdate)==3)then begin
+        switch(compnr)begin
+          case 1: filename = "Stock/ISTORTransfers.xls";
+        end;
+        
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        ReportDefaults(RepSpec,"StockMovJRn");
+        RepSpec.sStartDate = addday(currentdate,-7);
+        RepSpec.sEndDate = currentdate;
+        RepSpec.Media=20;
+        RepSpec.ArtMode = 1;
+        StockMovJRn(RepSpec);
+        closefile;
+        
+        switch(compnr)begin
+          case 1: RunProgram("Stock/ISTORTransfers.sh","");
+        end;
+      //end;
+return;
+end;

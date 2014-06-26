@@ -1,0 +1,41 @@
+event startup
+begin
+
+  SetLangMode(LangUkrainian,"UKR",0);
+ 
+  Maintenance("Clear INVc(товари)",INClrVClass,INClrMn,modIN);
+  Maintenance("Clear ORVc(Рахунки клієнтів)",ORClrVClass,ORClrMn,modSY);
+  Maintenance("Clear IVVc(акт/накладна клієнту)",REGClrVClass,IVClrMn,modSY);
+  Maintenance("Clear IVCashVc(ЕККА)",REGClrVClass,IVCashClrMn,modSY);
+  Maintenance("Clear SVOVc(Замовлення на обсл.)",REGClrVClass,SVOClrMn,modSY);
+  Maintenance("Clear POVc (замовлення постачальнику)",REGClrVClass,POClrMn,modSY);
+  
+  Maintenance("Clear AT2UnitVc (НА)",REGClrVClass,AT2UnitClrMn,modSY);
+  Maintenance("Clear AT2Vc (категорії НА)",REGClrVClass,AT2ClrMn,modSY);
+  Maintenance("Clear TRVc (записи операцій)",REGClrVClass,TRClrMn,modSY);
+  Maintenance("Clear VIVc (акт/накладна постачальника)",REGClrVClass,VIClrMn,modSY);
+  Maintenance("Clear OPVc (платежі постачальнику)",REGClrVClass,OPClrMn,modSY);
+  Maintenance("Clear IPVc (платежі клієнтів)",REGClrVClass,IPClrMn,modSY);
+  Maintenance("Clear SHVc (Відвантаження)",REGClrVClass,SHClrMn,modSY);
+  Maintenance("Clear PUVc (надходження)",REGClrVClass,PUClrMn,modSY);
+  Maintenance("Clear SDVc (списання)",REGClrVClass,SDClrMn,modSY);
+  Maintenance("Clear StockMovVc (переміщення)",REGClrVClass,StockMovClrMn,modSY);
+  Maintenance("Clear RetVc (повернення)",REGClrVClass,RetClrMn,modSY);
+  
+  Maintenance("Clear RetPUVc (повернення постач.)",REGClrVClass,RetPUClrMn,modSY);
+  
+  Maintenance("Clear DocVc (форми)",REGClrVClass,DocClrMn,modSY);
+  
+  Maintenance("Clear StockTakeVc (інвентаризація)",REGClrVClass,StockTakeClrMn,modSY);
+  Maintenance("Clear SRVc (переоцінка)",REGClrVClass,SRClrMn,modSY);
+  Maintenance("Clear ObjVc (Об’єкти)",REGClrVClass,ObjClrMn,modSY);
+  Maintenance("Clear ItemHistVc (Історія)",REGClrVClass,ItemHistClrMn,modSY);
+  Maintenance("Clear ItemStatusVc (Статус товару БД)",REGClrVClass,ItemStatusClrMn,modSY);
+  Maintenance("Clear ITVc (Група товару)",REGClrVClass,ITClrMn,modSY);
+  Maintenance("Clear APPayHistVc (ще одна історія)",REGClrVClass,APPClrMn,modSY);
+  Maintenance("Clear CLInVc (Надходження до каси)",REGClrVClass,CLInClrMn,modSY);
+  //Delete Archives in all Companies!!!
+  //Maintenance("Clear ArchiveVc (Архіви)",REGClrVClass,ArchiveClrMn,modSY);
+  
+ return;
+end;  

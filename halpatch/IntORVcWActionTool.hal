@@ -1,0 +1,507 @@
+external function Boolean POVc_PasteLocation(var record POVc);
+external function Boolean IntORchrsum(record IntORVc,Integer);
+external procedure SumupIntOR(var record IntORVc,var val);
+external function string 255 FindINObjects(string,string);
+external function Boolean POVc_PasteVECode(var record POVc,Boolean);
+external function val MulRateToBase1(var string,val,val,val,val,val,val,Integer);
+external procedure POSumup(var record POVc);
+external function Boolean POVc_PasteArtCode(var record POVc,Integer,Boolean);
+external procedure POVc_PasteQuant(var record POVc,Integer);
+external function val MulWithRateToBase1(var string,Date,val,Integer);
+external function Boolean ReadFirstItem(string,var record INVc,Boolean,Boolean);
+external function Boolean GetItemNameStr(Integer,var string,string,string,string);
+external function Boolean FindItemVAR(string,var string,var string,var string,var string);
+external procedure GetFullCurncyRate (var string,Date,var val,var val,var val,var val,var val);
+external procedure StockMovSumUp(var record StockMovVc);// Edit ************************** Monday, 9 July 2012 12:01:10
+
+function Boolean CheckIntORRowShipd(row IntORVc IntORrwp,Integer shipd)
+BEGIN
+  Boolean res;
+  val t;
+  
+  res = true;
+  switch (shipd) begin
+    case 0:
+      t = IntORrwp.Shipd1 + IntORrwp.Shipd2;
+      if (IntORrwp.Quant<=t) then begin 
+        res = false; 
+      end;
+    case 1:
+      if (IntORrwp.Quant<=IntORrwp.Shipd1) then begin
+        res = false;
+      end;
+    case 2:
+      if (IntORrwp.Quant<=IntORrwp.Shipd2) then begin 
+        res = false;
+      end;
+  end;
+  CheckIntORRowShipd = res;
+  RETURN;
+END;
+
+//procedure PasteIntOrdInStockMov(record IntORVc IntORp,var record StockMovVc StockMovp)
+
+global updating procedure PasteIntOrdInStockMov(record IntORVc IntORp,var record StockMovVc StockMovp)
+BEGIN
+  record INVc INr;
+  //record StockMovVc StockMovp;// Edit ************************** Monday, 9 July 2012 11:52:26 
+  row StockMovVc StockMovrw;
+  row IntORVc IntORrw;
+  Integer i,rwcnt,stcnt,k;
+  val fr,to1,to2,br1,br2;
+  string 10 curncy;
+  record IntORSettingBlock IntORRec;
+  date nodate;
+  integer counter;// Edit ************************** Monday, 9 July 2012 11:52:46
+  
+  
+  RecordNew(StockMovp);// Edit ************************** Monday, 9 July 2012 11:52:05
+  counter=0;
+  
+  if (blank(IntORp.Location)) then begin goto LPasteIntOrdInStockMov; end;
+  BlockLoad(IntORRec);
+  StockMovp.IntORNo = IntORp.SerNr;
+  StockMovp.ToLocation = IntORp.Location;
+  GetFullCurncyRate(curncy,StockMovp.TransDate,fr,to1,to2,br1,br2);
+  StockMovp.CurncyCode = curncy;
+  StockMovp.FrRate = fr;
+  StockMovp.ToRateB1 = to1;
+  StockMovp.ToRateB2 = to2;
+  StockMovp.BaseRate1 = br1;
+  StockMovp.BaseRate2 = br2;
+  if (IntORRec.SentQuantToStockMov==1) then begin
+    StockMovp.SentTransDate = CurrentDate;
+  end else begin
+    StockMovp.SentTransDate = nodate;
+  end;  
+  if (IntORRec.QuantToStockMov==1) then begin
+    StockMovp.TransDate  = CurrentDate;
+  end else begin
+    StockMovp.TransDate  = nodate;
+  end;  
+  stcnt = 0;
+  rwcnt = MatRowCnt(IntORp);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(IntORp,i,IntORrw);
+    INr.Code = IntORrw.ArtCode;
+    if (ReadFirstItem(IntORrw.ArtCode,INr,true,false)) then begin
+      if (CheckIntORRowShipd(IntORrw,1)) then begin
+        if(INr.SerNrf ==1) then begin
+          for (k=0;k<IntORrw.Quant;k=k+1) begin//-------------------------------------------BEGIN
+            ClearRow(StockMovp,StockMovrw,1);    
+            StockMovrw.ArtCode = IntORrw.ArtCode;
+            if (IntORRec.OrdQuantToStockMov==1) then begin
+              StockMovrw.OrdQuant = 1/*IntORrw.Quant - IntORrw.Shipd1*/;
+            end;  
+            if (IntORRec.SentQuantToStockMov==1) then begin
+              StockMovrw.SentQuant = 1/*IntORrw.Quant - IntORrw.Shipd1*/;
+            end;
+            if (IntORRec.QuantToStockMov==1) then begin
+              StockMovrw.Quant = 1/*IntORrw.Quant - IntORrw.Shipd1*/;
+            end;
+            StockMovrw.Spec = IntORrw.Spec;
+            StockMovrw.SerialNr = "";
+            if (IntORRec.CostPriceToStockMov==1) then begin
+              StockMovrw.NewPrice = IntORrw.Price;
+              StockMovrw.OldPrice = IntORrw.Price;
+            end else begin
+              StockMovrw.NewPrice = blankval;
+              StockMovrw.OldPrice = blankval;
+            end;  
+            StockMovrw.ExtraSCost = "";
+            StockMovrw.OldPrice = IntORrw.Price;
+            //please look carefully BasePrice is twice !
+            StockMovrw.BasePrice = INr.UPrice1;
+            StockMovrw.BasePrice = blankval;
+            StockMovrw.Coefficient = INr.UnitCoefficient;
+            StockMovrw.IntORRow = i;
+            MatRowPut(StockMovp,stcnt,StockMovrw);
+            // Edit Start ---------------------------------------------- Edit Start
+	//Monday, 9 July 2012 12:47:43
+	
+            if(counter==198)then begin
+              if (StockMovp.SerNr<=0) then begin
+                StockMovp.SerNr = NextSerNr("StockMovVc",StockMovp.TransDate,-1,false,"");
+              end;
+              counter = -1;
+              stcnt = -1;
+              StockMovSumUp(StockMovp);
+              if (RecordStore(StockMovp,false)) then begin
+                CreateRecordLink(StockMovp,CurrentCompany,IntORp,CurrentCompany);
+                CreateRecordLink(IntORp,CurrentCompany,StockMovp,CurrentCompany);
+              end;
+              
+              recordnew(StockMovp);
+              StockMovp.IntORNo = IntORp.SerNr;
+              StockMovp.ToLocation = IntORp.Location;
+              GetFullCurncyRate(curncy,StockMovp.TransDate,fr,to1,to2,br1,br2);
+              StockMovp.CurncyCode = curncy;
+              StockMovp.FrRate = fr;
+              StockMovp.ToRateB1 = to1;
+              StockMovp.ToRateB2 = to2;
+              StockMovp.BaseRate1 = br1;
+              StockMovp.BaseRate2 = br2;
+              if (IntORRec.SentQuantToStockMov==1) then begin
+                StockMovp.SentTransDate = CurrentDate;
+              end else begin
+                StockMovp.SentTransDate = nodate;
+              end;  
+              if (IntORRec.QuantToStockMov==1) then begin
+                StockMovp.TransDate  = CurrentDate;
+              end else begin
+                StockMovp.TransDate  = nodate;
+              end;
+            end;
+            
+	// Edit End ---------------------------------------------- Edit End
+	
+            counter = counter+1;      
+            stcnt = stcnt + 1;
+          end;
+        end else begin
+          ClearRow(StockMovp,StockMovrw,1);    
+            StockMovrw.ArtCode = IntORrw.ArtCode;
+            if (IntORRec.OrdQuantToStockMov==1) then begin
+              StockMovrw.OrdQuant = IntORrw.Quant - IntORrw.Shipd1;
+            end;  
+            if (IntORRec.SentQuantToStockMov==1) then begin
+              StockMovrw.SentQuant = IntORrw.Quant - IntORrw.Shipd1;
+            end;
+            if (IntORRec.QuantToStockMov==1) then begin
+              StockMovrw.Quant = IntORrw.Quant - IntORrw.Shipd1;
+            end;
+            StockMovrw.Spec = IntORrw.Spec;
+            StockMovrw.SerialNr = "";
+            if (IntORRec.CostPriceToStockMov==1) then begin
+              StockMovrw.NewPrice = IntORrw.Price;
+              StockMovrw.OldPrice = IntORrw.Price;
+            end else begin
+              StockMovrw.NewPrice = blankval;
+              StockMovrw.OldPrice = blankval;
+            end;  
+            StockMovrw.ExtraSCost = "";
+            StockMovrw.OldPrice = IntORrw.Price;
+            //please look carefully BasePrice is twice !
+            StockMovrw.BasePrice = INr.UPrice1;
+            StockMovrw.BasePrice = blankval;
+            StockMovrw.Coefficient = INr.UnitCoefficient;
+            StockMovrw.IntORRow = i;
+            MatRowPut(StockMovp,stcnt,StockMovrw); 
+            
+            // Edit Start ---------------------------------------------- Edit Start
+	//Monday, 9 July 2012 12:48:02
+	
+            if(counter==198)then begin
+              if (StockMovp.SerNr<=0) then begin
+                StockMovp.SerNr = NextSerNr("StockMovVc",StockMovp.TransDate,-1,false,"");
+              end;
+              counter = -1;
+              stcnt = -1;
+              StockMovSumUp(StockMovp);
+              if (RecordStore(StockMovp,false)) then begin
+                CreateRecordLink(StockMovp,CurrentCompany,IntORp,CurrentCompany);
+                CreateRecordLink(IntORp,CurrentCompany,StockMovp,CurrentCompany);
+              end;
+              
+              recordnew(StockMovp);
+              StockMovp.IntORNo = IntORp.SerNr;
+              StockMovp.ToLocation = IntORp.Location;
+              GetFullCurncyRate(curncy,StockMovp.TransDate,fr,to1,to2,br1,br2);
+              StockMovp.CurncyCode = curncy;
+              StockMovp.FrRate = fr;
+              StockMovp.ToRateB1 = to1;
+              StockMovp.ToRateB2 = to2;
+              StockMovp.BaseRate1 = br1;
+              StockMovp.BaseRate2 = br2;
+              if (IntORRec.SentQuantToStockMov==1) then begin
+                StockMovp.SentTransDate = CurrentDate;
+              end else begin
+                StockMovp.SentTransDate = nodate;
+              end;  
+              if (IntORRec.QuantToStockMov==1) then begin
+                StockMovp.TransDate  = CurrentDate;
+              end else begin
+                StockMovp.TransDate  = nodate;
+              end;
+            end;   
+            
+            
+	// Edit End ---------------------------------------------- Edit End
+	  
+            stcnt = stcnt + 1;
+            counter = counter+1;
+            
+        end;//---------------------------------------------------------------------------------END
+      end;  
+    end;  
+  end;
+ // Edit Start ---------------------------------------------- Edit Start
+	//Monday, 9 July 2012 12:00:35
+	 
+  if(counter>0)then begin
+      if (StockMovp.SerNr<=0) then begin
+        StockMovp.SerNr = NextSerNr("StockMovVc",StockMovp.TransDate,-1,false,"");
+      end;
+      StockMovSumUp(StockMovp);
+      if (RecordStore(StockMovp,false)) then begin
+        CreateRecordLink(StockMovp,CurrentCompany,IntORp,CurrentCompany);
+        CreateRecordLink(IntORp,CurrentCompany,StockMovp,CurrentCompany);
+      end;
+    end;
+    
+	// Edit End ---------------------------------------------- Edit End
+	
+LPasteIntOrdInStockMov:; 
+  RETURN;
+END;
+
+global
+procedure PasteIntOrdInSD(record IntORVc IntORp,var record SDVc SDp)
+BEGIN
+  record INVc INr;
+  row SDVc SDrw;
+  row IntORVc IntORrw;
+  Integer i,rwcnt,stcnt;
+  
+  if (blank(IntORp.Location)) then begin goto LPasteIntOrdInSD; end;
+  SDp.Location = IntORp.Location;
+  SDp.IntORNo = IntORp.SerNr;
+  stcnt = 0;
+  rwcnt = MatRowCnt(IntORp);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(IntORp,i,IntORrw);
+    INr.Code = IntORrw.ArtCode;
+    if (ReadFirstItem(IntORrw.ArtCode,INr,true,false)) then begin
+      if (CheckIntORRowShipd(IntORrw,1)) then begin
+        ClearRow(SDp,SDrw,1);    
+        SDrw.ArtCode = IntORrw.ArtCode;
+        SDrw.Qty = IntORrw.Quant - IntORrw.Shipd1;
+        SDrw.Spec = IntORrw.Spec;
+//        SDrw.Recepy = IntORrw.Recepy;
+        SDrw.CostAcc = IntORrw.CostAcc;
+        SDrw.Objects = IntORrw.Objects;
+        SDrw.SerialNr = "";
+        SDrw.FIFORowVal = blankval;
+        SDrw.FIFO = blankval;
+        SDrw.BasePrice = INr.UPrice1;
+        SDrw.Coefficient = INr.UnitCoefficient;
+        SDrw.IntORRow = i;
+        MatRowPut(SDp,stcnt,SDrw);      
+        stcnt = stcnt + 1;
+      end;  
+    end;  
+  end;  
+LPasteIntOrdInSD:; 
+  RETURN;
+END;
+
+global
+procedure PasteIntOrdInPO(string vecode,record IntORVc IntORp,var record POVc POp)
+BEGIN
+  record INVc INr;
+  row POVc POrw;
+  row IntORVc IntORrw;
+  Integer i,rwcnt,stcnt;
+  val fr,to1,to2,br1,br2;
+  string 10 curncy;
+  string 5 itgroup;
+  record POSettingBlock POb;
+  record PIVc PIr;
+
+  BlockLoad(POb);
+  POp.IntORNo = IntORp.SerNr;
+  GetFullCurncyRate(curncy,POp.TransDate,fr,to1,to2,br1,br2);
+  POp.CurncyCode = curncy;
+  POp.FrRate = fr;
+  POp.ToRateB1 = to1;
+  POp.ToRateB2 = to2;
+  POp.BaseRate1 = br1;
+  POp.BaseRate2 = br2;
+  POp.VECode = vecode;
+  if (nonblank(IntORp.Location)) then begin
+    POp.Location = IntORp.Location;
+    POVc_PasteLocation(POp);
+  end;
+  if (POVc_PasteVECode(POp,true)) then begin
+  end;
+  stcnt = 0;
+  rwcnt = MatRowCnt(IntORp);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(IntORp,i,IntORrw);
+    if (ReadFirstItem(IntORrw.ArtCode,INr,true,true)) then begin
+      if ((IntORrw.Quant - IntORrw.Shipd1 - IntORrw.POOrd)>0) then begin
+        if blank(itgroup) then begin
+          itgroup = INr.Group;
+        end; 
+        ClearRow(POp,POrw,1);    
+        POrw.ArtCode = IntORrw.ArtCode;
+        MatRowPut(POp,stcnt,POrw);      
+        if (POVc_PasteArtCode(POp,stcnt,false)) then begin end;
+        MatRowGet(POp,stcnt,POrw);      
+
+        PIr.DefaultChoice = 1;
+        PIr.ItemCode = POrw.ArtCode;
+        PIr.VECode = POp.VECode;
+        if (ReadFirstKey("DefaultChoice",PIr,3,true)==false) then begin
+          PIr.ItemCode = POrw.ArtCode;
+          PIr.VECode = POp.VECode;
+          ReadFirstKey("MainKey",PIr,2,true);
+        end;
+
+        POrw.Quant = IntORrw.Quant - IntORrw.Shipd1 - IntORrw.POOrd;
+        if (POb.UseNormOrdMult!=0) then begin
+          if (PIr.NormPOQty!=0) then begin
+            POrw.Quant = POrw.Quant/PIr.NormPOQty;
+            POrw.Quant = POrw.Quant + 49999.00/100000.00;
+            POrw.Quant = Round(POrw.Quant,0);
+            POrw.Quant = POrw.Quant*PIr.NormPOQty;
+          end;
+          if (PIr.MinPOQty!=0) then begin
+            if (PIr.MinPOQty>POrw.Quant) then begin POrw.Quant = PIr.MinPOQty; end;
+          end;
+        end;        
+        MatRowPut(POp,stcnt,POrw);      
+        POVc_PasteQuant(POp,stcnt);
+        MatRowGet(POp,stcnt,POrw);      
+        POrw.Spec = IntORrw.Spec;
+        POrw.IntORRow = i;
+        MatRowPut(POp,stcnt,POrw);   
+        stcnt = stcnt + 1;
+      end;  
+    end;  
+  end;  
+  POSumup(POp);
+  POp.AcceptanceState = 0;
+/*
+  if (blank(POp.AcceptanceGroup)) then begin
+external function string 20 AssignAcceptanceGroup(string,string,val);
+    POp.AcceptanceGroup = AssignAcceptanceGroup("POVc",itgroup,MulRateToBase1(POp.CurncyCode,POp.Sum4,POp.FrRate,POp.ToRateB1,POp.ToRateB2,POp.BaseRate1,POp.BaseRate2,DefaultCurRoundOff));  
+  end;
+*/
+LPasteIntOrdInPO:; 
+  RETURN;
+END;
+
+global
+function Boolean IntORVc_PasteOurUser(var record IntORVc IntORp)
+BEGIN
+  Boolean res;
+  record UserVc Userr;
+  record DepVc Depr;
+
+  Userr.Code = IntORp.OurUser;
+  if (ReadFirstMain(Userr,1,true)) then begin
+    IntORp.Name = Userr.Name;
+    IntORp.Department = Userr.Department;
+    IntORp.Location = Userr.Location;
+    IntORp.Phone = Userr.Phone1;
+    IntORp.Fax = Userr.Fax1;
+    IntORp.emailAddr = Userr.emailAddr;
+    Depr.Code = IntORp.Department;
+    if (ReadFirstMain(Depr,1,true)) then begin
+      IntORp.ShipAddr0 = Depr.Addr0;
+      IntORp.ShipAddr1 = Depr.Addr1;
+      IntORp.ShipAddr2 = Depr.Addr2;
+      IntORp.ShipAddr3 = Depr.Addr3;
+      IntORp.DelAddr3 = Depr.Addr4;
+      IntORp.DelAddr4 = Depr.Addr5;
+    end;
+    res = true;
+  end;  
+  IntORVc_PasteOurUser = res;
+  RETURN;
+END;
+
+procedure SetLocationAddr(string loc,var string a0,var string a1,var string a2,var string a3,var string a4,var string a5,var string phone,var string fax)
+BEGIN
+  record LocationVc locR;
+        
+  locR.Code = loc;
+  if (ReadFirstMain(locR,1,true)) then begin
+    a0 = locR.Addr0;
+    a1 = locR.Addr1;
+    a2 = locR.Addr2;
+    a3 = locR.Addr3;
+    a4 = locR.Addr4;
+    phone = locR.Phone;
+    fax = locR.Fax;
+  end;    
+  RETURN;
+END;
+
+global
+procedure IntORVc_PasteLocation(var record IntORVc IntORp)
+BEGIN
+  string 255 a0,a1,a2,a3,a4,a5,phone,fax;
+
+  SetLocationAddr(IntORp.Location,a0,a1,a2,a3,a4,a5,phone,fax);
+  IntORp.ShipAddr0 = a0;
+  IntORp.ShipAddr1 = a1;
+  IntORp.ShipAddr2 = a2;
+  IntORp.ShipAddr3 = a3;
+  IntORp.DelAddr3 = a4;
+  IntORp.DelAddr4 = a5;
+  IntORp.Phone = phone;
+  IntORp.Fax = fax;
+  RETURN;
+END;
+
+global
+procedure IntORMultiLineText(record IntORVc IntORr,record INVc INr,string  langcode,Integer arow)
+BEGIN
+  row IntORVc IntORrw;
+  string 255 tstr;
+  Integer tcnt;
+ 
+  tcnt = 2;
+  while (GetItemNameStr(tcnt,tstr,langcode,INr.Name,INr.Code)) begin      
+    ClearRow(IntORr,IntORrw,1);
+    IntORrw.Spec = tstr;
+    MatRowInsert(IntORr,arow+tcnt-1,IntORrw);
+    tcnt = tcnt + 1;
+  end;
+  RETURN;
+END;
+
+global
+function Boolean IntORVc_PasteArtCode(var record IntORVc IntORp,Integer rownr,Boolean changedf)
+BEGIN
+  Boolean res;
+  record INVc INr;
+  row IntORVc IntORrw;
+  val t;
+  Boolean chsum,chrsum;
+  string 60 sz,msk,mskrep;
+  string 200 varsubset;
+  
+  MatRowGet(IntORp,rownr,IntORrw);
+  if ((changedf) or (blank(IntORrw.Spec) and (nonblank(IntORrw.ArtCode)))) then begin
+    INr.Code = IntORrw.ArtCode;
+    if (ReadFirstItem(IntORrw.ArtCode,INr,true,false)) then begin
+      if (FindItemVAR(INr.Code,sz,msk,mskrep,varsubset)) then begin 
+        INr.Code = IntORrw.ArtCode;
+      end;
+      IntORrw.Price = MulWithRateToBase1(INr.LastPurchCurncyCode,IntORp.TransDate,INr.LastPurchPrice2,DefaultCurRoundOff);
+      IntORrw.ArtCode = INr.Code;
+      if (GetItemNameStr(1,varsubset,IntORp.LangCode,INr.Name,INr.Code)) then begin end;
+      IntORrw.Spec = varsubset;
+      IntORrw.Objects = FindINObjects(INr.Objects,INr.Group);
+      IntORrw.Recepy = INr.Recepy;
+      MatRowPut(IntORp,rownr,IntORrw);    
+      IntORMultiLineText(IntORp,INr,IntORp.LangCode,rownr);
+      res = true;
+    end else begin
+      res = false;
+    end;
+    if (chrsum) then begin
+      chsum = IntORchrsum(IntORp,rownr);
+    end;
+  end;
+  if (chsum) then begin
+    SumupIntOR(IntORp,t);
+    IntORp.Total = t;
+  end;
+  IntORVc_PasteArtCode = res;
+  RETURN;
+END;
+

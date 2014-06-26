@@ -1,0 +1,9 @@
+event startup
+begin
+
+  SetLangMode(LangUkrainian,"UKR",0);
+  
+  Import("Assets Categories Import",ImportAssCClass,ImportAssCIn,modAT2);
+
+ return;
+end;  

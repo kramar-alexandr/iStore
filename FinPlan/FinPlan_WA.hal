@@ -1,0 +1,885 @@
+external inner function Boolean GetFullCurncyRateDate(var string,Date,var val,var val,var val,var val,var val,var Date);
+external inner function Boolean CurncyCodeRegistered(string);
+external inner procedure GetAccStartBalance(string,string,Date,record ObjBalVc,Integer,Integer,string,Integer,var val);
+external inner procedure GetAccBalance(string,string,Date,record ObjBalVc,Integer,Integer,Integer,string,Integer,var val);
+
+SetLangMode(LangUkrainian,"UKR",0);
+
+global
+function LongInt OtherInPlanVcRecordDefaults(var record OtherInPlanVc OtherInPlanr,record OtherInPlanVc OtherInPlan2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+	record BaseCurBlock BCb;
+	
+	blockload(BCb);
+	//OtherInPlanr.SerNr = NextSerNr("OtherInPlanVc",CurrentDate,-1,false,"");      
+  //OtherInPlanr.TransDate = currentdate;
+  OtherInPlanr.CurncyCode = BCb.BaseCur1;
+  OtherInPlanr.SalesMan = currentuser;
+  
+  
+  OtherInPlanVcRecordDefaults = res; 
+  RETURN;
+END;
+
+
+global
+function LongInt OtherInPlanVcRecordCheck(var record OtherInPlanVc OtherInPlanr,record OtherInPlanVc OtherInPlan2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  integer mtrw,i;
+  row OtherInPlanVc OtherInPlanrw;
+  
+	res = 0;
+	if(OtherInPlanr.SerNr==-1)then begin
+		OtherInPlanr.SerNr = NextSerNr("OtherInPlanVc",CurrentDate,-1,false,"");  
+	end;
+	
+	if (blank(OtherInPlanr.SalesMan)) then begin
+    RecordCheckError(1058,"",-1,"SalesMan");      
+    res = -1; 
+    goto LOtherInPlanVcRecordCheck;
+  end;
+  
+  if (blank(OtherInPlanr.TransDate)) then begin
+    RecordCheckError(1058,"",-1,"TransDate");      
+    res = -1; 
+    goto LOtherInPlanVcRecordCheck;
+  end;
+  
+  if (blank(OtherInPlanr.CurncyCode)) then begin
+    RecordCheckError(1058,"",-1,"CurncyCode");      
+    res = -1; 
+    goto LOtherInPlanVcRecordCheck;
+  end;
+  
+  if (nonblank(OtherInPlanr.CurncyCode)) then begin
+    if (CurncyCodeRegistered(OtherInPlanr.CurncyCode)==false) then begin
+      RecordCheckError(1582,"",-1,"CurncyCode");      
+      res = -1; 
+      goto LOtherInPlanVcRecordCheck;
+    end;
+  end;
+  
+  mtrw = matrowcnt(OtherInPlanr);
+  For(i=0;i<mtrw;i=i+1) begin
+	  	matrowget(OtherInPlanr,i,OtherInPlanrw);
+	  	
+	  	if (nonblank(OtherInPlanrw.CurncyCode)) then begin
+			if (CurncyCodeRegistered(OtherInPlanrw.CurncyCode)==false) then begin
+				RecordCheckError(1582,"",i,"CurncyCode");      
+				res = -1; 
+				goto LOtherInPlanVcRecordCheck;
+			end;
+		end;
+	  	
+	end; 
+  
+  LOtherInPlanVcRecordCheck:;
+  OtherInPlanVcRecordCheck = res; 
+  RETURN;
+END;
+
+global procedure OtherInPlanSumUp(var record OtherInPlanVc OtherInPlanr)
+begin
+	integer i,mtrw;
+	row OtherInPlanVc OtherInPlanrw;
+	val fr,to1,to2,br1,br2;
+	val rfr,rto1,rto2,rbr1,rbr2;
+	val sum,sumb1;
+	record BaseCurBlock BCb;
+	date td;
+	
+	blockload(BCb);
+	
+	fr = 1;
+	to1 = 1;
+	to2 = 1;
+	br1 = 1;
+	br2 = 1;
+	
+	if(OtherInPlanr.CurncyCode!=BCb.BaseCur1)then begin
+		fr = OtherInPlanr.FrRate;
+		to1 = OtherInPlanr.ToRateB1;
+		to2 = OtherInPlanr.ToRateB2;
+		br1 = OtherInPlanr.BaseRate1;
+		br2 = OtherInPlanr.BaseRate2;
+		//GetFullCurncyRateDate(OtherInPlanr.CurncyCode,OtherInPlanr.TransDate,fr,to1,to2,br1,br2,td);
+	end;
+	
+	mtrw = matrowcnt(OtherInPlanr);
+	For(i=0;i<mtrw;i=i+1) begin
+		matrowget(OtherInPlanr,i,OtherInPlanrw);
+		if(nonblank(OtherInPlanrw.CurncyCode) and OtherInPlanrw.CurncyCode!=OtherInPlanr.CurncyCode)then begin
+			rfr = 1;
+			rto1 = 1;
+			rto2 = 1;
+			rbr1 = 1;
+			rbr2 = 1;
+			if(OtherInPlanrw.CurncyCode!=BCb.BaseCur1)then begin
+				rfr = OtherInPlanrw.FrRate;
+				rto1 = OtherInPlanrw.ToRateB1;
+				rto2 = OtherInPlanrw.ToRateB2;
+				rbr1 = OtherInPlanrw.BaseRate1;
+				rbr2 = OtherInPlanrw.BaseRate2;
+			end;
+			
+			sum = sum + round(OtherInPlanrw.PlanVal/rfr*rto1*fr/to1,defaultcurroundoff);
+			sumb1 = round(sum/fr*to1,defaultcurroundoff);
+			OtherInPlanrw.PlanValB1 = round(OtherInPlanrw.PlanVal/rfr*rto1,defaultcurroundoff);
+			matrowput(OtherInPlanr,i,OtherInPlanrw);
+		end else begin
+			sum = sum + OtherInPlanrw.PlanVal;
+			sumb1 = round(sum/fr*to1,defaultcurroundoff);
+			OtherInPlanrw.PlanValB1 = round(OtherInPlanrw.PlanVal/fr*to1,defaultcurroundoff);
+			matrowput(OtherInPlanr,i,OtherInPlanrw);
+		end;	
+		
+	end; 
+	
+	OtherInPlanr.Sum4 = sum;
+	OtherInPlanr.BaseSum4 = sumb1;
+	
+	
+return;
+end;
+
+global procedure ChangeGlobalCurncyCode(Integer wn,Integer rownr,Integer changed)
+begin
+	record OtherInPlanVc OtherInPlanr;
+	record BaseCurBlock BCb;
+	val fr,to1,to2,br1,br2;
+	Date td;
+	
+	if(changed==1)then begin
+		getwindowrecord(wn,OtherInPlanr);
+		if(nonblank(OtherInPlanr.CurncyCode))then begin
+			blockload(BCb);
+			OtherInPlanr.FrRate = 1;
+			OtherInPlanr.ToRateB1 = 1;
+			OtherInPlanr.ToRateB2 = 1;
+			OtherInPlanr.BaseRate1 = 1;
+			OtherInPlanr.BaseRate2 = 1;	
+			if(OtherInPlanr.CurncyCode!=BCb.BaseCur1)then begin
+				GetFullCurncyRateDate(OtherInPlanr.CurncyCode,OtherInPlanr.TransDate,fr,to1,to2,br1,br2,td);
+				OtherInPlanr.FrRate = fr;
+				OtherInPlanr.ToRateB1 = to1;
+				OtherInPlanr.ToRateB2 = to2;
+				OtherInPlanr.BaseRate1 = br1;
+				OtherInPlanr.BaseRate2 = br2;	
+			end;
+		end;
+		OtherInPlanSumUp(OtherInPlanr);
+
+		putwindowrecord(wn,OtherInPlanr);
+	end;
+	
+return;
+end;
+
+global procedure ChangeRowCurncyCode(Integer wn,Integer rownr,Integer changed)
+begin
+	record OtherInPlanVc OtherInPlanr;
+	row OtherInPlanVc OtherInPlanrw;
+	date td;
+	val fr,to1,to2,br1,br2;
+	record BaseCurBlock BCb;
+	
+	if(changed==1)then begin
+		getwindowrecord(wn,OtherInPlanr);
+		matrowget(OtherInPlanr,rownr,OtherInPlanrw);
+		OtherInPlanrw.FrRate = 1;
+		OtherInPlanrw.ToRateB1 = 1;
+		OtherInPlanrw.ToRateB2 = 1;
+		OtherInPlanrw.BaseRate1 = 1;
+		OtherInPlanrw.BaseRate2 = 1;
+		if(nonblank(OtherInPlanrw.CurncyCode))then begin
+			blockload(BCb);	
+			if(OtherInPlanrw.CurncyCode!=BCb.BaseCur1)then begin
+				GetFullCurncyRateDate(OtherInPlanrw.CurncyCode,OtherInPlanr.TransDate,fr,to1,to2,br1,br2,td);
+				OtherInPlanrw.FrRate = fr;
+				OtherInPlanrw.ToRateB1 = to1;
+				OtherInPlanrw.ToRateB2 = to2;
+				OtherInPlanrw.BaseRate1 = br1;
+				OtherInPlanrw.BaseRate2 = br2;
+			end;
+		end;
+		matrowput(OtherInPlanr,rownr,OtherInPlanrw);
+		OtherInPlanSumUp(OtherInPlanr);
+
+		putwindowrecord(wn,OtherInPlanr);
+	end;
+
+return;
+end;
+
+function Boolean OtherInPlanDClassCurncyCodeEFAfter(Integer wn,Integer rownr,Integer changed)
+BEGIN
+  
+  if(rownr==-1)then begin
+  		ChangeGlobalCurncyCode(wn,rownr,changed);
+  end else begin
+  		ChangeRowCurncyCode(wn,rownr,changed);
+  end;
+  
+  OtherInPlanDClassCurncyCodeEFAfter = true;
+  RETURN;
+END;
+
+function Boolean OtherInPlanDClassTransDateEFAfter(Integer wn,Integer rownr,Integer changed)
+BEGIN
+  record OtherInPlanVc OtherInPlanr;
+  row OtherInPlanVc OtherInPlanrw;
+	date td;
+	val fr,to1,to2,br1,br2;
+	record BaseCurBlock BCb;
+	integer mtrw,i;
+	
+  if(changed==1)then begin
+  		getwindowrecord(wn,OtherInPlanr);
+  		blockload(BCb);	
+
+  		if(nonblank(OtherInPlanr.CurncyCode))then begin
+			OtherInPlanr.FrRate = 1;
+			OtherInPlanr.ToRateB1 = 1;
+			OtherInPlanr.ToRateB2 = 1;
+			OtherInPlanr.BaseRate1 = 1;
+			OtherInPlanr.BaseRate2 = 1;	
+			if(OtherInPlanr.CurncyCode!=BCb.BaseCur1)then begin
+				GetFullCurncyRateDate(OtherInPlanr.CurncyCode,OtherInPlanr.TransDate,fr,to1,to2,br1,br2,td);
+				OtherInPlanr.FrRate = fr;
+				OtherInPlanr.ToRateB1 = to1;
+				OtherInPlanr.ToRateB2 = to2;
+				OtherInPlanr.BaseRate1 = br1;
+				OtherInPlanr.BaseRate2 = br2;	
+			end;
+		end;
+  		
+  		mtrw = matrowcnt(OtherInPlanr);	
+  		For(i=0;i<mtrw;i=i+1) begin
+	  		matrowget(OtherInPlanr,i,OtherInPlanrw);
+	  		if(nonblank(OtherInPlanrw.CurncyCode))then begin
+				OtherInPlanrw.FrRate = 1;
+				OtherInPlanrw.ToRateB1 = 1;
+				OtherInPlanrw.ToRateB2 = 1;
+				OtherInPlanrw.BaseRate1 = 1;
+				OtherInPlanrw.BaseRate2 = 1;	
+				if(OtherInPlanrw.CurncyCode!=BCb.BaseCur1)then begin
+					GetFullCurncyRateDate(OtherInPlanrw.CurncyCode,OtherInPlanr.TransDate,fr,to1,to2,br1,br2,td);
+					OtherInPlanrw.FrRate = fr;
+					OtherInPlanrw.ToRateB1 = to1;
+					OtherInPlanrw.ToRateB2 = to2;
+					OtherInPlanrw.BaseRate1 = br1;
+					OtherInPlanrw.BaseRate2 = br2;	
+				end;
+			end;
+			matrowput(OtherInPlanr,i,OtherInPlanrw);
+		end; 
+  		OtherInPlanSumUp(OtherInPlanr);
+  		putwindowrecord(wn,OtherInPlanr);
+  end;
+  
+  OtherInPlanDClassTransDateEFAfter = true;
+  RETURN;
+END;
+
+function Boolean OtherInPlanDClassCorspCodeEFAfter(Integer wn,Integer rownr,Integer changed)
+BEGIN
+  record OtherInPlanVc OtherInPlanr;
+  row OtherInPlanVc OtherInPlanrw;
+	record CLCorspVc Corr;
+	
+	if(changed==1)then begin
+		getwindowrecord(wn,OtherInPlanr);
+		matrowget(OtherInPlanr,rownr,OtherInPlanrw);
+		Corr.Code = OtherInPlanrw.CorspCode;
+		if (ReadFirstMain(Corr,1,true)) then begin
+			OtherInPlanrw.Name = Corr.Comment;
+			OtherInPlanrw.Comment = Corr.Comment;
+			matrowput(OtherInPlanr,rownr,OtherInPlanrw);
+		end;
+		putwindowrecord(wn,OtherInPlanr);
+	end;
+	
+  OtherInPlanDClassCorspCodeEFAfter = true;
+  RETURN;
+END;
+
+global
+function Boolean OtherInPlanDClassAfterEditField(Integer wn,string fieldname,Integer fn, Integer rownr,Integer changed)
+BEGIN
+  Boolean res;
+
+        switch (fieldname) begin
+          case "CurncyCode": res = OtherInPlanDClassCurncyCodeEFAfter(wn,rownr,changed);
+          case "TransDate": res = OtherInPlanDClassTransDateEFAfter(wn,rownr,changed);
+          case "CorspCode": res = OtherInPlanDClassCorspCodeEFAfter(wn,rownr,changed);
+        end;
+        
+  OtherInPlanDClassAfterEditField = res;
+  RETURN;
+END;
+
+
+
+global
+function LongInt OtherOutPlanVcRecordDefaults(var record OtherOutPlanVc OtherOutPlanr,record OtherOutPlanVc OtherOutPlan2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+	record BaseCurBlock BCb;
+	
+	blockload(BCb);
+	//OtherOutPlanr.SerNr = NextSerNr("OtherOutPlanVc",CurrentDate,-1,false,"");      
+  //OtherOutPlanr.TransDate = currentdate;
+  OtherOutPlanr.CurncyCode = BCb.BaseCur1;
+  OtherOutPlanr.SalesMan = currentuser;
+  
+  
+  OtherOutPlanVcRecordDefaults = res; 
+  RETURN;
+END;
+
+
+global
+function LongInt OtherOutPlanVcRecordCheck(var record OtherOutPlanVc OtherOutPlanr,record OtherOutPlanVc OtherOutPlan2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  integer mtrw,i;
+  row OtherOutPlanVc OtherOutPlanrw;
+  
+	res = 0;
+	if(OtherOutPlanr.SerNr==-1)then begin
+		OtherOutPlanr.SerNr = NextSerNr("OtherOutPlanVc",CurrentDate,-1,false,"");  
+	end;
+	
+	if (blank(OtherOutPlanr.SalesMan)) then begin
+    RecordCheckError(1058,"",-1,"SalesMan");      
+    res = -1; 
+    goto LOtherOutPlanVcRecordCheck;
+  end;
+  
+  if (blank(OtherOutPlanr.TransDate)) then begin
+    RecordCheckError(1058,"",-1,"TransDate");      
+    res = -1; 
+    goto LOtherOutPlanVcRecordCheck;
+  end;
+  
+  if (blank(OtherOutPlanr.CurncyCode)) then begin
+    RecordCheckError(1058,"",-1,"CurncyCode");      
+    res = -1; 
+    goto LOtherOutPlanVcRecordCheck;
+  end;
+  
+  if (nonblank(OtherOutPlanr.CurncyCode)) then begin
+    if (CurncyCodeRegistered(OtherOutPlanr.CurncyCode)==false) then begin
+      RecordCheckError(1582,"",-1,"CurncyCode");      
+      res = -1; 
+      goto LOtherOutPlanVcRecordCheck;
+    end;
+  end;
+  
+  mtrw = matrowcnt(OtherOutPlanr);
+  For(i=0;i<mtrw;i=i+1) begin
+	  	matrowget(OtherOutPlanr,i,OtherOutPlanrw);
+	  	
+	  	if (nonblank(OtherOutPlanrw.CurncyCode)) then begin
+			if (CurncyCodeRegistered(OtherOutPlanrw.CurncyCode)==false) then begin
+				RecordCheckError(1582,"",i,"CurncyCode");      
+				res = -1; 
+				goto LOtherOutPlanVcRecordCheck;
+			end;
+		end;
+	  	
+	end; 
+  
+  LOtherOutPlanVcRecordCheck:;
+  OtherOutPlanVcRecordCheck = res; 
+  RETURN;
+END;
+
+global procedure OtherOutPlanSumUp(var record OtherOutPlanVc OtherOutPlanr)
+begin
+	integer i,mtrw;
+	row OtherOutPlanVc OtherOutPlanrw;
+	val fr,to1,to2,br1,br2;
+	val rfr,rto1,rto2,rbr1,rbr2;
+	val sum,sumb1;
+	record BaseCurBlock BCb;
+	date td;
+	
+	blockload(BCb);
+	
+	fr = 1;
+	to1 = 1;
+	to2 = 1;
+	br1 = 1;
+	br2 = 1;
+	
+	if(OtherOutPlanr.CurncyCode!=BCb.BaseCur1)then begin
+		fr = OtherOutPlanr.FrRate;
+		to1 = OtherOutPlanr.ToRateB1;
+		to2 = OtherOutPlanr.ToRateB2;
+		br1 = OtherOutPlanr.BaseRate1;
+		br2 = OtherOutPlanr.BaseRate2;
+		//GetFullCurncyRateDate(OtherOutPlanr.CurncyCode,OtherOutPlanr.TransDate,fr,to1,to2,br1,br2,td);
+	end;
+	
+	mtrw = matrowcnt(OtherOutPlanr);
+	For(i=0;i<mtrw;i=i+1) begin
+		matrowget(OtherOutPlanr,i,OtherOutPlanrw);
+		if(nonblank(OtherOutPlanrw.CurncyCode) and OtherOutPlanrw.CurncyCode!=OtherOutPlanr.CurncyCode)then begin
+			rfr = 1;
+			rto1 = 1;
+			rto2 = 1;
+			rbr1 = 1;
+			rbr2 = 1;
+			if(OtherOutPlanrw.CurncyCode!=BCb.BaseCur1)then begin
+				rfr = OtherOutPlanrw.FrRate;
+				rto1 = OtherOutPlanrw.ToRateB1;
+				rto2 = OtherOutPlanrw.ToRateB2;
+				rbr1 = OtherOutPlanrw.BaseRate1;
+				rbr2 = OtherOutPlanrw.BaseRate2;
+			end;
+			
+			sum = sum + round(OtherOutPlanrw.PlanVal/rfr*rto1*fr/to1,defaultcurroundoff);
+			sumb1 = round(sum/fr*to1,defaultcurroundoff);
+			OtherOutPlanrw.PlanValB1 = round(OtherOutPlanrw.PlanVal/rfr*rto1,defaultcurroundoff);
+			matrowput(OtherOutPlanr,i,OtherOutPlanrw);
+		end else begin
+			sum = sum + OtherOutPlanrw.PlanVal;
+			sumb1 = round(sum/fr*to1,defaultcurroundoff);
+			OtherOutPlanrw.PlanValB1 = round(OtherOutPlanrw.PlanVal/fr*to1,defaultcurroundoff);
+			matrowput(OtherOutPlanr,i,OtherOutPlanrw);
+		end;	
+		
+	end; 
+	
+	OtherOutPlanr.Sum4 = sum;
+	OtherOutPlanr.BaseSum4 = sumb1;
+	
+	
+return;
+end;
+
+global procedure ChangeGlobalCurncyCode(Integer wn,Integer rownr,Integer changed)
+begin
+	record OtherOutPlanVc OtherOutPlanr;
+	record BaseCurBlock BCb;
+	val fr,to1,to2,br1,br2;
+	Date td;
+	
+	if(changed==1)then begin
+		getwindowrecord(wn,OtherOutPlanr);
+		if(nonblank(OtherOutPlanr.CurncyCode))then begin
+			blockload(BCb);
+			OtherOutPlanr.FrRate = 1;
+			OtherOutPlanr.ToRateB1 = 1;
+			OtherOutPlanr.ToRateB2 = 1;
+			OtherOutPlanr.BaseRate1 = 1;
+			OtherOutPlanr.BaseRate2 = 1;	
+			if(OtherOutPlanr.CurncyCode!=BCb.BaseCur1)then begin
+				GetFullCurncyRateDate(OtherOutPlanr.CurncyCode,OtherOutPlanr.TransDate,fr,to1,to2,br1,br2,td);
+				OtherOutPlanr.FrRate = fr;
+				OtherOutPlanr.ToRateB1 = to1;
+				OtherOutPlanr.ToRateB2 = to2;
+				OtherOutPlanr.BaseRate1 = br1;
+				OtherOutPlanr.BaseRate2 = br2;	
+			end;
+		end;
+		OtherOutPlanSumUp(OtherOutPlanr);
+
+		putwindowrecord(wn,OtherOutPlanr);
+	end;
+	
+return;
+end;
+
+global procedure ChangeRowCurncyCode(Integer wn,Integer rownr,Integer changed)
+begin
+	record OtherOutPlanVc OtherOutPlanr;
+	row OtherOutPlanVc OtherOutPlanrw;
+	date td;
+	val fr,to1,to2,br1,br2;
+	record BaseCurBlock BCb;
+	
+	if(changed==1)then begin
+		getwindowrecord(wn,OtherOutPlanr);
+		matrowget(OtherOutPlanr,rownr,OtherOutPlanrw);
+		OtherOutPlanrw.FrRate = 1;
+		OtherOutPlanrw.ToRateB1 = 1;
+		OtherOutPlanrw.ToRateB2 = 1;
+		OtherOutPlanrw.BaseRate1 = 1;
+		OtherOutPlanrw.BaseRate2 = 1;
+		if(nonblank(OtherOutPlanrw.CurncyCode))then begin
+			blockload(BCb);	
+			if(OtherOutPlanrw.CurncyCode!=BCb.BaseCur1)then begin
+				GetFullCurncyRateDate(OtherOutPlanrw.CurncyCode,OtherOutPlanr.TransDate,fr,to1,to2,br1,br2,td);
+				OtherOutPlanrw.FrRate = fr;
+				OtherOutPlanrw.ToRateB1 = to1;
+				OtherOutPlanrw.ToRateB2 = to2;
+				OtherOutPlanrw.BaseRate1 = br1;
+				OtherOutPlanrw.BaseRate2 = br2;
+			end;
+		end;
+		matrowput(OtherOutPlanr,rownr,OtherOutPlanrw);
+		OtherOutPlanSumUp(OtherOutPlanr);
+
+		putwindowrecord(wn,OtherOutPlanr);
+	end;
+
+return;
+end;
+
+function Boolean OtherOutPlanDClassCurncyCodeEFAfter(Integer wn,Integer rownr,Integer changed)
+BEGIN
+  
+  if(rownr==-1)then begin
+  		ChangeGlobalCurncyCode(wn,rownr,changed);
+  end else begin
+  		ChangeRowCurncyCode(wn,rownr,changed);
+  end;
+  
+  OtherOutPlanDClassCurncyCodeEFAfter = true;
+  RETURN;
+END;
+
+function Boolean OtherOutPlanDClassTransDateEFAfter(Integer wn,Integer rownr,Integer changed)
+BEGIN
+  record OtherOutPlanVc OtherOutPlanr;
+  row OtherOutPlanVc OtherOutPlanrw;
+	date td;
+	val fr,to1,to2,br1,br2;
+	record BaseCurBlock BCb;
+	integer mtrw,i;
+	
+  if(changed==1)then begin
+  		getwindowrecord(wn,OtherOutPlanr);
+  		blockload(BCb);	
+
+  		if(nonblank(OtherOutPlanr.CurncyCode))then begin
+			OtherOutPlanr.FrRate = 1;
+			OtherOutPlanr.ToRateB1 = 1;
+			OtherOutPlanr.ToRateB2 = 1;
+			OtherOutPlanr.BaseRate1 = 1;
+			OtherOutPlanr.BaseRate2 = 1;	
+			if(OtherOutPlanr.CurncyCode!=BCb.BaseCur1)then begin
+				GetFullCurncyRateDate(OtherOutPlanr.CurncyCode,OtherOutPlanr.TransDate,fr,to1,to2,br1,br2,td);
+				OtherOutPlanr.FrRate = fr;
+				OtherOutPlanr.ToRateB1 = to1;
+				OtherOutPlanr.ToRateB2 = to2;
+				OtherOutPlanr.BaseRate1 = br1;
+				OtherOutPlanr.BaseRate2 = br2;	
+			end;
+		end;
+  		
+  		mtrw = matrowcnt(OtherOutPlanr);	
+  		For(i=0;i<mtrw;i=i+1) begin
+	  		matrowget(OtherOutPlanr,i,OtherOutPlanrw);
+	  		if(nonblank(OtherOutPlanrw.CurncyCode))then begin
+				OtherOutPlanrw.FrRate = 1;
+				OtherOutPlanrw.ToRateB1 = 1;
+				OtherOutPlanrw.ToRateB2 = 1;
+				OtherOutPlanrw.BaseRate1 = 1;
+				OtherOutPlanrw.BaseRate2 = 1;	
+				if(OtherOutPlanrw.CurncyCode!=BCb.BaseCur1)then begin
+					GetFullCurncyRateDate(OtherOutPlanrw.CurncyCode,OtherOutPlanr.TransDate,fr,to1,to2,br1,br2,td);
+					OtherOutPlanrw.FrRate = fr;
+					OtherOutPlanrw.ToRateB1 = to1;
+					OtherOutPlanrw.ToRateB2 = to2;
+					OtherOutPlanrw.BaseRate1 = br1;
+					OtherOutPlanrw.BaseRate2 = br2;	
+				end;
+			end;
+			matrowput(OtherOutPlanr,i,OtherOutPlanrw);
+		end; 
+  		OtherOutPlanSumUp(OtherOutPlanr);
+  		putwindowrecord(wn,OtherOutPlanr);
+  end;
+  
+  OtherOutPlanDClassTransDateEFAfter = true;
+  RETURN;
+END;
+
+function Boolean OtherOutPlanDClassCorspCodeEFAfter(Integer wn,Integer rownr,Integer changed)
+BEGIN
+  record OtherOutPlanVc OtherOutPlanr;
+  row OtherOutPlanVc OtherOutPlanrw;
+	record CLCorspVc Corr;
+	
+	if(changed==1)then begin
+		getwindowrecord(wn,OtherOutPlanr);
+		matrowget(OtherOutPlanr,rownr,OtherOutPlanrw);
+		Corr.Code = OtherOutPlanrw.CorspCode;
+		if (ReadFirstMain(Corr,1,true)) then begin
+			OtherOutPlanrw.Name = Corr.Comment;
+			OtherOutPlanrw.Comment = Corr.Comment;
+			matrowput(OtherOutPlanr,rownr,OtherOutPlanrw);
+		end;
+		putwindowrecord(wn,OtherOutPlanr);
+	end;
+	
+  OtherOutPlanDClassCorspCodeEFAfter = true;
+  RETURN;
+END;
+
+global
+function Boolean OtherOutPlanDClassAfterEditField(Integer wn,string fieldname,Integer fn, Integer rownr,Integer changed)
+BEGIN
+  Boolean res;
+
+        switch (fieldname) begin
+          case "CurncyCode": res = OtherOutPlanDClassCurncyCodeEFAfter(wn,rownr,changed);
+          case "TransDate": res = OtherOutPlanDClassTransDateEFAfter(wn,rownr,changed);
+          case "CorspCode": res = OtherOutPlanDClassCorspCodeEFAfter(wn,rownr,changed);
+        end;
+        
+  OtherOutPlanDClassAfterEditField = res;
+  RETURN;
+END;
+
+
+
+
+global 
+function boolean OtherInPlanDClassActiveEditField(Integer wn,string fieldname,Integer fn,Integer wnst,Integer rownr,Integer changed)
+begin
+	Boolean res;
+	record OtherInPlanVc OtherInPlanr;
+	
+	res = true;
+	getwindowrecord(wn,OtherInPlanr);
+	
+	if(OtherInPlanr.OKFlag==1)then begin
+		
+		switch(fieldname)begin
+			case 1:res = true;
+			otherwise res = false;
+		end;
+		
+	end;
+	
+  OtherInPlanDClassActiveEditField = res;  
+  RETURN;
+END;
+
+
+procedure AddPOSSales(date dt,var record ORVc Factr,var integer arcnt)
+begin
+	boolean testf,TrHs;
+	record AccVc Accr;
+	row ORVc ORrw;
+	integer i,mtrw,k,ormatrw;
+	array string 10 POSnumber;
+	val sum,Sb;
+	record IVCashVc IVCashr;
+	record PMBlock PMb;
+	record LocalMachineAccBlock LMAb; 
+	row LocalMachineAccBlock LMArw; 
+	
+	blockload(LMAb);
+	
+	k=0;
+	ormatrw = matrowcnt(Factr);
+	mtrw = matrowcnt(LMAb);
+	For(i=0;i<mtrw;i=i+1) begin
+	  	matrowget(LMAb,i,LMArw);
+	  	POSnumber[k] = LMArw.CashID;
+	  	ORrw.ArtCode = LMArw.CashID;
+	  	ORrw.Location = LMArw.DefLoc;
+		matrowput(Factr,ormatrw+k,ORrw);
+	  	k=k+1;
+	end; 
+	For(i=0;i<mtrw;i=i+1) begin
+	  	matrowget(LMAb,i,LMArw);
+	  	POSnumber[k] = LMArw.TermID;
+	  	ORrw.ArtCode = LMArw.CashID;
+		ORrw.Location = LMArw.DefLoc;
+		matrowput(Factr,ormatrw+k,ORrw);
+	  	k=k+1;
+	end;
+	
+	IVCashr.InvDate = dt;
+	TrHs = true;
+	sum = 0;
+	while(loopkey("InvDate",IVCashr,1,true))begin
+		testf = true;
+		if(IVCashr.InvDate!=dt)then begin TrHs = false; testf = false; end;
+		if(IVCashr.OKFlag==0)then begin testf = false; end;
+		
+		if(testf)then begin
+			For(i=ormatrw;i<ormatrw+k;i=i+1) begin
+					matrowget(Factr,i,ORrw);
+					if(ORrw.Location==IVCashr.Location)then begin
+						if(ORrw.ArtCode==IVCashr.PayDeal)then begin
+							ORrw.Price = ORrw.Price + IVCashr.RecValue;
+							sum = sum + IVCashr.RecValue;
+							matrowput(Factr,i,ORrw);
+						end else begin
+							ORrw.Price = ORrw.Price + IVCashr.CashValue - IVCashr.RetValue;
+							sum = sum + IVCashr.CashValue - IVCashr.RetValue;
+							matrowput(Factr,i,ORrw);
+						end;
+					end;
+			end; 
+		end;
+	end;
+	
+	ORrw.ArtCode = "sum";
+	ORrw.Spec = "Разом продажі";
+	ORrw.Price = sum;
+	matrowput(Factr,k,ORrw);
+		
+return;
+end;
+
+procedure PrintAccStartBalance(date dt,var record ORVc Factr,var integer arcnt)
+begin
+	record ObjBalVc ObjBalr;
+	boolean testf;
+	record AccVc Accr;
+	row ORVc ORrw;
+	integer i,mtrw;
+	array string 10 accnumber;
+	val sum,Sb;
+
+	accnumber[0] = "117/0/2";
+	accnumber[1] = "117/0/3";
+	accnumber[2] = "117/1/1";
+	accnumber[3] = "117/1/2";
+	accnumber[4] = "117/1/7";
+	accnumber[5] = "117/3/1";
+	accnumber[6] = "117/6/1";
+	accnumber[7] = "117/6/2";
+	accnumber[8] = "117/6/6";
+	accnumber[9] = "118/0/2";
+	accnumber[10] = "118/1/1";
+	accnumber[11] = "119/0/4";
+	accnumber[12] = "124/0/2";
+	mtrw = 13;
+	sum = 0;
+	for(i=0;i<mtrw;i=i+1)begin
+		Sb = 0;
+		Accr.AccNumber = accnumber[i];
+		readfirstmain(Accr,1,true);
+		ObjBalr.AccNumber = accnumber[i];
+		readfirstmain(ObjBalr,1,true);
+		GetAccStartBalance(accnumber[i],"",dt,ObjBalr,0,0,"",0,Sb);
+		ORrw.ArtCode = accnumber[i];
+		ORrw.Spec = Accr.Comment;
+		ORrw.Price = Sb;
+		sum = sum + Sb; 
+		Factr.Sum0 = sum;
+		matrowput(Factr,i,ORrw);
+	end;
+	ORrw.ArtCode = "sum";
+	ORrw.Spec = "Разом Залишок на початок";
+	ORrw.Price = sum;
+	
+	matrowput(Factr,mtrw,ORrw);
+
+	arcnt = arcnt + 1;
+	
+return;
+end;
+
+global procedure PintResultsrow(record ORVc Factr,integer j,integer arcnt)
+begin
+	row ORVc ORrw;
+	integer i,mtrw;
+
+	
+	matrowget(Factr,j,ORrw);
+	If(arcnt==0) then begin
+		outstring(0,0,"",false);
+		outstring(0,0,"",false);
+	end; 
+	outstring(0,0,ORrw.Price,false);
+	
+return;
+end;
+
+global procedure PintResultssum(record ORVc Factr,integer j,integer arcnt)
+begin
+	row ORVc ORrw;
+	integer i,mtrw;
+
+	If(arcnt==0) then begin
+		outstring(0,0,"",false);
+		outstring(0,0,"",false);
+	end; 
+	outstring(0,0,Factr.Sum0,false);
+	
+return;
+end;
+
+function integer getrowcnt(record ORVc ORr)
+begin
+	getrowcnt = matrowcnt(ORr);
+return;
+end;
+
+
+global procedure FinPlanRepRn(record RcVc RepSpec)
+begin
+	record AccVc Accr;
+	record OtherInPlanVc OtherInPlanr;
+	row OtherInPlanVc OtherInPlanrw;
+	record OtherOutPlanVc OtherOutPlanr;
+	row OtherOutPlanVc OtherOutPlanrw;
+	val Pb,Sb,Eb,totsum,sum,t;
+	string 100 accnumber;
+	record ObjBalVc ObjBalr;
+	Boolean testf,resUseAccum;
+	date dt;
+	array val sumbal;
+	integer arcnt,i,j,mtrw;
+	record ORVc ORr;
+	array record ORVc Factr,Planr;
+ 	 	 
+  	startreportnoheaderjob("Заплановані розрахунки");
+	
+	startformat(15);
+		OutString(0,0,"Показник",false);
+		OutString(0,0,"Перiод:" & RepSpec.sStartDate & ":" & RepSpec.sEndDate,false);
+		
+		dt = RepSpec.sStartDate;
+		testf = true;
+		recordnew(ORr);
+		Factr[0] = ORr;
+		arcnt = 1;
+		while(testf)begin
+			recordnew(ORr);
+			Factr[arcnt] = ORr;
+			OutString(0,0,"Сума план: " & dt,false);
+			OutString(0,0,"Сума факт: " & dt,false);
+			PrintAccStartBalance(dt,Factr[arcnt],arcnt);
+			//AddPOSSales(dt,Factr,arcnt);
+			dt = addday(dt,1);		
+			if(dt>RepSpec.sEndDate)then begin
+				testf = false;
+			end;
+		end;
+	endformat;
+	
+	mtrw = getrowcnt(Factr[1]);
+	For(j=0;j<mtrw;j=j+1) begin
+		startformat(15);
+		For(i=0;i<arcnt;i=i+1) begin					
+			PintResultsrow(Factr[i],j,arcnt);
+		end; 
+		endformat;
+	end;
+	
+	For(i=0;i<arcnt;i=i+1) begin					
+			PintResultssum(Factr[i],j,arcnt);
+	end; 
+	
+	endjob;
+	
+return;
+end;
+
+
+
+
+

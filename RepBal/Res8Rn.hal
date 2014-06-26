@@ -1,0 +1,729 @@
+external procedure ListPerTrans(record RcVc);
+external procedure FindAccSD(Date,var Date,var Boolean);
+external procedure FindRepDefHeader(string,var string);
+external function Boolean GetNextSep(string,var Integer,var string);
+external function Boolean GetNextItem(string,var Integer,var string);
+external procedure AGrHeader(record RcVc,Boolean,Boolean,Date);
+external procedure SumListPerBal(string,Integer,var Array val,var Array val,var Array val,
+                                 var Array val,var Array val,var Array val,Integer,var Array LongInt,Boolean);
+external procedure AGrSumLine(record RcVc,Integer,string,string,string,
+                              val,val,val,val,val,val,Boolean,val,Boolean,Boolean,string,Integer,LongInt,Boolean);
+external procedure GetResGr8Description(record ResGr8Vc,string,var string);
+external procedure GetPreviousPeriods(record RcVc,Date,Date,var string,var string);
+external procedure GetNotStr(Integer,var string);
+external procedure GetNext2Sep(string,var Integer,var string);
+external procedure GetNextToken(string,var Integer,var string);
+external function Boolean GetNextTokenReturn(string,var Integer,var string);
+external procedure GetAccountDescription2(string,string,var string);
+external function Boolean AccRuPerBal(record RcVc,Boolean,string,string,var val,var val,var val,var val,var val,var val,
+                                      Integer,Boolean,Date,Date,Date);
+external procedure InitValArray(Integer,var Array val);
+external procedure InitLongArray(Integer,var Array LongInt);
+external function Boolean GetObjBal(string,string,var record ObjBalVc);
+external procedure SumLine2(record RcVc,Boolean,string,string,string,var val,var val,var val,var val,var val,
+                            var val,Boolean,val,Boolean,Date,Integer,Integer,LongInt);
+
+procedure ALPB2ResGr8(record RcVc RepSpec,Boolean PLf,record ResGr8Vc ResGr8p,record AccVc Accp,string anru,
+                var val S3bp,var val Pbp,var val Ebp,var val S4bp,var val S5bp,var val S6bp,
+                Boolean addflag,val goms,var Boolean headflagp,Boolean resUseAccum,Date AccumStartDate)
+BEGIN
+  Boolean negf,usedf;
+  val S3b1,Pb1,Eb1,S4b1,S5b1,S6b1;
+  string 255 nru;
+  record CYBlock CompYear;
+  string 255 tstr,tstr2;
+  Date budsd,buded;
+  
+  budsd = StringToDate(FirstInRange(RepSpec.Stext,10));
+  if (blankdate(budsd)) then begin budsd = RepSpec.sStartDate; end;    
+  buded = StringToDate(LastInRange(RepSpec.Stext,10));
+  if (blankdate(buded)) then begin buded = RepSpec.sEndDate; end;    
+//  if (AccBlockedTest((AccessView*)appSlotArr[gCurSlot].ast_Accessp,Accp->AccNumber)) then goto LALPB2;
+  BlockLoad(CompYear);
+  nru = anru;//??
+  RepSpec.f5 = nru;// Edit ************************** Tuesday, 17 May 2011 10:47:48
+  // Edit Start ---------------------------------------------- Edit Start
+	//Wednesday, 27 April 2011 10:41:07
+	if(nonblank(RepSpec.ObjStr))then begin
+    nru = RepSpec.ObjStr;//??
+    RepSpec.f5 = nru;// Edit ************************** Tuesday, 17 May 2011 10:47:48
+  end;
+	// Edit End ---------------------------------------------- Edit End
+  usedf = AccRuPerBal(RepSpec,PLf,Accp.AccNumber,nru,S3b1,Pb1,Eb1,S4b1,S5b1,S6b1,ResGr8p.DCSide,resUseAccum,AccumStartDate,budsd,buded);
+/*  
+  if (ResGr8p.DCSaldo==1) then begin
+    if (Eb1<0) then begin goto LALPB2ResGr8; end;
+  end;
+  if (ResGr8p.DCSaldo==2) then begin
+    if (Eb1>=0) then begin goto LALPB2ResGr8; end;
+  end;
+*/  
+  switch (RepSpec.Comparison) begin
+    case 0:
+      if (ResGr8p.DCSaldo==1) then begin
+        if (Eb1<0) then begin goto LALPB2ResGr8; end;//S3b1
+      end;
+      if (ResGr8p.DCSaldo==2) then begin
+        if (Eb1>0) then begin goto LALPB2ResGr8; end;//S3b1
+      end;
+      if (Eb1==0) then begin
+        if (ResGr8p.DCSaldo==1) then begin
+          if (Pb1>0) then begin goto LALPB2ResGr8; end;
+        end;
+        if (ResGr8p.DCSaldo==2) then begin
+          if (Pb1<0) then begin goto LALPB2ResGr8; end;
+        end;
+      end;            
+    otherwise
+      if (ResGr8p.DCSaldo==1) then begin
+        if (Pb1<0) then begin goto LALPB2ResGr8; end;
+      end;
+      if (ResGr8p.DCSaldo==2) then begin
+        if (Pb1>=0) then begin goto LALPB2ResGr8; end;
+      end;
+  end;              
+  GetResGr8Description(ResGr8p,RepSpec.Language,tstr2);  
+  if (nonblank(tstr2)) then begin// ResGr8p->Comment
+    if ((((RepSpec.AccSpec==1) or (RepSpec.AccSpec==4)) and ((Pb1!=0) or (S3b1!=0) or (S4b1!=0) or (S5b1!=0) or (S6b1!=0) or(Eb1!=0) or (usedf))) 
+        or (RepSpec.AccSpec==0)) then begin//or (nonblank(RepSpec.ObjType))
+      if (headflagp==false) then begin
+        StartFormat(15);
+        OutString(0,0,tstr2,false); 
+        EndFormat;
+        headflagp = true;
+        Gray_Divider(0,1);
+      end;
+      negf = true;
+      if (Accp.AccType==0) then begin
+        if (CompYear.NS0[0]==0) then begin
+          negf = false;
+        end;
+      end;
+      if (Accp.AccType==1) then begin
+        if (CompYear.NS0[1]==0) then begin
+          negf = false;
+        end;
+      end;
+      if (Accp.AccType==2) then begin
+        if (CompYear.NS0[2]==0) then begin
+          negf = false;
+        end;
+      end;
+      if (Accp.AccType==3) then begin
+        if (CompYear.NS0[3]==0) then begin
+          negf = false;
+        end;
+      end;
+      if (Accp.AccType==4) then begin
+        if (CompYear.NS0[4]==0) then begin
+          negf = false;
+        end;
+      end;                    
+      GetAccountDescription2(Accp.AccNumber,RepSpec.Language,tstr);            
+      if (blank(RepSpec.ObjType)) then begin
+        AGrSumLine(RepSpec,0,Accp.AccNumber,tstr,ResGr8p.SpecCode,S3b1,Pb1,Eb1,S4b1,S5b1,S6b1,negf,goms,PLf,resUseAccum,"DblNL",8,ResGr8p.IdKey,usedf);
+      end else begin
+        SumLine2(RepSpec,PLf,Accp.AccNumber,tstr,ResGr8p.SpecCode,S3b1,Pb1,Eb1,S4b1,S5b1,S6b1,negf,goms,resUseAccum,AccumStartDate,ResGr8p.DCSide,8,ResGr8p.IdKey);
+      end;      
+    end;
+  end;
+  if (addflag==true) then begin
+    S3bp = S3bp + S3b1;
+    S4bp = S4bp + S4b1;
+    S5bp = S5bp + S5b1;
+    S6bp = S6bp + S6b1;
+    Pbp = Pbp + Pb1;
+    Ebp = Ebp + Eb1;
+  end else begin
+    S3bp = S3bp - S3b1;
+    S4bp = S4bp - S4b1;
+    S5bp = S5bp - S5b1;
+    S6bp = S6bp - S6b1;
+    Pbp = Pbp - Pb1;
+    Ebp = Ebp - Eb1;
+  end;
+LALPB2ResGr8:;
+  RETURN;
+END;
+
+procedure ALPBEnd(record RcVc RepSpec,Boolean PLf,string Comment,string extracode,val S3bp,val Pbp,val Ebp,
+                  val S4bp,val S5bp,val S6bp,Boolean negf,val goms,Boolean aheadflag,Boolean resUseAccum,LongInt idkey)
+BEGIN
+  string 255 tstr;
+  
+  if ((RepSpec.AccSpec==0) or (RepSpec.AccSpec==1) or (RepSpec.AccSpec==4)) then begin
+    if (aheadflag==true) then begin
+      tstr = USetStr(3143) & Comment;
+      if (nonblank(Comment)) then begin
+        Gray_Divider(0,1);
+        AGrSumLine(RepSpec,0,tstr,"",extracode,S3bp,Pbp,Ebp,S4bp,S5bp,S6bp,negf,goms,PLf,resUseAccum,"",8,idkey,false);
+        StartFormat(15);
+        EndFormat;
+      end;
+    end;
+  end;
+  if (RepSpec.AccSpec==2) then begin
+    if (nonblank(Comment)) then begin
+      AGrSumLine(RepSpec,0,Comment,"",extracode,S3bp,Pbp,Ebp,S4bp,S5bp,S6bp,negf,goms,PLf,resUseAccum,"",8,idkey,false);
+    end;
+  end;
+  if (RepSpec.AccSpec==3) then begin
+    if ((S3bp!=0) or (S4bp!=0) or (S5bp!=0) or (S6bp!=0) or (Pbp!=0)) then begin
+      if (nonblank(Comment)) then begin
+        AGrSumLine(RepSpec,0,Comment,"",extracode,S3bp,Pbp,Ebp,S4bp,S5bp,S6bp,negf,goms,PLf,resUseAccum,"",8,idkey,false);
+      end;
+    end;
+  end;
+  RETURN;
+END;
+
+
+procedure AccListPerBalResGr8(record RcVc RepSpec,Boolean PLf,record ResGr8Vc ResGr8p,var val S3bp,var val Pbp,
+                        var val Ebp,var val S4bp,var val S5bp,var val S6bp,Boolean negf,val goms,Boolean resUseAccum,
+                        Date AccumStartDate)
+BEGIN
+  record AccVc Accr;
+  Boolean addflag;
+  string 255 Nitem;
+  string 255 Nitem2;
+  string 255 NRu;
+  string 5 nsep;
+  Boolean Accs;
+  Integer np;
+  Boolean headflag;
+  string 255 tstr;
+
+  S3bp = 0;
+  S4bp = 0;
+  S5bp = 0;
+  S6bp = 0;
+  Pbp = 0;
+  Ebp = 0;
+  headflag = false;
+  np = 0;
+  GetNext2Sep(ResGr8p.Desc,np,nsep);
+  while (GetNextTokenReturn(ResGr8p.Desc,np,Nitem)) begin
+    if (nsep=="-") then begin
+      addflag = false; 
+    end else begin
+      addflag = true;
+    end;
+    GetNext2Sep(ResGr8p.Desc,np,nsep);
+    if (nsep==".") then begin
+      GetNextToken(ResGr8p.Desc,np,NRu);
+      GetNext2Sep(ResGr8p.Desc,np,nsep);
+    end else begin
+      NRu = "";
+    end;    
+    if (nsep==":") then begin
+      GetNextToken(ResGr8p.Desc,np,Nitem2);
+      GetNext2Sep(ResGr8p.Desc,np,nsep);
+    end else begin
+      Nitem2 = "";
+    end;    
+    Accr.AccNumber = Nitem;
+    if (blank(Nitem2)) then begin
+      Accs = ReadFirstMain(Accr,1,true);
+      if ((Accs) and (Accr.GroupAcc==0)) then begin
+        ALPB2ResGr8(RepSpec,PLf,ResGr8p,Accr,NRu,S3bp,Pbp,Ebp,S4bp,S5bp,S6bp,addflag,goms,headflag,resUseAccum,AccumStartDate);
+      end;
+    end else begin
+      if (Nitem<Nitem2) then begin
+        ResetLoop(Accr);
+        Accs = true;
+        while (LoopMain(Accr,2,Accs)) begin
+          if (Accs==true) then begin
+            if (Accr.AccNumber>Nitem2) then begin Accs = false; end;
+          end;
+          if ((Accs) and (Accr.GroupAcc==0)) then begin
+            ALPB2ResGr8(RepSpec,PLf,ResGr8p,Accr,NRu,S3bp,Pbp,Ebp,S4bp,S5bp,S6bp,addflag,goms,headflag,resUseAccum,AccumStartDate);
+          end;
+        end;
+      end else begin
+        ResetLoop(Accr);
+        Accr.AccNumber = Nitem;
+        Accs = LoopBackKey("AccNumber",Accr,1,true);
+        while (Accs) begin
+          if (Accs==true) then begin
+            if (Accr.AccNumber<Nitem2) then begin Accs = false; end;
+          end;  
+          if ((Accs) and (Accr.GroupAcc==0)) then begin
+            ALPB2ResGr8(RepSpec,PLf,ResGr8p,Accr,NRu,S3bp,Pbp,Ebp,S4bp,S5bp,S6bp,addflag,goms,headflag,resUseAccum,AccumStartDate);
+          end;  
+          Accs = LoopBackKey("AccNumber",Accr,1,true);//Accs = m4_ReadLogicalMain(AccVc,LLoop1--,&Accr);
+        end;
+      end;
+    end;
+  end;
+  np = 0;
+  GetNext2Sep(ResGr8p.Desc2,np,nsep);
+  while (GetNextTokenReturn(ResGr8p.Desc2,np,Nitem)) begin
+    if (nsep=="-") then begin
+      addflag = false; 
+    end else begin
+      addflag = true;
+    end;  
+    GetNext2Sep(ResGr8p.Desc2,np,nsep);
+    if (nsep==".") then begin
+      GetNextToken(ResGr8p.Desc2,np,NRu);
+      GetNext2Sep(ResGr8p.Desc2,np,nsep);
+    end else begin
+      NRu = "";
+    end;    
+    if (nsep==":") then begin
+      GetNextToken(ResGr8p.Desc2,np,Nitem2);
+      GetNext2Sep(ResGr8p.Desc2,np,nsep);
+    end else begin
+      Nitem2 = "";
+    end;    
+    Accr.AccNumber = Nitem;
+    if (blank(Nitem2)) then begin
+      Accs = ReadFirstMain(Accr,1,true);
+      if ((Accs) and  (Accr.GroupAcc==0)) then begin
+        ALPB2ResGr8(RepSpec,PLf,ResGr8p,Accr,NRu,S3bp,Pbp,Ebp,S4bp,S5bp,S6bp,addflag,goms,headflag,resUseAccum,AccumStartDate);
+      end;    
+    end else begin
+      if (Nitem<Nitem2) then begin
+        ResetLoop(Accr);
+        Accs = true;
+        while (LoopMain(Accr,2,Accs)) begin
+          if (Accs==true) then begin
+            if (Accr.AccNumber>Nitem2) then begin Accs = false; end;
+          end;  
+          if ((Accs) and  (Accr.GroupAcc==0)) then begin
+            ALPB2ResGr8(RepSpec,PLf,ResGr8p,Accr,NRu,S3bp,Pbp,Ebp,S4bp,S5bp,S6bp,addflag,goms,headflag,resUseAccum,AccumStartDate);
+          end;
+        end;
+      end else begin
+        ResetLoop(Accr);
+        Accr.AccNumber = Nitem;
+        Accs = LoopBackKey("AccNumber",Accr,1,true);
+        while (Accs) begin
+          if (Accs==true) then begin
+            if (Accr.AccNumber<Nitem2) then begin Accs = false; end;
+          end;  
+          if ((Accs) and  (Accr.GroupAcc==0)) then begin
+            ALPB2ResGr8(RepSpec,PLf,ResGr8p,Accr,NRu,S3bp,Pbp,Ebp,S4bp,S5bp,S6bp,addflag,goms,headflag,resUseAccum,AccumStartDate);
+          end;  
+          Accs = LoopBackKey("AccNumber",Accr,1,true);//Accs = m4_ReadLogicalMain(AccVc,LLoop1--,&Accr);
+        end;
+      end;
+    end;
+  end;
+  np = 0;
+  GetNext2Sep(ResGr8p.Desc3,np,nsep);
+  while (GetNextTokenReturn(ResGr8p.Desc3,np,Nitem)) begin
+    if (nsep=="-") then begin
+      addflag = false; 
+    end else begin
+      addflag = true;
+    end;  
+    GetNext2Sep(ResGr8p.Desc3,np,nsep);
+    if (nsep==".") then begin
+      GetNextToken(ResGr8p.Desc3,np,NRu);
+      GetNext2Sep(ResGr8p.Desc3,np,nsep);
+    end else begin
+      NRu = "";
+    end;    
+    if (nsep==":") then begin
+      GetNextToken(ResGr8p.Desc3,np,Nitem2);
+      GetNext2Sep(ResGr8p.Desc3,np,nsep);
+    end else begin
+      Nitem2 = "";
+    end;    
+    Accr.AccNumber = Nitem;
+    if (blank(Nitem2)) then begin
+      Accs = ReadFirstMain(Accr,1,true);
+      if ((Accs) and  (Accr.GroupAcc==0)) then begin
+        ALPB2ResGr8(RepSpec,PLf,ResGr8p,Accr,NRu,S3bp,Pbp,Ebp,S4bp,S5bp,S6bp,addflag,goms,headflag,resUseAccum,AccumStartDate);
+      end;
+    end else begin
+      if (Nitem<Nitem2) then begin
+        ResetLoop(Accr);
+        Accs = true;
+        while (LoopMain(Accr,2,Accs)) begin
+          if (Accs==true) then begin
+            if (Accr.AccNumber>Nitem2) then begin Accs = false; end;
+          end;  
+          if ((Accs) and  (Accr.GroupAcc==0)) then begin
+            ALPB2ResGr8(RepSpec,PLf,ResGr8p,Accr,NRu,S3bp,Pbp,Ebp,S4bp,S5bp,S6bp,addflag,goms,headflag,resUseAccum,AccumStartDate);
+          end;  
+        end;
+      end else begin
+        ResetLoop(Accr);
+        Accr.AccNumber = Nitem;
+        Accs = LoopBackKey("AccNumber",Accr,1,true);
+        while (Accs) begin
+          if (Accs==true) then begin
+            if (Accr.AccNumber<Nitem2) then begin
+              Accs = false;
+            end;  
+          end;  
+          if ((Accs) and  (Accr.GroupAcc==0)) then begin
+            ALPB2ResGr8(RepSpec,PLf,ResGr8p,Accr,NRu,S3bp,Pbp,Ebp,S4bp,S5bp,S6bp,addflag,goms,headflag,resUseAccum,AccumStartDate);
+          end;
+          Accs = LoopBackKey("AccNumber",Accr,1,true);
+        end;
+      end;
+    end;
+  end;
+  GetResGr8Description(ResGr8p,RepSpec.Language,tstr);
+  ALPBEnd(RepSpec,PLf,tstr,ResGr8p.SpecCode,S3bp,Pbp,Ebp,S4bp,S5bp,S6bp,negf,goms,headflag,resUseAccum,ResGr8p.IdKey);// ResGr8p.Comment
+  RETURN;
+END;
+
+global
+procedure Res8Rn(record RcVc RepSpec)
+BEGIN
+  record ResGr8Vc ResGr8r;
+  record CYBlock CompYear;
+  record ConsolidationBlock cr;
+  Array val S3ba;
+  Array val S4ba;
+  Array val S5ba;
+  Array val S6ba;
+  Array val Pba;
+  Array val Eba;  
+  Array LongInt aida;
+  val tmpS3ba,tmpS4ba,tmpS5ba,tmpS6ba,tmpPba,tmpEba;
+  string 255 tstr,notstr,per1,per2;
+  val Goms;
+  Boolean negf,AGrs;
+  Boolean PLf,headerf,resUseAccum;
+  Integer i,aid,nr;
+  Integer aidn,maxrsums;
+  Date AccumStartDate;
+  
+  PLf = true;
+  headerf = true;
+  if (RepSpec.CalledFromHAL==0) then begin
+    if ((RepSpec.AccSpec==2) and (nonblank(RepSpec.ObjType))) then begin
+      MessageBox(1072,"");
+      goto LBal1Rn;
+    end;
+  end;
+  BlockLoad(CompYear);
+//  if (cstreq(RepSpec.repname,"Bal1Rn"))  then AGrVc = NameToVc("ResGr8Vc");
+  
+  maxrsums = CountRecords("ResGr8Vc");
+  InitValArray(maxrsums,S3ba);
+  InitValArray(maxrsums,S4ba);
+  InitValArray(maxrsums,S5ba);
+  InitValArray(maxrsums,S6ba);
+  InitValArray(maxrsums,Pba);
+  InitValArray(maxrsums,Eba);
+  InitLongArray(maxrsums,aida);
+//  if (cstreq(gModStr,"modCons")) then begin    
+//    SBlockGet("ConsolidationBlock",&cr,sizeof(ConsolidationType));
+//    RepSpec.basecurncy = cr.ConsCrncy;  
+//  end;
+  resUseAccum = false;
+  if ((PLf==true) and (RepSpec.Comparison==0)) then begin
+    FindAccSD(RepSpec.sStartDate,AccumStartDate,resUseAccum);// StartDate
+  end;  
+
+  if (RepSpec.CalledFromHAL==0) then begin
+    FindRepDefHeader(RepSpec.repname,tstr);
+    if (nonblank(RepSpec.f1)) then begin
+      tstr = RepSpec.f1;
+    end;  
+  
+    if (RepSpec.flags[5]!=0) then begin 
+      headerf = false;
+    end;  
+    if (headerf) then begin
+      StartReportJob(tstr);
+      AGrHeader(RepSpec,PLf,resUseAccum,AccumStartDate);
+      EndHeader;
+    end else begin
+      StartReportNoHeaderJob(tstr);
+    end;
+    SetRepCol(2,50);
+    SetRepCol(3,288);
+    SetRepCol(4,384);
+    SetRepCol(5,480);
+    SetRepCol(6,15);
+  end;
+  aidn = -1;
+  
+/*#### not needed
+    if (RepSpec.Notation==3) then begin
+      M4Handle lKeyRech = NIL;
+
+      HBlockGet(&lKeyRech,"KeyBlock");
+      keyrp = (KeyRowType*)HM2Lock(lKeyRech,NIL);
+      gKeyRech = lKeyRech;
+      Symbol_init();
+      tstr = USetStr(3146);
+      nr = GetKeyCodeNr(tstr);
+      SetM4IntVal(&Goms,1);
+      if (nr!=-1) then begin
+        strpcpy(tstr,keyrp[nr].defstr);
+        Express2_it(tstr,2);
+        M4FromStr(&Goms,M4Val,0,tstr);
+        Div100M4Val(&Goms,&Goms);
+      end;
+      Symbol_exit();
+      HM4Unlock(lKeyRech);
+      M4DisposeHandle(&lKeyRech);
+   end;
+*/
+  if (RepSpec.CalledFromHAL==0) then begin
+    if (PLf==false) then begin
+      GetNotStr(RepSpec.Notation,notstr);
+      StartFormat(20);
+      tstr = "";
+      OutString(11,0,tstr,true); // To make export to file look better 
+      OutString(20,0,tstr,true);
+      if (RepSpec.Comparison==0) then begin
+        tstr = USetStr(3147);
+        tstr = tstr & notstr;
+        OutString(3,0,tstr,true);
+        tstr = USetStr(3148);
+        tstr = tstr & notstr;
+        OutString(4,0,tstr,true);
+        tstr = USetStr(3149);
+        tstr = tstr & notstr;
+        OutString(5,0,tstr,true);
+      end;
+      if (RepSpec.Comparison==2) then begin
+        tstr = USetStr(3150);
+        tstr = tstr & notstr;
+        OutString(3,0,tstr,true);
+        tstr = USetStr(3151);
+        tstr = tstr & notstr;
+        OutString(4,0,tstr,true);
+        tstr = USetStr(3152);
+        tstr = tstr & notstr;
+        OutString(5,0,tstr,true);
+      end;
+      if (RepSpec.Comparison==3) then begin
+        tstr = USetStr(3153);
+        tstr = tstr & notstr;
+        OutString(3,0,tstr,true);
+        tstr = USetStr(3154);
+        tstr = tstr & notstr;
+        OutString(4,0,tstr,true);
+        tstr = USetStr(3155);
+        tstr = tstr & notstr;
+        OutString(5,0,tstr,true);
+      end;
+      if (RepSpec.Comparison==4) then begin
+        GetPreviousPeriods(RepSpec,RepSpec.sStartDate,RepSpec.sEndDate,per1,per2);
+        tstr = "";
+        OutString(3,0,tstr,true);
+        OutString(4,0,per1,true);
+        OutString(5,0,per2,true);
+      end;
+      if (RepSpec.Comparison==5) then begin
+        tstr = USetStr(3173);
+        tstr = tstr & notstr;
+        OutString(3,0,tstr,true);
+        tstr = USetStr(3147);
+        tstr = tstr & notstr;
+        OutString(4,0,tstr,true);
+        tstr = USetStr(3149);
+        tstr = tstr & notstr;
+        OutString(5,0,tstr,true);
+      end;
+      EndFormat;
+    end else begin
+      GetNotStr(RepSpec.Notation,notstr);
+      StartFormat(20);
+      tstr = "";
+      OutString(11,0,tstr,true); // To make export to file look better 
+      OutString(20,0,tstr,true);
+      if (RepSpec.Comparison==0) then begin
+        tstr = USetStr(3156);
+        tstr = tstr & notstr;
+//        if (resUseAccum==true) then begin //I don't think this is needed here at all
+          OutString(4,0,tstr,true);
+//        end;  
+        tstr = USetStr(3157);
+        tstr = tstr & notstr;
+        OutString(5,0,tstr,true);
+      end;
+      //-------------------------------------------------------BEGIN
+   if (RepSpec.Comparison==1) then begin
+      tstr = USetStr(3158);
+      tstr = tstr & notstr;
+      OutString(180,0,"Cur. period",true);
+      tstr = USetStr(3159);
+      tstr = tstr & notstr;
+      OutString(240,0,"Cur. YTD",true);
+      OutString(300,0,"% of Sales",true);
+      OutString(360,0,"Last period",true);
+      OutString(420,0,"Last Year",true);
+      OutString(480,0,"% of Sales",true);
+         //-------------------------------------------------------END
+ 
+    end;
+      if (RepSpec.Comparison==2) then begin
+        tstr = USetStr(3161);
+        tstr = tstr & notstr;
+        OutString(3,0,tstr,true);
+        tstr = USetStr(3162);
+        tstr = tstr & notstr;
+        OutString(4,0,tstr,true);
+        OutString(5,0,USetStr(3163),true);
+      end;
+      if (RepSpec.Comparison==3) then begin
+        tstr = USetStr(3164);
+        tstr = tstr & notstr;
+        OutString(3,0,tstr,true);
+        tstr = USetStr(3165);
+        tstr = tstr & notstr;
+        OutString(4,0,tstr,true);
+        OutString(5,0,USetStr(3166),true);
+      end;
+      if (RepSpec.Comparison==4) then begin
+        GetPreviousPeriods(RepSpec,RepSpec.sStartDate,RepSpec.sEndDate,per1,per2);
+        tstr = USetStr(3173);
+        tstr = tstr & notstr;
+        OutString(3,0,tstr,true);
+        OutString(4,0,per1,true);
+        OutString(5,0,per2,true);
+      end;
+      EndFormat;
+    end;
+  end;
+  if ((nonblank(RepSpec.ObjType)) and (RepSpec.AccSpec==2)) then begin
+    StartFormat(20);
+    OutString(0,0,USetStr(1565),false);
+    EndFormat;
+    goto L88LBal1Rn;
+  end;
+  
+  ResGr8r.IdKey = 0; 
+  AGrs = ReadFirstMain(ResGr8r,2,false);
+  if (AGrs==false) then begin
+    StartFormat(20);
+    OutString(0,0,USetStr(3167),false);
+    EndFormat;
+  end;
+  ResGr8r.IdKey = 0; 
+  AGrs = true;
+  while (LoopMain(ResGr8r,2,AGrs)) begin
+    if (AGrs) then begin
+      if (ResGr8r.RsType==3) then begin//RsHead
+        GetResGr8Description(ResGr8r,RepSpec.Language,tstr);        
+        StartFormat(15);
+        OutString(0,0,tstr,false);// ResGr8r.Comment
+        EndFormat;
+      end;
+      if (ResGr8r.RsType==2) then begin//RsSum
+        if (aidn<maxrsums) then begin
+          aidn = aidn + 1;
+        end; 
+        aida[aidn] = ResGr8r.IdKey;
+        aid = aidn;
+        SumListPerBal(ResGr8r.Desc,aid,S3ba,Pba,Eba,S4ba,S5ba,S6ba,maxrsums,aida,true);
+        SumListPerBal(ResGr8r.Desc2,aid,S3ba,Pba,Eba,S4ba,S5ba,S6ba,maxrsums,aida,false);
+        SumListPerBal(ResGr8r.Desc3,aid,S3ba,Pba,Eba,S4ba,S5ba,S6ba,maxrsums,aida,false);
+        negf = false;
+        if (ResGr8r.AccType==0) then begin
+          if (CompYear.NS0[0]!=0) then begin
+            negf = true;
+          end;
+        end;
+        if (ResGr8r.AccType==1) then begin
+          if (CompYear.NS0[1]!=0) then begin
+            negf = true;
+          end;
+        end;
+        if (ResGr8r.AccType==2) then begin
+          if (CompYear.NS0[2]!=0) then begin
+            negf = true;
+          end;
+        end;
+        if (ResGr8r.AccType==3) then begin
+          if (CompYear.NS0[3]!=0) then begin
+            negf = true;
+          end;
+        end;
+        if (ResGr8r.AccType==4) then begin
+          if (CompYear.NS0[4]!=0) then begin
+            negf = true;
+          end;
+        end;              
+        //MessageBox(0,aid & "--" & S3ba[aid]);
+        if((ResGr8r.IdKey == 10) and blank(ResGr8r.Comment)) then begin
+        RepSpec.vals3=S4ba[aid];
+        RepSpec.vals4=Eba[aid];
+        end;              
+        
+        if (nonblank(ResGr8r.Comment)) then begin
+          GetResGr8Description(ResGr8r,RepSpec.Language,tstr);        
+          AGrSumLine(RepSpec,0,tstr,"",ResGr8r.SpecCode,S3ba[aid],Pba[aid],Eba[aid],
+                     S4ba[aid],S5ba[aid],S6ba[aid],negf,Goms,PLf,resUseAccum,"",8,ResGr8r.IdKey,false);
+        end;
+      end;
+      if (ResGr8r.RsType==1) then begin//RsRange
+        negf = true;
+        if (ResGr8r.AccType==0) then begin
+          if (CompYear.NS0[0]==0) then begin
+            negf = false;
+          end;
+        end;
+        if (ResGr8r.AccType==1) then begin
+          if (CompYear.NS0[1]==0) then begin
+            negf = false;
+          end;
+        end;
+        if (ResGr8r.AccType==2) then begin
+          if (CompYear.NS0[2]==0) then begin
+            negf = false;
+          end;
+        end;
+        if (ResGr8r.AccType==3) then begin
+          if (CompYear.NS0[3]==0) then begin
+           negf = false;
+          end;
+        end;
+        if (ResGr8r.AccType==4) then begin
+          if (CompYear.NS0[4]==0) then begin
+            negf = false;
+          end;
+        end;              
+        if (aidn<maxrsums) then begin
+          aidn = aidn + 1;
+        end;  
+        aida[aidn] = ResGr8r.IdKey;
+        aid = aidn;
+        
+//this is not working like IVr.Sum4 passed to procedure
+//        AccListPerBalResGr8(RepSpec,PLf,ResGr8r,S3ba[aid],Pba[aid],Eba[aid],S4ba[aid],S5ba[aid],S6ba[aid],negf,Goms,resUseAccum);
+
+        AccListPerBalResGr8(RepSpec,PLf,ResGr8r,tmpS3ba,tmpPba,tmpEba,tmpS4ba,tmpS5ba,tmpS6ba,negf,Goms,resUseAccum,AccumStartDate);
+        S3ba[aid] = tmpS3ba;
+        S4ba[aid] = tmpS4ba;
+        S5ba[aid] = tmpS5ba;
+        S6ba[aid] = tmpS6ba;
+        Pba[aid] = tmpPba;
+        Eba[aid] = tmpEba;        
+      end;
+      if (ResGr8r.RsType==4) then begin//RsNewPage
+        if (RepSpec.Media!=mtScreen) then begin
+          NewPage(false);
+        end;  
+      end;
+    end;
+  end;
+  if (RepSpec.flags[4]!=0) then begin
+    RepSpec.f1 = "";    
+    ListPerTrans(RepSpec);
+  end;  
+  if (RepSpec.Notation==3) then begin
+    Goms = Goms*100;
+    StartFormat(15);
+    OutString(0,0,USetStr(3170),false);
+    OutVal(340,0,Goms,M4Val,true);
+    EndFormat;
+  end;
+L88LBal1Rn:;
+  if (RepSpec.CalledFromHAL==0) then begin
+    EndJob;
+  end;  
+LBal1Rn:;  
+  RETURN;
+END;

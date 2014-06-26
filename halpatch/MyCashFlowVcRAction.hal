@@ -1,0 +1,84 @@
+
+global
+function LongInt MyCashFlowBlockCheck(var record MyCashFlowBlock MCFr,record MyCashFlowBlock MCF2r,LongInt stat,LongInt check)
+BEGIN
+  LongInt res;
+  row MyCashFlowBlock MCFrw;
+  integer mtrw,i; 
+  res = 0;
+  mtrw = matrowcnt(MCFr);
+  
+  for(i=0;i<mtrw;i=i+1)begin
+    MatrowgeT(MCFr,i,MCFrw);
+    if(MCFrw.SumUp>0 and MCFrw.SerNr<=0)then begin
+      RecordCheckError(1058,"",i,"SerNr");
+      res = -1;
+      goto LMyCashFlowBlockRecordCheck;
+    end;
+    if(nonblank(MCFrw.CalcStr) and MCFrw.SerNr<=0)then begin
+      RecordCheckError(1058,"",i,"SerNr");
+      res = -1;
+      goto LMyCashFlowBlockRecordCheck;
+    end;
+    
+    if (nonblank(MCFrw.CalcStr) and ((MCFrw.SumUp>0)or(nonblank(MCFrw.FrAcc))or(nonblank(MCFrw.ToAcc)))) then begin
+      RecordCheckError(31014,"",i,"CalcStr");
+      res = -1;
+      goto LMyCashFlowBlockRecordCheck;
+    end;
+  end;
+LMyCashFlowBlockRecordCheck:;
+  MyCashFlowBlockCheck = res;
+  RETURN;
+END;
+
+global
+function LongInt MyCashFlowDRBlockCheck(var record MyCashFlowDRBlock MCFr,record MyCashFlowDRBlock MCF2r,LongInt stat,LongInt check)
+BEGIN
+  LongInt res;
+  row MyCashFlowDRBlock MCFrw;
+  integer mtrw,i; 
+  res = 0;
+  mtrw = matrowcnt(MCFr);
+  
+  for(i=0;i<mtrw;i=i+1)begin
+    MatrowgeT(MCFr,i,MCFrw);
+    if(MCFrw.SumUp>0 and MCFrw.SerNr<=0)then begin
+      RecordCheckError(1058,"",i,"SerNr");
+      res = -1;
+      goto LMyCashFlowBlockRecordCheck;
+    end;
+    if(nonblank(MCFrw.CalcStr) and MCFrw.SerNr<=0)then begin
+      RecordCheckError(1058,"",i,"SerNr");
+      res = -1;
+      goto LMyCashFlowBlockRecordCheck;
+    end;
+    
+    if (nonblank(MCFrw.CalcStr) and ((MCFrw.SumUp>0)or(nonblank(MCFrw.FrAcc))or(nonblank(MCFrw.ToAcc)))) then begin
+      RecordCheckError(31014,"",i,"CalcStr");
+      res = -1;
+      goto LMyCashFlowBlockRecordCheck;
+    end;
+  end;
+LMyCashFlowBlockRecordCheck:;
+  MyCashFlowDRBlockCheck = res;
+  RETURN;
+END;
+
+global
+function LongInt GigieneTextVcRecordCheck(var record GigieneTextVc GGr,record GigieneTextVc GG2r,LongInt stat,LongInt check)
+BEGIN
+  LongInt res;
+  res = 0;
+  
+  
+    if(blank(GGr.ArtCode))then begin
+      RecordCheckError(1058,"",-1,"ArtCode");
+      res = -1;
+      goto LGigieneTextVcRecordCheck;
+    end;
+    
+LGigieneTextVcRecordCheck:;
+  GigieneTextVcRecordCheck = res;
+  RETURN;
+END;

@@ -1,0 +1,976 @@
+external procedure ARRnRateDifferencesDetailed(record RcVc,record IVVc,record ARVc,record CUVc,val,val,Date,Boolean,
+                            var val,var val,var val,var val,var Boolean,
+                            var string,var Boolean,var record SMVc);
+external procedure ARRnRateDifferences(record RcVc,record IVVc,val,val,Date,var val,var val,var val,var val,
+                            var string,var Boolean ,var record SMVc);
+external procedure PrintARAged(record RcVc,val,val,val,val,val,val,val,val,val,Integer,val,val,val,val,val,val,val,val,val);
+external procedure PrintARReportTotals(record RcVc,val,val,val,val,val,val,val,val,val,val);
+external function Boolean ARInvoiceTest(record RcVc,record IVVc,Boolean);
+external procedure ARRnAddToDebtorsAccounts(string,Integer,val,Array string,Array val,var Integer);
+external procedure ARRnPrintDebtorsAccounts(Array string,Array val,var Integer);
+external procedure ARRnGetInvBalance(LongInt,var Date,Integer,var val,var val,var LongInt);
+external procedure SumAgedInstalmenInvoice(Date,LongInt,var val,var val,var val,var val,var val,var val,var val,var val);
+external procedure SubCashRows_IVVc(record IVVc,Boolean,var val,var val);
+external function val MulRateToBase2(var string,val,val,val,val,val,val,Integer);
+external function val MulRateToBase1(var string,val,val,val,val,val,val,Integer);
+external function LongInt DateDiff(Date,Date);
+external procedure PrintPrepaymentsNrsIP(record RcVc,string,Boolean);
+external function Boolean ObjectTypeMatch(string,string);
+external procedure BeginCurncyTotals(var Integer);
+external procedure AddCurncyTotals(var array string,var array val,var Integer,string,val);
+external procedure PrintCurncyTotals(array string,array val,array val,array val,Integer,Integer,Integer,Integer,Integer,Boolean,Integer);
+external procedure PrintCurTotalsRow(record SMVc,Integer,Integer,Integer,Integer);
+external procedure AddCurTotalsRow(string,val,val,val,var record SMVc);
+external procedure PrintHeaderAR(record RcVc);
+external procedure PrintHeaderAR2(record RcVc,Date,Integer);
+external procedure SubPrePayments(record IVVc,var val,var val);
+external procedure PrintOnAccountInfo(record CUVc,val,val,var Boolean,record RcVc,record SMVc,Boolean);
+external procedure GetOnAccBalance(record RcVc,string,string,Boolean,Integer,var val,var val,var val,var val,var val,var val,var val,record SMVc);
+external procedure Base1ToBase2(var val,Date,var val);
+external procedure ARWithLogg(var array string,var array val,var Integer,record RcVc,record IVVc,var val,Integer,Boolean);
+external procedure PrintDueDetailed(record IVVc,record RcVc,string,string,val,val,val,val,val,val,val,val,var val,Integer);
+external procedure ARRPrintOverView(record IVVc,record RcVc,val,val,LongInt);
+external procedure PrintAgedLine(val,val,val,val,val,val,val,val,val,Integer,Integer);
+external procedure SumAged(Date,Integer,var val,var val,var val,var val,var val,var val,var val,var val,var val);
+external procedure CountPeriods(var Integer);
+external procedure ClassTypef(string,string,var boolean);
+external procedure GetInfoAvansBody(string,string,record RcVc);
+external procedure GetUserName(string,var string);
+
+
+global
+procedure ARRn(record RcVc RepSpec)
+BEGIN
+  record ARVc ARr;
+  record CUVc CUr;
+  record IVVc IVr;
+  Boolean TrHs,CUs,CustOut,backdatf;
+  Boolean testf,first1f,first2f;
+  val AR1Sum,AR2Sum,CurSum;
+  val tot1Sum,tot2Sum,totCurSum;
+  LongInt latedays;
+  Integer rwcnt,keys,nrofper;
+  val s0,s1,s2,s3,s4,s5,s6,s7;
+  val s0b2,s1b2,s2b2,s3b2,s4b2,s5b2,s6b2,s7b2;
+  val ss0,ss1,ss2,ss3,ss4,ss5,ss6,ss7;
+  val ss0b2,ss1b2,ss2b2,ss3b2,ss4b2,ss5b2,ss6b2,ss7b2;
+  string 255 frcc,tocc;
+  val rs,rs2;
+  val rval,tot,totb2,rvalb1;
+  val sum,sum2;
+//  val due1tot,due2tot,duecurtot,notdue1tot,notdue2tot,notduecurtot;
+  Array val duetot;
+  Array val notduetot;
+  val Total1Due,Total2Due,Total1NotDue,Total2NotDue,TotOnAcc,TotalCurDue,TotalCurNotDue;
+  val sumdiff,sumcurncy,sumbooked,sumnow;
+  val totdiff,totbooked,totnow;
+  val s0inv,s1inv,s2inv,s3inv,s4inv,s5inv,s6inv,s7inv,totinv;
+  string 255 ckey;
+  record SMVc CurTotalsr;  //addcurencytotals
+  Array string 10 debaccs;
+  Array val debbal;
+  Integer debcnt;
+  array val av1;
+  array val av2;
+  array val av3;
+  array string 20 acur;
+  Integer curcnt;
+  Date agedate;
+  string 255 lastcurncycode;
+  Boolean onecurncyf;
+  string 50 salesname;
+
+  debcnt = -1;
+  if (nonblankdate(RepSpec.d1)) then begin
+    backdatf = true;
+    agedate = RepSpec.d1;
+  end else begin
+    backdatf = false;
+    agedate = CurrentDate;
+  end;  
+
+  frcc = FirstInRange(RepSpec.f1,20);
+  tocc = LastInRange(RepSpec.f1,20);
+  StartReportJob(USetStr(2430));
+   PrintHeaderAR(RepSpec);
+  EndHeader;  
+  CountPeriods(nrofper);
+  if ((RepSpec.ArtMode==2) or (RepSpec.ArtMode==5)) then begin
+  if (nrofper==2) then begin
+    SetRepCol(2,250);
+    SetRepCol(3,300);
+    SetRepCol(4,350);
+    SetRepCol(5,400);
+  end;
+  if (nrofper==3) then begin
+    SetRepCol(2,240);
+    SetRepCol(3,280);
+    SetRepCol(4,320);
+    SetRepCol(5,360);
+    SetRepCol(6,400);
+  end;
+  if (nrofper==4) then begin
+    SetRepCol(2,232);
+    SetRepCol(3,260);
+    SetRepCol(4,294);
+    SetRepCol(5,334);
+    SetRepCol(6,380);
+    SetRepCol(7,430);
+  end;
+  if (nrofper==5) then begin
+    SetRepCol(2,200);
+    SetRepCol(3,229);
+    SetRepCol(4,263);
+    SetRepCol(5,303);
+    SetRepCol(6,350);
+    SetRepCol(7,396);
+    SetRepCol(8,430);    
+  end;
+  if (nrofper==6) then begin
+    SetRepCol(2,210);
+    SetRepCol(3,235);
+    SetRepCol(4,260);
+    SetRepCol(5,285);
+    SetRepCol(6,310);
+    SetRepCol(7,335);
+    SetRepCol(8,360);
+    SetRepCol(9,385);
+  end;
+  end;
+  PrintHeaderAR2(RepSpec,agedate,nrofper);
+  if (RepSpec.ArtMode==4) or (RepSpec.ArtMode==6) then begin
+    RecordNew(CurTotalsr);
+  end;
+  totCurSum = blankval;
+  tot1Sum = blankval;
+  tot2Sum = blankval;
+  if (RepSpec.flags[1]==1) then begin
+    CUr.Name = frcc;
+    CUr.Code = "";
+    ckey = "Name";
+//    CUs = m4_ReadFirstLCKey(CUVc,ckey,&CUr,1,false,&LLoop2);
+    keys = 1;
+    CUs = LoopKey(ckey,CUr,1,true);
+    if (CUs==false) then begin goto L99; end;
+    first1f = true;        
+  end else begin
+    if (blank(RepSpec.f3)) then begin    
+      CUr.Code = frcc;
+      ckey = "Code";
+//      CUs = m4_ReadFirstLCKey(CUVc,ckey,&CUr,1,false,&LLoop2);
+      keys = 1;
+      CUs = LoopKey(ckey,CUr,1,true);      
+      if (CUs==false) then begin goto L99; end;            
+      first1f = true;        
+    end else begin
+      CUr.CustCat = RepSpec.f3;
+      CUr.Code = frcc;
+      ckey = "Group";
+      keys = 2;
+//      CUs = m4_ReadFirstLCKey(CUVc,ckey,&CUr,2,false,&LLoop2);
+      CUs = LoopKey(ckey,CUr,2,true);
+      if (CUs==false) then begin goto L99; end;
+      first1f = true;        
+    end;
+  end;
+L22:;
+  onecurncyf = true;
+  lastcurncycode = "";
+  
+  if (CUs==false) then begin goto L88; end;
+//    CUs = m4_ReadLogicalCKey(CUVc,ckey,LLoop2++,&CUr);
+    if (first1f) then begin 
+      first1f = false; 
+      ResetLoop(CUr);      
+    end;
+    CUs = LoopKey(ckey,CUr,keys,true);  
+    if (CUs) then begin
+      testf = true;
+      if (CUr.CUType==0) then begin testf = false; end;
+      if (RepSpec.flags[1]==1) then begin
+        if (nonblank(tocc)) then begin
+          if (CUr.Name>tocc) then begin
+            CUs = false;
+          end;
+        end;    
+        if (nonblank(RepSpec.f3)) then begin 
+          if (CUr.CustCat<>RepSpec.f3) then begin
+            testf = false;
+          end;
+        end;    
+      end else begin
+        if (nonblank(RepSpec.f3)) then begin 
+          if (CUr.CustCat<>RepSpec.f3) then begin
+            testf = false;
+          end;
+        end;    
+        if (nonblank(tocc)) then begin
+          if (CUr.Code>tocc) then begin
+            CUs = false;
+          end;
+        end;    
+      end;
+    end;
+  if (CUs==false) then begin goto L88; end;
+  if (testf==false) then begin goto L22; end;
+  CustOut = false;
+  if (RepSpec.ArtMode!=4) and (RepSpec.ArtMode!=6) then begin
+    RecordNew(CurTotalsr);
+  end;
+  BeginCurncyTotals(curcnt);
+  CurSum = 0;
+  AR1Sum = 0;
+  AR2Sum = 0;
+  rwcnt = 0;
+  s0 = 0; s0b2 = 0;
+  s1 = 0; s1b2 = 0;
+  s2 = 0; s2b2 = 0;
+  s3 = 0; s3b2 = 0;
+  s4 = 0; s4b2 = 0;
+  s5 = 0; s5b2 = 0;
+  s6 = 0; s6b2 = 0;
+  s7 = 0; s7b2 = 0;
+  if (RepSpec.flags[2]==1) then begin
+    s0 = CurSum + s0;
+  end else begin
+    s0 = AR1Sum + s0;
+  end;  
+
+  if (backdatf) then begin
+    IVr.CustCode = CUr.Code;
+    IVr.SerNr = 0;
+//    TrHs = m4_ReadFirstLCKey(IVVc,"CustCode",&IVr,2,false,&LLoop1);
+    ResetLoop(IVr);
+    TrHs = LoopKey("CustCode",IVr,2,true);
+    first2f = true;            
+  end else begin
+    ARr.CustCode = CUr.Code;
+    ARr.InvoiceNr = 0;
+//    TrHs = m4_ReadFirstLCKey(ARVc,"CustCode",&ARr,2,false,&LLoop1);
+    ResetLoop(ARr);
+    TrHs = LoopKey("CustCode",ARr,2,true);
+    first2f = true;            
+  end;
+  if (RepSpec.flags[21]==1) then begin TrHs = false; end;
+  while (TrHs==true) begin
+    testf = false;
+    if (backdatf) then begin
+//      TrHs = m4_ReadLogicalCKey(IVVc,"CustCode",LLoop1++,&IVr);
+      if (first2f) then begin 
+        first2f = false; 
+        ResetLoop(IVr); 
+      end;
+      TrHs = LoopKey("CustCode",IVr,2,true);      
+      if (TrHs) then begin 
+        if (CUr.Code<>IVr.CustCode) then begin TrHs = false; end;
+      end;  
+      if (TrHs) then begin
+        testf = true;
+        testf = ARInvoiceTest(RepSpec,IVr,backdatf);
+        
+        if (RepSpec.flags[22]==0) then begin
+          latedays = DateDiff(IVr.PayDate,agedate);
+        end else begin
+          latedays = DateDiff(IVr.InvDate,agedate);
+        end;
+        if (RepSpec.flags[0]<>0) then begin 
+          if (latedays>=0) then begin 
+            testf = false; 
+          end else begin          
+            if (RepSpec.long1>0) then begin          
+              if (-latedays<=RepSpec.long1) then begin
+                testf = false; 
+              end;
+            end;
+          end;
+        end;
+        if ((nonblank(RepSpec.f3)) and (RepSpec.f3<>CUr.CustCat)) then begin testf = false; end;
+        if (nonblank(RepSpec.f4)) then begin
+          if (SetInSet(RepSpec.f4,CUr.Classification)==false) then begin
+            testf = false;
+          end;
+        end;
+        if (nonblank(RepSpec.f5)) then begin
+          if (testf) then begin
+            testf = false;
+            ClassTypef(RepSpec.f5,CUr.Classification,testf);
+          end;
+        end;
+        if (testf) then begin
+          if ((IVr.InvType<>3) and (IVr.InvType<>2)) then begin
+            rval = IVr.Sum4;
+            rvalb1 = IVr.BaseSum4;
+            if (rvalb1==0) then begin
+              rvalb1 = rval;
+            end;
+          end;
+          if (IVr.InvType==3) then begin
+            if (IVr.CredInv==-1) then begin
+              rval = -IVr.Sum4;
+              rvalb1 = -IVr.BaseSum4;
+              if (rvalb1==0) then begin
+                rvalb1 = rval;
+              end;
+            end else begin
+              rval = 0;
+              rvalb1 = 0;
+            end;    
+          end;
+          if (IVr.InvType==2) then begin
+            rval = 0;
+            rvalb1 = 0;
+          end;          
+          if (IVr.TransDate>RepSpec.d1) then begin          
+            rval = 0;
+            rvalb1 = 0;
+            testf = false;            
+          end else begin
+            ARRnGetInvBalance(IVr.SerNr,RepSpec.d1,IVr.InvType,rval,rvalb1,latedays);
+            SubPrePayments(IVr,rval,rvalb1);
+            SubCashRows_IVVc(IVr,false,rval,rvalb1);
+//            rs = MulRateToBase1(IVr.CurncyCode,rval,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,DefaultCurRoundOff);
+//            rs2 = MulRateToBase2(IVr.CurncyCode,rval,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,DefaultCurRoundOff);
+            rs = rvalb1;
+            Base1ToBase2(rs,IVr.TransDate,rs2);
+            if (rval==0) then begin testf = false; end;
+            if (testf) then begin
+              if (latedays<0) then begin
+                duetot[1] = rs + duetot[1];
+                duetot[2] = rs2 + duetot[2];
+                duetot[0] = duetot[0] + rval;
+              end else begin
+                notduetot[1] = notduetot[1] + rs;
+                notduetot[2] = notduetot[2] + rs2;
+                notduetot[0] = notduetot[0] + rval;
+              end;
+            end;
+          end;
+        end;
+      end;
+    end else begin
+//      TrHs = m4_ReadLogicalCKey(ARVc,"CustCode",LLoop1++,&ARr);
+      if (first2f) then begin first2f = false; ResetLoop(ARr); end;
+      TrHs = LoopKey("CustCode",ARr,2,true);      
+      if (TrHs) then begin 
+        if (CUr.Code<>ARr.CustCode) then begin TrHs = false; end;
+      end;  
+      if (TrHs) then begin
+        if (RepSpec.flags[22]==0) then begin
+          latedays = DateDiff(ARr.DueDate,agedate);
+        end else begin
+          IVr.SerNr = ARr.InvoiceNr;
+          if (ReadFirstMain(IVr,1,true)) then begin
+            latedays = DateDiff(IVr.InvDate,agedate);
+          end else begin
+            latedays = DateDiff(ARr.DueDate,agedate);
+          end;
+        end;
+        if ((RepSpec.flags[0]==0) or (latedays<0)) then begin
+          if ((blank(RepSpec.f3)) or (RepSpec.f3==CUr.CustCat)) then begin testf = true; end;
+          if ((blank(RepSpec.f4)) or (SetInSet(RepSpec.f4,CUr.Classification)==true)) then begin
+            testf = true;
+          end;
+          if (nonblank(RepSpec.f5)) then begin
+            if (testf) then begin
+              testf = false;
+              ClassTypef(RepSpec.f5,CUr.Classification,testf);
+            end;
+          end;
+        end;
+        if (RepSpec.flags[0]<>0) then begin 
+          if (latedays>=0) then begin 
+            testf = false; 
+          end else begin          
+            if (RepSpec.long1>0) then begin          
+              if (-latedays<=RepSpec.long1) then begin
+                testf = false; 
+              end;
+            end;
+          end;
+        end;
+      end;
+      if (nonblank(RepSpec.CurncyCode)) then begin
+        if (ARr.ARCurncyCode!=RepSpec.CurncyCode) then begin          
+          testf = false;
+        end;
+      end;
+      if (testf) then begin
+        rval = ARr.RVal;
+        IVr.SerNr = ARr.InvoiceNr;
+        if (ReadFirstMain(IVr,1,true)) then begin
+//          rs = MulRateToBase1(IVr.CurncyCode,rval,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,DefaultCurRoundOff);
+//          rs2 = MulRateToBase2(IVr.CurncyCode,rval,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,DefaultCurRoundOff);
+          rs = ARr.BookRVal;
+          Base1ToBase2(rs,ARr.DueDate,rs2);
+          if ((nonblank(RepSpec.ObjStr)) and (SetInSet(RepSpec.ObjStr,IVr.Objects)==false)) then begin testf = false; end;
+          if (nonblank(RepSpec.f2)) then begin
+            if (RepSpec.f2<>IVr.SalesMan) then begin testf = false; end;
+          end;
+          if (nonblank(RepSpec.f4)) then begin
+            if (SetInSet(RepSpec.f4,CUr.Classification)==false) then begin
+              testf = false;
+            end;
+          end;
+          if (nonblank(RepSpec.Language)) then begin
+            if (RepSpec.Language!=IVr.LangCode) then begin
+               testf = false;
+            end;
+          end;
+          if (nonblank(RepSpec.AccStr)) then begin
+            if (RepSpec.AccStr!=IVr.ARAcc) then begin
+               testf = false;
+            end;
+          end;
+          if (nonblank(RepSpec.f5)) then begin
+            if (testf) then begin
+              testf = false;
+              ClassTypef(RepSpec.f5,CUr.Classification,testf);
+            end;
+          end;
+          if (IVr.Invalid<>0) then begin testf = false; end;
+          if ((RepSpec.flags[13]==1) and (IVr.InvType!=4)) then begin testf = false; end;
+          if ((RepSpec.flags[15]==1) and (IVr.InvType!=6)) then begin testf = false; end;
+          if (nonblank(RepSpec.ObjStr)) then begin
+            if (SetInSet(RepSpec.ObjStr,IVr.Objects)==false) then begin
+              testf = false;
+            end;
+          end else begin
+            if ((testf==true) and (nonblank(RepSpec.ObjType))) then begin
+              testf = ObjectTypeMatch(IVr.Objects,RepSpec.ObjType);            
+            end;
+          end;
+          if (RepSpec.flags[16]==1) then begin
+            if (IVr.NoRemndrFlag==1) then begin
+              testf = false;
+            end;
+          end;
+          if (RepSpec.flags[17]==1) then begin
+            if (IVr.NoColectionFlag==1) then begin
+              testf = false;
+            end;
+          end;          
+          if (testf) then begin
+            if (RepSpec.flags[3]==1) then begin
+              if (IVr.DisputedFlag==1) then begin
+                testf = false;
+              end;
+            end;
+          end;
+          if (testf) then begin
+            if (RepSpec.flags[3]==2) then begin
+              if (IVr.DisputedFlag<>1) then begin
+                testf = false;
+              end;
+            end;
+          end;
+        end else begin
+          rs = ARr.BookRVal;
+          Base1ToBase2(rs,ARr.DueDate,rs2);
+          IVr.CustCode = ARr.CustCode;
+          IVr.Addr0 = CUr.Name;
+          IVr.SerNr = ARr.InvoiceNr;
+          IVr.PayDate = ARr.DueDate;
+          IVr.CurncyCode = ARr.ARCurncyCode;
+          if (nonblank(RepSpec.f2)) then begin testf = false; end;
+        end;
+        if (testf) then begin
+          if (latedays<0) then begin
+            duetot[1] = rs + duetot[1];
+            duetot[2] = rs2 + duetot[2];
+            duetot[0] = duetot[0] + rval;
+          end else begin
+            notduetot[1] = notduetot[1] + rs;
+            notduetot[2] = notduetot[2] + rs2;
+            notduetot[0] = notduetot[0] + rval;
+          end;
+        end;
+      end;
+    end;
+    if (testf) then begin
+        if ((CustOut==false) and (RepSpec.ArtMode<>3) and (RepSpec.ArtMode<>2) and (RepSpec.ArtMode<>4) and (RepSpec.ArtMode<>6)) then begin
+          Gray_Divider(0,1);
+          
+          StartFormat(15);
+            OutString(0,0,"",true);
+          endformat;
+          
+          StartFormat(15);
+           if(RepSpec.ArtMode==0 and (RepSpec.Media==2 or RepSpec.Media==20)) then begin// Edit ************************** Tuesday, 31 August 2010 10:02:42
+           
+           end else begin// Edit ************************** Tuesday, 31 August 2010 10:02:43
+           OutString(0,"DblCUVc",CUr.Code,false);
+           OutString(100,0,CUr.Name,false);
+           OutString(180,0,CUr.SalesMan,false);//------------------------------------------
+           //salesname = "";
+           //GetUserName(CUr.SalesMan,salesname);//------------------------------------------
+           //OutString(220,0,salesname,false);//---------------------------------------
+           //OutString(280,0,CUr.Phone,false);
+           if (RepSpec.flags[2]==1) then begin
+             OutString(480,0,CUr.CurncyCode,true);
+           end;  
+          EndFormat;   
+          end;// Edit ************************** Tuesday, 31 August 2010 10:02:45
+          CustOut = true;
+        end;
+        if (((RepSpec.ArtMode==0) or (RepSpec.ArtMode==1)) and RepSpec.Media<>2 and RepSpec.Media<>20) then begin// Edit ************************** Tuesday, 31 August 2010 11:00:58
+          if (IVr.Addr0<>CUr.Name) then begin
+            StartFormat(15);
+            OutString(100,0,IVr.Addr0,false);
+            EndFormat;
+          end;
+        end;
+        AR1Sum = rs + AR1Sum;
+        AR2Sum = rs2 + AR2Sum;
+        CurSum = rval + CurSum;
+        rwcnt = rwcnt + 1;
+        if ((RepSpec.flags[18]!=0) and (RepSpec.ArtMode!=4) and (RepSpec.ArtMode!=6)) then begin
+          ARRnAddToDebtorsAccounts(IVr.ARAcc,IVr.InvType,rs,debaccs,debbal,debcnt);
+        end;
+        if (RepSpec.ArtMode==0) then begin// Historik 
+          ARWithLogg(acur,av1,curcnt,RepSpec,IVr,rval,rwcnt,backdatf);//----Detailed 1st
+        end;        
+        if (RepSpec.ArtMode==1) then begin// Overview
+          ARRPrintOverView(IVr,RepSpec,rval,rs,latedays);  //------------------------------------------------------*******************      
+          AddCurncyTotals(acur,av1,curcnt,IVr.CurncyCode,rval);
+        end;
+        if (RepSpec.ArtMode==2) then begin// Åldersfördelat 
+          if ((IVr.InstallmentInv==1) and (RepSpec.flags[19]!=0)) then begin
+            if (RepSpec.flags[2]==0) then begin
+              SumAgedInstalmenInvoice(agedate,IVr.SerNr,s0,s1,s2,s3,s4,s5,s6,s7);
+            end else begin
+              if (nonblank(CUr.CurncyCode)) then begin
+                SumAgedInstalmenInvoice(agedate,IVr.SerNr,s0,s1,s2,s3,s4,s5,s6,s7);
+              end else begin
+                SumAgedInstalmenInvoice(agedate,IVr.SerNr,s0,s1,s2,s3,s4,s5,s6,s7);
+              end;
+            end;
+          end else begin
+            if (RepSpec.flags[2]==0) then begin
+              SumAged(agedate,latedays,rs,s0,s1,s2,s3,s4,s5,s6,s7);
+              SumAged(agedate,latedays,rs2,s0b2,s1b2,s2b2,s3b2,s4b2,s5b2,s6b2,s7b2);
+            end else begin
+              if (nonblank(CUr.CurncyCode)) then begin
+                SumAged(agedate,latedays,rval,s0,s1,s2,s3,s4,s5,s6,s7);
+              end else begin
+                SumAged(agedate,latedays,rs,s0,s1,s2,s3,s4,s5,s6,s7);
+                SumAged(agedate,latedays,rs2,s0b2,s1b2,s2b2,s3b2,s4b2,s5b2,s6b2,s7b2);
+              end;
+            end;
+          end;
+        end;
+        if (RepSpec.ArtMode==3) then begin// Saldo          
+        end;
+        if (RepSpec.ArtMode==4) then begin// rate difference 
+          ARRnRateDifferences(RepSpec,IVr,rval,rs,agedate,sumnow,sumcurncy,sumbooked,sumdiff,lastcurncycode,onecurncyf,CurTotalsr);
+        end;
+        if (RepSpec.ArtMode==6) then begin// rate difference detailed 
+          ARRnRateDifferencesDetailed(RepSpec,IVr,ARr,CUr,rval,rs,agedate,backdatf,
+                            sumnow,sumcurncy,sumbooked,sumdiff,CustOut,lastcurncycode,onecurncyf,CurTotalsr);
+        end;
+        
+        if (RepSpec.ArtMode==5) then begin// Detailed            
+            s0inv = 0;
+            s1inv = 0;
+            s2inv = 0;
+            s3inv = 0;
+            s4inv = 0;
+            s5inv = 0;
+            s6inv = 0;
+            s7inv = 0;
+            totinv = 0;
+            if (RepSpec.flags[2]==0) then begin
+              SumAged(agedate,latedays,rs,s0inv,s1inv,s2inv,s3inv,s4inv,s5inv,s6inv,s7inv);
+            end else begin
+              SumAged(agedate,latedays,rval,s0inv,s1inv,s2inv,s3inv,s4inv,s5inv,s6inv,s7inv);
+            end;
+            totinv = s0inv + s1inv;
+            totinv = totinv + s2inv;
+            totinv = totinv + s3inv;
+            totinv = totinv + s4inv;
+            totinv = totinv + s5inv;
+            totinv = totinv + s6inv;
+            totinv = totinv + s7inv;
+            PrintDueDetailed(IVr,RepSpec,CUr.CurncyCode,CUr.Objects,s0inv,s1inv,s2inv,s3inv,s4inv,s5inv,s6inv,s7inv,totinv,nrofper);
+            if (RepSpec.flags[2]==0) or (nonblank(CUr.CurncyCode)) then begin
+              s0 = s0inv + s0;
+              s1 = s1inv + s1;
+              s2 = s2inv + s2;
+              s3 = s3inv + s3;
+              s4 = s4inv + s4;
+              s5 = s5inv + s5;
+              s6 = s6inv + s6;
+              s7 = s7inv + s7;
+            end else begin
+              s0 = s0 + MulRateToBase1(IVr.CurncyCode,s0inv,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,DefaultCurRoundOff);
+              s1 = s1 + MulRateToBase1(IVr.CurncyCode,s1inv,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,DefaultCurRoundOff);
+              s2 = s2 + MulRateToBase1(IVr.CurncyCode,s2inv,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,DefaultCurRoundOff);
+              s3 = s3 + MulRateToBase1(IVr.CurncyCode,s3inv,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,DefaultCurRoundOff);
+              s4 = s4 + MulRateToBase1(IVr.CurncyCode,s4inv,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,DefaultCurRoundOff);
+              s5 = s5 + MulRateToBase1(IVr.CurncyCode,s5inv,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,DefaultCurRoundOff);
+              s6 = s6 + MulRateToBase1(IVr.CurncyCode,s6inv,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,DefaultCurRoundOff);
+              s7 = s7 + MulRateToBase1(IVr.CurncyCode,s7inv,IVr.FrRate,IVr.ToRateB1,IVr.ToRateB2,IVr.BaseRate1,IVr.BaseRate2,DefaultCurRoundOff);
+            end;
+        end;
+L55:;
+    end;
+  end;
+//  find out and print on account receipts 
+testf = true;
+if (nonblank(RepSpec.f2)) then begin
+  if (CUr.SalesMan<>RepSpec.f2) then begin
+    testf = false;
+  end;  
+end;
+if (RepSpec.flags[1]==1) then begin
+  if (nonblank(RepSpec.f3)) then begin
+    if (CUr.CustCat<>RepSpec.f3) then begin testf = false; end;
+  end;    
+end;  
+if (nonblank(RepSpec.f4)) then begin
+  if (SetInSet(RepSpec.f4,CUr.Classification)==false) then begin
+    testf = false;
+  end;
+end;
+if (nonblank(RepSpec.f5)) then begin
+  if (testf) then begin
+    testf = false;
+    ClassTypef(RepSpec.f5,CUr.Classification,testf);
+  end;
+end;
+if (testf) then begin
+    rval = 0;
+    if (RepSpec.flags[21]<2) then begin    
+      if (RepSpec.flags[13]==0) then begin
+        GetOnAccBalance(RepSpec,CUr.Code,CUr.CurncyCode,backdatf,RepSpec.flags[2],sum,sum2,rval,sumbooked,sumnow,sumcurncy,sumdiff,CurTotalsr);//calcSUM
+        if (nonblank(CUr.CurncyCode)) then begin
+          if (RepSpec.flags[2]!=0) then begin          
+            TotOnAcc = TotOnAcc + rval;
+          end else begin
+            TotOnAcc = TotOnAcc + sum;
+          end;
+        end else begin
+          TotOnAcc = TotOnAcc + sum;
+        end;
+      end;
+    end;
+    if (rval==0) then begin
+      sum = 0;
+    end;
+    AR1Sum = sum + AR1Sum;
+    AR2Sum = sum2 + AR2Sum;
+    CurSum = rval + CurSum;
+  if (RepSpec.ArtMode==0) then begin
+    if (sum<>0) then begin
+          // Edit Start ---------------------------------------------- Edit Start
+	//Tuesday, 31 August 2010 12:43:06
+          if(RepSpec.ArtMode==0 and (RepSpec.Media==2 or RepSpec.Media==20)) then begin
+            StartFormat(15);
+              OutString(0,0,"",true);
+            endformat;
+            GetInfoAvansBody("111",CUr.Code,RepSpec);
+          end else begin
+            PrintOnAccountInfo(CUr,rval,sum,CustOut,RepSpec,CurTotalsr,backdatf);
+          end;
+	// Edit End ---------------------------------------------- Edit End
+	
+          
+    end;
+  end;
+  if (RepSpec.ArtMode==1) then begin
+    if ((sum<>0) or (rval<>0)) then begin
+      if (RepSpec.flags[2]==0) then begin
+        if (CustOut==false) then begin
+          Gray_Divider(0,1);
+          StartFormat(15);
+          OutString(0,"DblCUVc",CUr.Code,false);
+          OutString(100,0,CUr.Name,false);
+          //OutString(280,0,CUr.Phone,false);
+          if (RepSpec.flags[2]==1) then begin
+            OutString(480,0,CUr.CurncyCode,true);
+          end;
+          EndFormat;
+          CustOut = true;
+        end;
+        StartFormat(15);
+        OutStringID(130,"GetInfoAvans",USetStr(2497),false,CUr.Code);
+        OutVal(450,0,sum,M4Val,true);//--------------------------AVANCOV
+        EndFormat;
+        
+        GetInfoAvansBody("111",CUr.Code,RepSpec);
+        
+        if (RepSpec.flags[20]!=0) then begin
+          PrintPrepaymentsNrsIP(RepSpec,CUr.Code,backdatf);
+        end;        
+      end else begin
+        PrintOnAccountInfo(CUr,rval,sum,CustOut,RepSpec,CurTotalsr,backdatf);
+      end;
+      if (nonblank(CUr.CurncyCode)) then begin
+        AddCurncyTotals(acur,av1,curcnt,CUr.CurncyCode,rval);
+      end;
+    end;
+  end;
+  if (RepSpec.ArtMode==4) then begin
+    if (sumdiff<>0) then begin
+      StartFormat(15);
+       OutString(0,0,CUr.Name,false);
+       if (onecurncyf) then begin
+         OutVal(240,0,sumcurncy,M4Val,true);
+       end;
+       OutVal(320,0,sumnow,M4Val,true);
+       OutVal(400,0,sumbooked,M4Val,true);
+       OutVal(480,0,sumdiff,M4Val,true);
+      EndFormat;
+      totdiff = sumdiff + totdiff;
+      totbooked = sumbooked + totbooked;
+      totnow = sumnow + totnow;
+    end;
+    sumdiff = 0;
+    sumbooked = 0;
+    sumnow = 0;
+    sumcurncy = 0;
+  end;
+  if (RepSpec.ArtMode==6) then begin
+    if (sumdiff<>0) then begin
+      Gray_Divider(200,1);
+      StartFormat(15);
+       if (onecurncyf) then begin
+         OutVal(240,0,sumcurncy,M4Val,true);
+       end;
+       OutVal(320,0,sumnow,M4Val,true);
+       OutVal(400,0,sumbooked,M4Val,true);
+       OutVal(480,0,sumdiff,M4Val,true);
+      EndFormat;
+      totdiff = sumdiff + totdiff;
+      totbooked = sumbooked + totbooked;
+      totnow = sumnow + totnow;
+    end;
+    sumdiff = 0;
+    sumbooked = 0;
+    sumnow = 0;
+    sumcurncy = 0;
+  end;
+  if (RepSpec.ArtMode==2) then begin
+    testf = true;
+    if ((s0==0) and (s1==0) and (s2==0) and (s3==0) and  (s4==0) and  (s5==0) and (s6==0) and (s7==0) and (sum==0)) then begin testf = false; end;        
+    if (testf) then begin
+      if (RepSpec.flags[2]==1) then begin
+        s0 = rval + s0;
+      end else begin
+        s0 = sum + s0;
+      end;  
+      tot = s0 + s1;
+      tot = tot + s2;
+      tot = tot + s3;
+      tot = tot + s4;
+      tot = tot + s5;
+      tot = tot + s6;
+      tot = tot + s7;
+      StartFormat(15);
+       OutString(0,"DblCUVc",CUr.Code,false);
+       OutString(60,0,CUr.Name,false);
+       if (RepSpec.flags[2]==1) then begin
+         PrintAgedLine(s0,s1,s2,s3,s4,s5,s6,s7,tot,nrofper,464);//-------------------------------------------------
+         OutString(465,0,CUr.CurncyCode,false);
+       end else begin
+         PrintAgedLine(s0,s1,s2,s3,s4,s5,s6,s7,tot,nrofper,480);
+       end;
+      EndFormat;
+    end;
+  end;
+  if (RepSpec.ArtMode==5) then begin
+    testf = true;
+    if ((s0==0) and (s1==0) and (s2==0) and (s3==0) and (s4==0) and (s5==0) and (s6==0) and (s7==0) and (sum==0)) then begin testf = false; end;
+    if (testf) then begin
+      if (sum<>0) then begin
+        PrintOnAccountInfo(CUr,rval,sum,CustOut,RepSpec,CurTotalsr,backdatf);
+      end;
+      if (RepSpec.flags[2]==1) then begin
+        s0 = rval + s0;
+      end else begin
+        s0 = sum + s0;
+      end;  
+      tot = s0 + s1;
+      tot = tot + s2;
+      tot = tot + s3;
+      tot = tot + s4;
+      tot = tot + s5;
+      tot = tot + s6;
+      tot = tot + s7;
+      Black_Divider(200,480);
+      StartFormat(15);
+      if (RepSpec.flags[2]==1) then begin
+        PrintAgedLine(s0,s1,s2,s3,s4,s5,s6,s7,tot,nrofper,464)
+        OutString(465,0,CUr.CurncyCode,false);
+      end else begin
+        PrintAgedLine(s0,s1,s2,s3,s4,s5,s6,s7,tot,nrofper,480)
+      end;
+      EndFormat;
+    end;
+  end;
+end;
+   Total1Due = duetot[1] + Total1Due;
+   TotalCurDue = TotalCurDue + duetot[0];
+   Total2Due = duetot[2] + Total2Due;
+
+   Total1NotDue = Total1NotDue + notduetot[1];
+   TotalCurNotDue = TotalCurNotDue + notduetot[0];
+   
+  // Edit Start ---------------------------------------------- Edit Start
+	//Tuesday, 19 October 2010 13:13:35
+	If(CustOut==false and (AR1Sum!=0)) then begin
+	  StartFormat(15);
+      OutString(320,0,USetStr(2424),true);// ????????? BALANS
+      if (nonblank(RepSpec.CurncyCode)) and (RepSpec.flags[2]==1) then begin
+        OutVal(450,0,CurSum,M4Val,true);
+      end else begin
+        OutVal(450,0,AR1Sum,M4Val,true);
+      end;
+     EndFormat;
+  end; 
+	// Edit End ---------------------------------------------- Edit End
+	
+ if ((RepSpec.ArtMode==0) or (RepSpec.ArtMode==1) and (CurSum!=0 or AR1Sum!=0)) then begin// Edit ************************** Tuesday, 15 May 2012 10:21:17
+// CustOut=true;// Edit ************************** Tuesday, 19 October 2010 13:00:45
+   if (CustOut==true) then begin
+     if (RepSpec.flags[2]==0) then begin
+       Black_Divider(290,450);
+     end;
+     if (RepSpec.flags[2]==1) then begin
+       PrintCurncyTotals(acur,av1,av2,av3,curcnt,450,-1,-1,320,false,RepSpec.PocketPC);
+       Black_Divider(290,450);
+     end;
+     StartFormat(15);
+      OutString(320,0,USetStr(2424),true);// ?????????
+      if (nonblank(RepSpec.CurncyCode)) and (RepSpec.flags[2]==1) then begin
+        OutVal(450,0,CurSum,M4Val,true);
+      end else begin
+        OutVal(450,0,AR1Sum,M4Val,true);
+      end;
+     EndFormat;
+     if (duetot[1]<>0) then begin
+        StartFormat(15);
+         OutString(320,0,USetStr(2527),true);
+         if (nonblank(RepSpec.CurncyCode)) and (RepSpec.flags[2]==1) then begin
+           OutVal(450,0,duetot[0],M4Val,true);
+         end else begin
+           OutVal(450,0,duetot[1],M4Val,true);
+         end;
+        EndFormat;
+     end;
+     if (notduetot[1]<>0) then begin
+        StartFormat(15);
+         OutString(320,0,USetStr(2521),true);
+         if (nonblank(RepSpec.CurncyCode)) and (RepSpec.flags[2]==1) then begin
+           OutVal(450,0,notduetot[0],M4Val,true);
+         end else begin
+           OutVal(450,0,notduetot[1],M4Val,true);
+         end;
+        EndFormat;
+     end;
+   end;
+ end; 
+ if (RepSpec.ArtMode==2) then begin
+   if (CustOut==true) then begin
+     Black_Divider(400,480);
+     StartFormat(15);
+      OutVal(480,0,AR1Sum,M4Val,true);
+     EndFormat;
+   end;
+ end; 
+ if (RepSpec.ArtMode==3) then begin
+   if (AR1Sum==0) then begin goto L77; end;
+   StartFormat(15);
+      OutString(0,"DblCUVc",CUr.Code,false);
+      OutString(100,0,CUr.Name,false);
+      OutVal(480,0,AR1Sum,M4Val,true);
+   EndFormat;
+      if (duetot[1]!=blankval) then begin
+        StartFormat(15);
+        OutString(420,0,USetStr(2527),true);
+        OutVal(480,0,duetot[1],M4Val,true);
+        EndFormat;
+      end;  
+      if (notduetot[1]<>0) then begin
+        StartFormat(15);
+         OutString(420,0,USetStr(2521),true);
+         OutVal(480,0,notduetot[1],M4Val,true);
+        EndFormat;
+      end;      
+    Gray_Divider(400,480);
+ end;
+  duetot[1] = blankval;
+  duetot[2] = blankval;
+  duetot[0] = blankval;
+  notduetot[1] = blankval;
+  notduetot[2] = blankval;
+  notduetot[0] = blankval;
+ if (RepSpec.ArtMode==5) then begin
+   if (CustOut==true) then begin
+     StartFormat(15);
+     EndFormat;
+   end;
+ end; 
+L77:;
+  tot1Sum = AR1Sum + tot1Sum;
+  tot2Sum = AR2Sum + tot2Sum;
+  totCurSum = CurSum + totCurSum;
+  ss0 = s0 + ss0;
+  ss1 = s1 + ss1;
+  ss2 = s2 + ss2;
+  ss3 = s3 + ss3;
+  ss4 = s4 + ss4;
+  ss5 = s5 + ss5;
+  ss6 = s6 + ss6;
+  ss7 = s7 + ss7;
+
+  ss0b2 = s0b2 + ss0b2;
+  ss1b2 = s1b2 + ss1b2;
+  ss2b2 = s2b2 + ss2b2;
+  ss3b2 = s3b2 + ss3b2;
+  ss4b2 = s4b2 + ss4b2;
+  ss5b2 = s5b2 + ss5b2;
+  ss6b2 = s6b2 + ss6b2;
+  ss7b2 = s7b2 + ss7b2;
+  
+  goto L22;
+L88:;
+  Gray_Divider(0,1);
+  if ((RepSpec.ArtMode==2) or (RepSpec.ArtMode==5)) then begin
+    tot = ss0 + ss1;
+    tot = ss2 + tot;
+    tot = ss3 + tot;
+    tot = ss4 + tot;
+    tot = ss5 + tot;
+    tot = ss6 + tot;
+    tot = ss7 + tot;
+    totb2 = ss0b2 + ss1b2;
+    totb2 = ss2b2 + totb2;
+    totb2 = ss3b2 + totb2;
+    totb2 = ss4b2 + totb2;
+    totb2 = ss5b2 + totb2;
+    totb2 = ss6b2 + totb2;
+    totb2 = ss7b2 + totb2;    
+    PrintARAged(RepSpec,ss0,ss1,ss2,ss3,ss4,ss5,ss6,ss7,tot,nrofper,
+                      ss0b2,ss1b2,ss2b2,ss3b2,ss4b2,ss5b2,ss6b2,ss7b2,totb2);
+  end;
+  if ((RepSpec.flags[2]==1) and (RepSpec.ArtMode==2)) then begin goto L99; end;
+  if ((RepSpec.flags[2]==1) and (RepSpec.ArtMode==3)) then begin goto L99; end;
+  if ((RepSpec.flags[2]==1) and (RepSpec.ArtMode==5)) then begin goto L99; end;
+  PrintARReportTotals(RepSpec,tot1Sum,Total1Due,Total1NotDue,TotOnAcc,tot2Sum,Total2Due,Total2NotDue,totCurSum,TotalCurDue,TotalCurNotDue);
+
+  if (RepSpec.ArtMode==4) or (RepSpec.ArtMode==6) then begin
+    StartFormat(15);
+    OutVal(320,0,totnow,M4Val,true);
+    OutVal(400,0,totbooked,M4Val,true);
+    OutVal(480,0,totdiff,M4Val,true);
+    EndFormat;
+    PrintCurTotalsRow(CurTotalsr,-1,240,-1,-1);
+  end;
+  if ((RepSpec.flags[18]!=0) and (RepSpec.ArtMode!=4) and (RepSpec.ArtMode!=6)) then begin
+    ARRnPrintDebtorsAccounts(debaccs,debbal,debcnt);
+  end;  
+L99:;
+  EndJob;
+  RETURN;
+END;
+

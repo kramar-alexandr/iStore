@@ -1,0 +1,295 @@
+external function val MulRateToBase1(var string,val,val,val,val,val,val,Integer);
+external function Integer GetVATLaw();
+external procedure CalcVATBaseVAT(record SMVc,Integer,Integer,Integer,var val,var val);
+external procedure AddVATBase(var record SMVc,string,val,val,Integer,Integer,Integer);
+external procedure SetupVATBase(var record SMVc,var Integer);
+external procedure SendArtStat(string,string,string,val,val,val,Date);
+external procedure GetINCostAcc(record INVc,var string);
+external procedure RoundRowSum(string,string,var val);
+external procedure CalcSum(val,val,val,val,var val,Integer);
+external procedure CalcProc(val,val,var val);
+external procedure IVSumup(var record IVVc,Boolean);
+external function Boolean GetItemNameStr(Integer,var string,string,string,string);
+external procedure GetCurncyRoundoff(string,string,var Integer,var LongInt,var Integer);
+external procedure PUCalcPerc(val,string,var val);
+external procedure GetItemVATCode(string,Integer,var string,Boolean);
+external procedure MulVATIV(string,val,var val,var val,Integer,Integer);
+external procedure CalculatePURowSum(val,val,string,var val,val,
+                                     val,val,val,val,val,
+                                     string,var val,Boolean,string,
+                                     val,val,val,val,val);
+external function Boolean GetFirstItem(var string,var record INVc);
+
+global
+procedure IVMultiLineText(record IVVc IVr,record INVc INr,string  langcode,Integer arow)
+BEGIN
+  row IVVc IVrw;
+  string 255 tstr;
+  Integer tcnt;
+ 
+  tcnt = 2;
+  while (GetItemNameStr(tcnt,tstr,langcode,INr.Name,INr.Code)) begin      
+    ClearRow(IVr,IVrw,1);
+    IVrw.Spec = tstr;
+    MatRowInsert(IVr,arow+tcnt-1,IVrw);
+    tcnt = tcnt + 1;
+  end;
+  RETURN;
+END;
+
+global
+procedure IVCashMultiLineText(record IVCashVc IVCashr,record INVc INr,string  langcode,Integer arow)
+BEGIN
+  row IVCashVc IVCashrw;
+  string 255 tstr;
+  Integer tcnt;
+ 
+  tcnt = 2;
+  while (GetItemNameStr(tcnt,tstr,langcode,INr.Name,INr.Code)) begin      
+    ClearRow(IVCashr,IVCashrw,1);
+    IVCashrw.Spec = tstr;
+    MatRowInsert(IVCashr,arow+tcnt-1,IVCashrw);
+    tcnt = tcnt + 1;
+  end;
+  RETURN;
+END;
+
+global
+procedure ORMultiLineText(record ORVc ORr,record INVc INr,string  langcode,Integer arow)
+BEGIN
+  row ORVc ORrw;
+  string 255 tstr;
+  Integer tcnt;
+ 
+  tcnt = 2;
+  while (GetItemNameStr(tcnt,tstr,langcode,INr.Name,INr.Code)) begin      
+    ClearRow(ORr,ORrw,1);
+    ORrw.Spec = tstr;
+    MatRowInsert(ORr,arow+tcnt-1,ORrw);
+    tcnt = tcnt + 1;
+  end;
+  RETURN;
+END;
+
+global
+procedure POMultiLineText(record POVc POr,record INVc INr,string  langcode,Integer arow)
+BEGIN
+  row POVc POrw;
+  string 255 tstr;
+  Integer tcnt;
+ 
+  tcnt = 2;
+  while (GetItemNameStr(tcnt,tstr,langcode,INr.Name,INr.Code)) begin      
+    ClearRow(POr,POrw,1);
+    POrw.Spec = tstr;
+    MatRowInsert(POr,arow+tcnt-1,POrw);
+    tcnt = tcnt + 1;
+  end;
+  RETURN;
+END;
+
+global
+procedure PUSumUp(var record PUVc PUr)
+BEGIN
+  record RoundBlock RoundRec;
+  row PUVc PUrw;
+  Integer i,rwcnt;
+  val t,cc,totqty;
+  val s,s2,ms,ms2,uprice;
+  Integer rndtotal,roundvat;
+  LongInt roundlines;
+  record SMVc VATr;
+  Integer vatcnt;
+  val shipcost,cost1,cost2,cost3,cost4,cost5,customscost;
+  val SumCostPrice;
+  
+  RecordNew(VATr);
+  SetupVATBase(VATr,vatcnt);            
+  BlockLoad(RoundRec);
+  GetCurncyRoundoff(PUr.CurncyCode,"",rndtotal,roundlines,roundvat);
+  PUr.SumQuant = blankval;
+  PUr.SumCostPrice = blankval;
+
+  shipcost = PUr.ShipCost;
+  cost1 = PUr.Cost1;
+  cost2 = PUr.Cost2;
+  cost3 = PUr.Cost3;
+  cost4 = PUr.Cost4;
+  cost5 = PUr.Cost5;
+  customscost = PUr.CustomsCost;
+  
+  PUr.ShipCost = blankval;
+  PUr.Cost1 = blankval;
+  PUr.Cost2 = blankval;
+  PUr.Cost3 = blankval;
+  PUr.Cost4 = blankval;
+  PUr.Cost5 = blankval;
+  PUr.CustomsCost = blankval;
+  PUr.ExtraCost = blankval;
+  PUr.TAX1Sum = blankval;
+  rwcnt = MatRowCnt(PUr);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(PUr,i,PUrw);
+    if ((PUrw.stp==3) or (PUrw.ovst!=0)) then begin
+      goto LSKIPPUROWPUSumUp;
+    end;
+    totqty = totqty + PUrw.Quant;
+//    t = Round(PUrw.Quant*PUrw.CostPrice,RoundRec.RndFIFO);
+
+    t = Round(PUrw.Quant*PUrw.CostPrice,5);//they say should be this regardless of  RndFIFO, if we round it to 2 there are diffrences between PO and PU totals when freight used
+    PUr.SumCostPrice = PUr.SumCostPrice + t;
+    t = Round(PUrw.Quant*PUrw.ShipCost,5);//RoundRec.RndFIFO
+    PUr.ShipCost = t + PUr.ShipCost;
+    t = Round(PUrw.Quant*PUrw.RowCost1,5);//RoundRec.RndFIFO
+    PUr.Cost1 = t + PUr.Cost1;
+    t = Round(PUrw.Quant*PUrw.RowCost2,5);//RoundRec.RndFIFO
+    PUr.Cost2 = t + PUr.Cost2;
+    t = Round(PUrw.Quant*PUrw.RowCost3,5);//RoundRec.RndFIFO
+    PUr.Cost3 = t + PUr.Cost3;
+    t = Round(PUrw.Quant*PUrw.RowCost4,5);//RoundRec.RndFIFO
+    PUr.Cost4 = t + PUr.Cost4;
+    t = Round(PUrw.Quant*PUrw.RowCost5,5);//RoundRec.RndFIFO
+    PUr.Cost5 = t + PUr.Cost5;
+    uprice = MulRateToBase1(PUr.CurncyCode,PUrw.UPrice,PUr.FrRate,PUr.ToRateB1,PUr.ToRateB2,PUr.BaseRate1,PUr.BaseRate2,5);
+//    uprice = PUrw.UPrice; this is in foreign currency
+    PUCalcPerc(uprice,PUrw.Extra,cc);//should be in base 1 shouldn't it, PUrw.UPrice
+    t = PUrw.Quant*cc;
+    PUr.ExtraCost = t + PUr.ExtraCost;
+    if (GetVATLaw==25) then begin//vatPolish
+      uprice = uprice + PUrw.ShipCost;
+      uprice = Round(uprice,0);
+    end;
+    PUCalcPerc(uprice,PUrw.CustomsCost,cc);
+    t = PUrw.Quant*cc;
+    PUr.CustomsCost = t + PUr.CustomsCost;
+LSKIPPUROWPUSumUp:;    
+  end;
+  PUr.SumQuant = Round(totqty,2);
+  PUr.ShipCost = Round(PUr.ShipCost,3);
+  PUr.Cost1 = Round(PUr.Cost1,3);
+  PUr.Cost2 = Round(PUr.Cost2,3);
+  PUr.Cost3 = Round(PUr.Cost3,3);
+  PUr.Cost4 = Round(PUr.Cost4,3);
+  PUr.Cost5 = Round(PUr.Cost5,3);
+  PUr.CustomsCost = Round(PUr.CustomsCost,5);
+  PUr.ExtraCost = Round(PUr.ExtraCost,DefaultCurRoundOff);
+  PUr.SumCostPrice = Round(PUr.SumCostPrice,2);//rndtotal should not be rounded, cause creating TR doesnt to it
+
+  PUr.ShipCostRound = shipcost - PUr.ShipCost;
+  PUr.Cost1Round = cost1 - PUr.Cost1;
+  PUr.Cost2Round = cost2 - PUr.Cost2;
+  PUr.Cost3Round = cost3 - PUr.Cost3;
+  PUr.Cost4Round = cost4 - PUr.Cost4;
+  PUr.Cost5Round = cost5 - PUr.Cost5;
+  PUr.CustomsCostRound = customscost - PUr.CustomsCost;
+//  extracost = PUr.ExtraCost;
+  
+  rwcnt = MatRowCnt(PUr);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(PUr,i,PUrw);
+    t = MulRateToBase1(PUr.CurncyCode,PUrw.Sum,PUr.FrRate,PUr.ToRateB1,PUr.ToRateB2,PUr.BaseRate1,PUr.BaseRate2,DefaultCurRoundOff);
+//    s = s + Round(PUrw.Sum,RoundRec.RndFIFO);
+    s = s + Round(PUrw.Quant*PUrw.CostPrice,5);
+    s2 = s2 + t;
+    if (nonblank(PUrw.VATCode)) then begin
+//      AddVATBase(VATr,PUrw.VATCode,PUrw.Sum,blankval,vatcnt,PUr.InclVAT,0);
+      AddVATBase(VATr,PUrw.VATCode,Round(PUrw.Quant*PUrw.CostPrice,2),blankval,vatcnt,PUr.InclVAT,PUr.NoTAXonVAT);//when changing round to 5 pls look in IN>>Register>>Good receipt - wrong round off on VAT
+    end;
+  end;
+  CalcVATBaseVAT(VATr,PUr.InclVAT,PUr.NoTAXonVAT,vatcnt,ms,t);
+  PUr.TAX1Sum = t;
+  ms = Round(ms,roundvat);  
+  if (PUr.InclVAT!=0) then begin
+    ms2 = s;
+  end else begin
+    ms2 = s + ms;
+  end;
+  ms2 = Round(ms2,rndtotal);
+  PUr.SubTotal = Round(s,2);//rndtotal subttoal should not be rounded
+  PUr.VATVal = ms;
+  PUr.PayVal = ms2 + PUr.TAX1Sum;  
+  RETURN;
+END;
+
+global
+procedure PUCalcCostPrice(string item,val pricep,Integer InclVAT,string extra,string curncycode,
+                        val frrat,val to1,val to2,val b1,val b2,
+                        val shipc,val extra1,val extra2,val extra3,val extra4,val extra5,
+                        string custc,var val sump,val qtyp,var val rowsump,string vatcode,Integer exportflag)
+BEGIN
+  val vat;
+  val t,t1,bas;
+  string 2 lvatcode;
+  
+  sump = blankval;
+  if ((pricep==blankval) and (blank(extra)) and
+      (shipc==blankval) and (blank(custc))) then begin
+    goto LPUCalcCostPrice;
+  end;
+  //DivBaseRate(curncycode,pricep,frrat,to1,to2,b1,b2,&bas,NIL,5);
+  bas = MulRateToBase1(curncycode,pricep,frrat,to1,to2,b1,b2,5);
+  if (InclVAT==1) then begin
+    if (nonblank(vatcode)) then begin
+      lvatcode = vatcode;
+    end else begin
+      GetItemVATCode(item,exportflag,lvatcode,false); // To support old Purchase Orders
+    end;
+    MulVATIV(lvatcode,bas,vat,t1,InclVAT,0);
+    bas = bas - vat - t1;
+  end;  
+  sump = sump + bas;
+  if (nonblank(extra)) then begin
+    PUCalcPerc(bas,extra,t);
+    sump = sump + t;
+  end;
+  sump = sump + shipc;
+  if (nonblank(custc)) then begin
+    if (GetVATLaw==25) then begin//vatPolish
+      bas = bas + shipc;
+      bas = Round(bas,0);
+    end;
+    PUCalcPerc(bas,custc,t);
+    sump = sump + t;
+  end;
+  sump = sump + extra1;
+  sump = sump + extra2;
+  sump = sump + extra3;
+  sump = sump + extra4;
+  sump = sump + extra5;
+  CalculatePURowSum(qtyp,pricep,extra,sump,shipc,
+                    extra1,extra2,extra3,extra4,extra5,
+                    custc,rowsump,false,curncycode,
+                    frrat,to1,to2,b1,b2);
+  sump = Round(sump,defaultcurroundoff);  
+LPUCalcCostPrice:;
+  RETURN;
+END;
+
+global
+procedure PURecalcCost(var record PUVc PUp)
+BEGIN
+  row PUVc PUrw;
+  Integer rwcnt,i;
+  val p,s;
+        
+  rwcnt = MatRowCnt(PUp);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(PUp,i,PUrw);
+    if ((PUrw.stp==3) or (PUrw.ovst!=0) or (blank(PUrw.ArtCode))) then begin
+      goto LSKIPPUROWRecalCost;
+    end;
+    s = blankval;
+    p = blankval;
+    PUCalcCostPrice(PUrw.ArtCode,PUrw.UPrice,PUp.InclVAT,PUrw.Extra,PUp.CurncyCode,
+                    PUp.FrRate,PUp.ToRateB1,PUp.ToRateB2,PUp.BaseRate1,PUp.BaseRate2,
+                    PUrw.ShipCost,PUrw.RowCost1,PUrw.RowCost2,PUrw.RowCost3,PUrw.RowCost4,PUrw.RowCost5,
+                    PUrw.CustomsCost,p,PUrw.Quant,s,PUrw.VATCode,PUp.ExportFlag);
+    PUrw.CostPrice = p;
+    PUrw.Sum = s;                    
+    MatRowPut(PUp,i,PUrw);
+LSKIPPUROWRecalCost:;    
+  end;
+  PUSumUp(PUp);
+  RETURN;
+END;
+

@@ -1,0 +1,39 @@
+global
+function Boolean StockMovDClassOrdFlagButtonAction(Integer wn,Integer value)
+begin
+  Boolean res;
+  Integer normalmode,updatemode;
+  record StockMovVc StockMovr;
+  record StockMovVc StockMov2r;
+
+  res = true;
+  normalmode = 0;//Rs_normal
+  updatemode = 2;//Rs_update
+  GetWindowRecord(wn,StockMovr);
+  if (WindowState(wn)==normalmode) then begin
+    if (StockMovr.OrdFlag!=0) then begin
+      //res = false;// Edit ************************** Friday, 12 August 2011 13:13:07
+    end;
+    if (StockMovr.OKFlag!=0) then begin
+      res = false;
+    end;
+    if (StockMovr.SentOKFlag!=0) then begin
+      res = false;
+    end;
+  end;  
+  if (WindowState(wn)==updatemode) then begin
+    GetPrevWindowRecord(wn,StockMov2r);
+    if (StockMov2r.SentOKFlag!=0) then begin
+      res = false;
+    end;
+    if (StockMov2r.OKFlag!=0) then begin
+      res = false;
+    end;
+    if (StockMov2r.OrdFlag!=0) then begin
+      res = false;
+    end;
+  end;  
+  StockMovDClassOrdFlagButtonAction = res;
+  return;
+end;
+

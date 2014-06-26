@@ -1,0 +1,1334 @@
+external function Integer GetIntYc(Date);
+external procedure SplitEclass(string,var Array string);
+external function Boolean CheckTTRPerRow(string,string,string,Boolean,var string,Integer);
+external procedure AddSMRow(record SMVc,Date,string,string,string,string,val,Boolean,Boolean ,var val);
+external function Integer CheckObjs(string,string,var string);
+external function val MulRateToBase1(var string,val,val,val,val,val,val,Integer);
+external procedure AddEuroCurncyNomTrRow(record TRVc,string,string,string,string,val,Boolean,Boolean,var val,string,val,val,val,val,val,val,val,val,LongInt,Boolean,string,string,string);
+external function Boolean GetAccName(string,var string,Integer);
+external updating function Boolean EInvoiceQueTransaction(string,LongInt,string,string,string,Integer,LongInt);
+external function Integer TRVc_AddRoundOffRow(var record TRVc,val,val,string,Boolean,Boolean,Boolean,val,var val);
+external function string 255 CheckTrans(var record TRVc,Integer,Boolean);
+external function val MulWithRateToBase1(var string,Date,val,Integer);
+external function val MulWithRateToBase2(var string,Date,val,Integer);
+external function val FindVAT(string,val,Integer,Integer);
+external function Boolean GetAccName(string,var string,Integer);
+external procedure GetFullCurncyRateText(Boolean,var string,val,val,val,val,val);
+external procedure GetFullCurncyRate (var string,Date,var val,var val,var val,var val,var val);
+external function Boolean PUDClassAfterEditField(Integer,string,Integer,Integer,Integer);
+external outer function Boolean StockMovDClassAfterEditField(Integer,string,Integer,Integer,Integer);
+external procedure GetAlternativeItemCode(string,var string);
+remote procedure ArtCodeAvaible(var string,string);
+external function Boolean ORDClassAfterEditField(Integer,string,Integer,Integer,Integer);
+external function Boolean PODClassAfterEditField(Integer,string,Integer,Integer,Integer);
+external function Boolean SHDClassAfterEditField(Integer,string,Integer,Integer,Integer);
+external procedure PasteSernr(string,record SHVc,record ORVc,var string);
+external procedure ORVc_PasteCurncyCode(var record ORVc,string);
+
+
+
+
+	SetLangMode(LangUkrainian,"UKR",0);
+
+
+procedure AddEuroTrRow(record TRVc TRr,string acc,string objs,string vatcod,string comm,val valv,
+                       val baserate1,val baserate2,Boolean accf,Boolean dcflag,var val totsump,Boolean negamf,string taccnumber,string tfilename,string tcode)
+BEGIN  
+  string 255 curncy;
+  val nilv;
+  
+  nilv = -1;
+  AddEuroCurncyNomTrRow(TRr,acc,objs,vatcod,comm,valv,accf,dcflag,totsump,curncy,nilv,nilv,nilv,baserate1,baserate2,nilv,nilv,nilv,-1,negamf,taccnumber,tfilename,tcode);
+  RETURN;
+END;
+
+procedure SetTRObjectRows(var record TRVc TRr)
+begin
+  record CYBlock CYb;
+  record ObjVc Objr;
+  record ObjVc Obj2r;
+  row TRVc TRrw;
+  Integer i,j,rwcnt;
+  string 255 errstr;
+  string 60 preobj;
+  Array string 20 ac;
+  
+  BlockLoad(CYb);
+  if ((Importing==false) and (nonblank(CYb.Object))) then begin
+    j = 0;
+    SplitEclass(CYb.Object,ac);
+    while (nonblank(ac[j])) begin
+      Objr.Code = ac[j];
+      if (ReadFirstMain(Objr,1,true)) then begin
+        rwcnt = MatRowCnt(TRr);
+        for (i=0; i<rwcnt; i=i+1) begin
+          MatRowGet(TRr,i,TRrw);
+          if (SetInSet(Objr.Code,TRrw.Objects)==false) then begin
+            if (nonblank(TRrw.Objects)) then begin
+              TRrw.Objects = TRrw.Objects & ",";
+            end;
+            TRrw.Objects = TRrw.Objects & Objr.Code;
+            if (CheckObjs(TRrw.AccNumber,TRrw.Objects,errstr)==0) then begin
+              MatRowPut(TRr,i,TRrw);
+            end;
+          end;
+        end;
+      end;
+      j = j + 1;
+    end;
+  end;
+  return;
+end;
+
+global procedure TRSumup1(var record TRVc TRr,var val base2diff)
+BEGIN
+  Integer i,rwcnt;
+  row TRVc TRrw;
+  val deb2,cred2;
+  val CSum,CSum2,dif;
+  string 5 cur;
+  record POSCurncyBlock PCb;// Edit ************************** Wednesday, 13 April 2011 12:27:35
+  
+  SetTRObjectRows(TRr);
+  TRr.DSum = blankval;
+  TRr.CSum = blankval;
+  TRr.DSum2 = blankval;
+  TRr.CSum2 = blankval;
+  rwcnt = MatRowCnt(TRr);
+  for (i=0; i<rwcnt; i=i+1) begin
+    MatRowGet(TRr,i,TRrw);
+    if ((TRrw.stp==1) and (TRrw.ovst==0)) then begin
+      if ((nonblank(TRrw.DebVal)) or (nonblank(TRrw.CredVal))) then begin
+        TRr.DSum = TRr.DSum + TRrw.DebVal;
+        CSum = CSum + TRrw.CredVal;
+      end;
+      if ((nonblank(TRrw.DebVal2)) or (nonblank(TRrw.CredVal2))) then begin
+        deb2 = deb2 + TRrw.DebVal2;
+        cred2 = cred2 + TRrw.CredVal2;
+        TRr.DSum2 = TRr.DSum2 + TRrw.DebVal2;
+        CSum2 = CSum2 + TRrw.CredVal2;
+      end;
+    end;
+  end;
+  TRr.DSum = Round(TRr.DSum,defaultcurroundoff);
+  TRr.DSum2 = Round(TRr.DSum2,defaultcurroundoff);
+  TRr.CSum = -Round(CSum,defaultcurroundoff);
+  TRr.CSum2 = -Round(CSum2,defaultcurroundoff);
+  TRr.DiffVal = TRr.DSum + TRr.CSum;
+  dif=TRr.DSum + round(TRr.CSum,defaultcurroundoff);
+  //cur="UAH";
+  blockload(PCb);// Edit ************************** Wednesday, 13 April 2011 12:27:33
+  //cur="UAH";// Edit ************************** Wednesday, 13 April 2011 12:27:57
+  cur=PCb.CurncyCode;// Edit ************************** Wednesday, 13 April 2011 12:27:56
+  dif=MulWithRateToBase2(cur,TRr.TransDate,dif,defaultcurroundoff);
+  TRr.Diff2Val = TRr.DSum2 + TRr.CSum2 + dif;
+  
+
+  if (base2diff!=-1) then begin
+    deb2 = Round(deb2,defaultcurroundoff);
+    cred2 = -Round(cred2,defaultcurroundoff);
+    base2diff = deb2 + cred2;
+    base2diff = Round(base2diff,defaultcurroundoff);
+  end;
+  RETURN;
+END;
+
+
+	// DEBIT
+global function GetCreditAcc(var string AcccodeMy,var string Comment,string Customer,string LocalmaChine)
+begin
+  record AccBlock Accbl;
+  record CCatVc CCatr;
+  record CUVc CUr;
+  record IVCashVc IVCashr;
+  record AccVc Accr;
+  record LocalMachineAccBlock LMAb;// Edit ************************** Wednesday, 19 October 2011 10:59:48
+  row LocalMachineAccBlock LMArw;// Edit ************************** Wednesday, 19 October 2011 10:59:49
+  integer mtrw,i;// Edit ************************** Wednesday, 19 October 2011 10:59:50
+
+
+ BlockLoad(Accbl);
+	If (nonblank(Accbl.ARAcc)) then begin AcccodeMy=Accbl.ARAcc;  end;
+	//TRrw.AccNumber= // Номер счета
+	
+	CUr.Code=Customer;
+	ReadFirstMain(CUr,1,false);
+	
+CCatr.Code=CUr.CustCat;
+	ReadFirstMain(CCatr,1,false);
+	If (nonblank(CCatr.ARAcc)) then begin AcccodeMy=CCatr.ARAcc; end;
+	If (nonblank(CUr.AccAP)) then begin AcccodeMy=CUr.AccAP; end;
+	
+	
+	
+	blockload(LMAb);// Edit ************************** Wednesday, 19 October 2011 10:59:52
+	mtrw = matrowcnt(LMAb);
+	for(i=0;i<mtrw;i=i+1)begin
+	  matrowget(LMAb,i,LMArw);
+	  if(LMArw.LocalMachine==LocalmaChine)then begin
+	    if(nonblank(LMArw.RecAcc))then begin
+	      AcccodeMy = LMArw.RecAcc;
+	    end;
+	  end;
+	end;
+	
+	Accr.AccNumber=AcccodeMy;
+	ReadFirstMain(Accr,1,false);
+	Comment=Accr.Comment;
+	
+	
+return;
+end;
+
+//CREDIT
+global function GetDebitAcc(var string AcccodeMy,var string Comment,string Customer,string artcode,integer flag, string LocalMachine)
+begin
+  record AccBlock Accbl;
+	record CCatVc CCatr;
+  record CUVc CUr;
+  record AccVc Accr;
+  integer compnr;
+  record INVc INr;
+  record ITVc ITr;  
+  record LocalMachineAccBlock LMAb;// Edit ************************** Wednesday, 19 October 2011 10:59:48
+  row LocalMachineAccBlock LMArw;// Edit ************************** Wednesday, 19 October 2011 10:59:49
+  integer mtrw,i;// Edit ************************** Wednesday, 19 October 2011 10:59:50
+
+  compnr = currentcompany;
+  
+  switch(compnr)begin
+
+  case 1: if (flag == 0) then begin
+            BlockLoad(Accbl);
+            If (nonblank(Accbl.DomSalesAcc)) then begin AcccodeMy=Accbl.DomSalesAcc;  end;
+            CUr.Code=Customer;
+            ReadFirstMain(CUr,1,false);
+            CCatr.Code=CUr.CustCat;
+            ReadFirstMain(CCatr,1,false);
+            If (nonblank(CCatr.AccAP)) then begin AcccodeMy=CCatr.AccAP; end;
+            //If (nonblank(CUr.AccAP)) then begin AcccodeMy=CUr.AccAP; end;
+            
+            blockload(LMAb);// Edit ************************** Wednesday, 19 October 2011 10:59:52
+            mtrw = matrowcnt(LMAb);
+            for(i=0;i<mtrw;i=i+1)begin
+              matrowget(LMAb,i,LMArw);
+              if(LMArw.LocalMachine==LocalMachine)then begin
+                if(nonblank(LMArw.RecAcc))then begin
+                  AcccodeMy = LMArw.SaleAcc;
+                end;
+              end;
+            end;
+            
+            
+            Accr.AccNumber=AcccodeMy;
+            ReadFirstMain(Accr,1,false);
+            Comment=Accr.Comment;
+          end else begin
+            BlockLoad(Accbl);
+            CUr.Code=Customer;
+            ReadFirstMain(CUr,1,false);
+            CCatr.Code=CUr.CustCat;
+            ReadFirstMain(CCatr,1,false);
+            If (nonblank(CCatr.OnAccAccAP)) then begin AcccodeMy=CCatr.OnAccAccAP; end;
+            
+            blockload(LMAb);// Edit ************************** Wednesday, 19 October 2011 10:59:52
+            mtrw = matrowcnt(LMAb);
+            for(i=0;i<mtrw;i=i+1)begin
+              matrowget(LMAb,i,LMArw);
+              if(LMArw.LocalMachine==LocalMachine)then begin
+                if(nonblank(LMArw.RecAcc))then begin
+                  AcccodeMy = LMArw.RetAcc;
+                end;
+              end;
+            end;
+            
+            Accr.AccNumber=AcccodeMy;
+            ReadFirstMain(Accr,1,false);
+            Comment=Accr.Comment;
+          end;
+  
+  //this ia an old algorithm for itek company which add objects from 
+  case 2: if (flag == 0) then begin
+            INr.Code = artcode;
+            readfirstmain(INr,1,true);
+            ITr.Code = INr.Group;
+            Readfirstmain(ITr,1,true);
+            AcccodeMy = ITr.SalesAcc;
+            Accr.AccNumber=AcccodeMy;
+            ReadFirstMain(Accr,1,false);
+            Comment=Accr.Comment;
+          end else begin
+             INr.Code = artcode;
+            readfirstmain(INr,1,true);
+            ITr.Code = INr.Group;
+            Readfirstmain(ITr,1,true);
+            AcccodeMy = ITr.CredSalesAcc;
+            Accr.AccNumber=AcccodeMy;
+            ReadFirstMain(Accr,1,false);
+            Comment=Accr.Comment;
+          end;
+          
+    case 6: if (flag == 0) then begin
+            BlockLoad(Accbl);
+            If (nonblank(Accbl.DomSalesAcc)) then begin AcccodeMy=Accbl.DomSalesAcc;  end;
+            CUr.Code=Customer;
+            ReadFirstMain(CUr,1,false);
+            CCatr.Code=CUr.CustCat;
+            ReadFirstMain(CCatr,1,false);
+            If (nonblank(CCatr.AccAP)) then begin AcccodeMy=CCatr.AccAP; end;
+            //If (nonblank(CUr.AccAP)) then begin AcccodeMy=CUr.AccAP; end;
+            
+            blockload(LMAb);// Edit ************************** Wednesday, 19 October 2011 10:59:52
+            mtrw = matrowcnt(LMAb);
+            for(i=0;i<mtrw;i=i+1)begin
+              matrowget(LMAb,i,LMArw);
+              if(LMArw.LocalMachine==LocalMachine)then begin
+                if(nonblank(LMArw.RecAcc))then begin
+                  AcccodeMy = LMArw.SaleAcc;
+                end;
+              end;
+            end;
+            
+            
+            Accr.AccNumber=AcccodeMy;
+            ReadFirstMain(Accr,1,false);
+            Comment=Accr.Comment;
+          end else begin
+            BlockLoad(Accbl);
+            CUr.Code=Customer;
+            ReadFirstMain(CUr,1,false);
+            CCatr.Code=CUr.CustCat;
+            ReadFirstMain(CCatr,1,false);
+            If (nonblank(CCatr.OnAccAccAP)) then begin AcccodeMy=CCatr.OnAccAccAP; end;
+            
+            blockload(LMAb);// Edit ************************** Wednesday, 19 October 2011 10:59:52
+            mtrw = matrowcnt(LMAb);
+            for(i=0;i<mtrw;i=i+1)begin
+              matrowget(LMAb,i,LMArw);
+              if(LMArw.LocalMachine==LocalMachine)then begin
+                if(nonblank(LMArw.RecAcc))then begin
+                  AcccodeMy = LMArw.RetAcc;
+                end;
+              end;
+            end;
+            
+            Accr.AccNumber=AcccodeMy;
+            ReadFirstMain(Accr,1,false);
+            Comment=Accr.Comment;
+          end;
+  
+  end;
+
+	
+return;
+end;
+
+
+global function GetCashAcc(var string AcccodeMy,var string Comment,string PayMod)
+begin
+  record AccVc Accr;
+  record PMBlock PMr;
+  row PMBlock PMrw;
+  integer i,mtrw;
+  
+  blockload(PMr);
+  
+  mtrw = matrowcnt(PMr);
+  for(i=0;i<mtrw;i=i+1)begin
+    matrowget(PMr,i,PMrw);
+    if(PMrw.Code==PayMod)then begin
+      AcccodeMy = PMrw.AccNr;
+      
+    end;
+  end;
+  
+  Accr.AccNumber=AcccodeMy;
+	ReadFirstMain(Accr,1,false);
+	Comment=Accr.Comment;
+	
+	
+return;
+end;
+
+
+global updating procedure MyTransMn(record RcVc RepSpec)
+begin
+  record IVCashVc IVCashr;
+  record TRVc TRr,TRrtest;
+  record AccBlock ARb;
+  record VATCodeBlock VATCodeRec;
+  row VATCodeBlock VATCoderw;
+  record AccVc Accr;
+  record SMVc VATr;
+  record CUVc CUr;
+  row SMVc VATrw;
+  Integer flag;
+  string 255 ftxt,tstr,tstr2;
+  string 10 firstVATAC,firstVATCode;
+  val VATSum,TotSum,TAXSum;
+  val t1,rs,t;
+  val frrate,torate1,torate2,baserate1,baserate2;
+  Boolean dc1,dc2;
+  val sum4,instalsum,interestsum;
+  val tvat,srev,nilv;
+  val tax1val,tax1curval,vatbase;
+  string 10 firstrev,salesacc;
+  string 60 objstr;
+  LongInt sernr;
+
+  string 10 taccnumber;
+  row TRVc TRrw,TR1rw;
+  Boolean TrHs,testf;
+  val deb2,cred2;
+  val CSum,CSum2,base2diff;
+  record CCatVc CCatr;
+  record AccBlock Accbl;
+  string 10 AcccodeMy,Acccode0My,Acccode1My;
+  string 60 Comment;
+  string 20 Customer;
+  val rate,VATRate,VATco;
+  record VATCodeBlock VATb;
+  row VATCodeBlock VATrw1;
+  row IVCashVc IVCrw,IVC1rw;
+  integer ii;
+  val to1,to2,br1,br2;
+  String 5 curcode,PayMod; 
+  val sumdeb,sumcred,difcred,difdeb,sumcurdeb,sumcurcred,curdifdeb,vatrow;
+  integer rowcount,r,loci,locmtrw;
+  
+  record INVc INr;
+  record LocalMachineAccBlock LMAb;
+  row LocalMachineAccBlock LMArw;
+  
+  
+  Integer i,rwcnt,vcrwcnt,rwcnt11,mtrw,j,s,rpmrwcnt,rpm;
+  
+  
+  record RestPMBlock RPMr;
+  row RestPMBlock RPMrw;
+  blockload(RPMr);
+  
+  TrHs=true;
+  //IVCashr.TransDate = CurrentDate;
+  IVCashr.TransDate = RepSpec.sEndDate;
+  while (LoopBackKey("TransDate",IVCashr,1,TrHs)) begin
+    testf = true;
+    TRrtest.Number = IVCashr.SerNr;
+    TRrtest.IntYc = 666;
+    if (readfirstmain(TRrtest,2,true)) then begin
+      if ((TRrtest.Number == IVCashr.SerNr) and (TRrtest.IntYc == 666)) then begin
+        testf = false;
+      end;
+    end;
+    if (not(testf)) and (IVCashr.TransDate<RepSpec.sStartDate or IVCashr.TransDate>RepSpec.sEndDate) then begin
+      TrHs = false;
+    end;
+    if (testf) then begin
+    
+      if (IVCashr.OKFlag!=0) then begin
+        REcordNew(TRr);
+        s=0;
+       
+       //***********************************************  DEBIT	
+        if(IVCashr.CashValue!=0)then begin    //-----------------------------------------CASH
+          Customer=IVCashr.CustCode;
+          AcccodeMy="";
+          Comment="";
+          
+          rpmrwcnt = matrowcnt(RPMr);
+          for(rpm=0;rpm<rpmrwcnt;rpm=rpm+1)begin
+            matrowget(RPMr,rpm,RPMrw);
+            if(IVCashr.LocalMachineCode==RPMrw.MachineName)then begin
+              PayMod = RPMrw.PMCode;
+            end;
+          end;
+          
+          GetCashAcc(AcccodeMy,Comment,PayMod);// Edit ************************** Thursday, 23 June 2011 16:27:46
+          TRrw.stp=1;
+          TRrw.AccNumber=AcccodeMy;
+          TRrw.Comment=Comment; //коментарий к аккнамберу
+          TRrw.Objects="";//IVCashr.Objects;// Объект
+          TRrw.Curncy=IVCashr.CurncyCode; //валюта (код валюты)
+          TRr.TransDate = IVCashr.TransDate;
+          //maybe there calculate currency Rate
+          GetFullCurncyRate(TRrw.Curncy,TRr.TransDate,frrate,to1,to2,br1,br2);
+          if(IVCashr.CashValue>=0) then begin
+            TRrw.DebVal=MulWithRateToBase1(TRrw.Curncy,TRr.TransDate,IVCashr.CashValue-IVCashr.RetValue,defaultcurroundoff); //no comment
+            TRrw.CredVal=BlankVal;
+          end else begin
+            TRrw.CredVal=-MulWithRateToBase1(TRrw.Curncy,TRr.TransDate,IVCashr.CashValue-IVCashr.RetValue,defaultcurroundoff); //no comment
+            TRrw.DebVal=BlankVal;
+          end;
+          //TRrw.CompCode=IVCashr.CustCode; //Имя компании клиента или поставщика может быть пустым Из актов накладных - ПОКУПАТЕЛЬ!!!!!
+          TRrw.Typ=0; //Тип клиент/поставщик или еще что-то****************
+          TRrw.FrRate = frrate;
+          TRrw.ToRateB1 = to1;
+          rate=TRrw.BaseRate1/TRrw.BaseRate2;
+          if(IVCashr.CashValue>=0) then begin
+            //TRrw.CurDebVal = round(TRrw.DebVal*frrate/to1,defaultcurroundoff);
+            TRrw.CurDebVal = IVCashr.CashValue-IVCashr.RetValue;
+            VATco=TRrw.DebVal;
+            TRrw.CredVal2=blankval; //credit 2
+            TRrw.CurCredVal=blankval; //credit 2
+          end else begin
+            //TRrw.CurCredVal = round(TRrw.CredVal*frrate/to1,defaultcurroundoff);
+            TRrw.CurCredVal = -(IVCashr.CashValue-IVCashr.RetValue);
+            VATco=TRrw.CredVal;
+            TRrw.DebVal2=blankval; //credit 2
+            TRrw.CurDebVal=blankval; //credit 2
+          end;
+          MatrowInsert(TRr,s,TRrw);
+          s=s+1;
+        end;
+        if(IVCashr.RecValue!=0)then begin    //-----------------------------------------TERMINAL
+          Customer=IVCashr.CustCode;
+          AcccodeMy="";
+          Comment="";
+          GetCashAcc(AcccodeMy,Comment,IVCashr.PayDeal);// Edit ************************** Thursday, 23 June 2011 16:27:46
+          TRrw.stp=1;
+          TRrw.AccNumber=AcccodeMy;
+          TRrw.Comment=Comment; //коментарий к аккнамберу
+          TRrw.Objects="";//IVCashr.Objects;// Объект
+          TRrw.Curncy=IVCashr.CurncyCode; //валюта (код валюты)
+          TRr.TransDate = IVCashr.TransDate;
+          GetFullCurncyRate(TRrw.Curncy,TRr.TransDate,frrate,to1,to2,br1,br2);
+          if(IVCashr.RecValue>=0) then begin
+            TRrw.DebVal=MulWithRateToBase1(TRrw.Curncy,TRr.TransDate,IVCashr.RecValue,defaultcurroundoff); //no comment
+            TRrw.CredVal=BlankVal;
+          end else begin
+            TRrw.CredVal=-MulWithRateToBase1(TRrw.Curncy,TRr.TransDate,IVCashr.RecValue,defaultcurroundoff); //no comment
+            TRrw.DebVal=BlankVal;
+          end;
+          TRrw.FrRate = frrate;
+          TRrw.ToRateB1 = to1;
+          rate=TRrw.BaseRate1/TRrw.BaseRate2;
+          if(IVCashr.RecValue>=0) then begin
+            //TRrw.CurDebVal = round(TRrw.DebVal*frrate/to1,defaultcurroundoff);
+            TRrw.CurDebVal = IVCashr.RecValue;
+            VATco=TRrw.DebVal;
+            TRrw.CredVal2=blankval; //credit 2
+            TRrw.CurCredVal=blankval; //credit 2
+          end else begin
+            //TRrw.CurCredVal = round(TRrw.CredVal*frrate/to1,defaultcurroundoff);
+            TRrw.CurCredVal = -IVCashr.RecValue;
+            VATco=TRrw.CredVal;
+            TRrw.DebVal2=blankval; //credit 2
+            TRrw.CurDebVal=blankval; //credit 2
+          end;
+          MatrowInsert(TRr,s,TRrw);
+          s=s+1;
+        end;
+        if(IVCashr.RecValue3!=0)then begin    //-----------------------------------------TERMINAL
+          Customer=IVCashr.CustCode;
+          AcccodeMy="";
+          Comment="";
+          GetCashAcc(AcccodeMy,Comment,IVCashr.PayDeal3);// Edit ************************** Thursday, 23 June 2011 16:27:46
+          TRrw.stp=1;
+          TRrw.AccNumber=AcccodeMy;
+          TRrw.Comment=Comment; //коментарий к аккнамберу
+          TRrw.Objects="";//IVCashr.Objects;// Объект
+          TRrw.Curncy=IVCashr.CurncyCode; //валюта (код валюты)
+          TRr.TransDate = IVCashr.TransDate;
+          GetFullCurncyRate(TRrw.Curncy,TRr.TransDate,frrate,to1,to2,br1,br2);
+          if(IVCashr.RecValue3>=0) then begin
+            TRrw.DebVal=MulWithRateToBase1(TRrw.Curncy,TRr.TransDate,IVCashr.RecValue3,defaultcurroundoff); //no comment
+            TRrw.CredVal=BlankVal;
+          end else begin
+            TRrw.CredVal=-MulWithRateToBase1(TRrw.Curncy,TRr.TransDate,IVCashr.RecValue3,defaultcurroundoff); //no comment
+            TRrw.DebVal=BlankVal;
+          end;
+          TRrw.FrRate = frrate;
+          TRrw.ToRateB1 = to1;
+          rate=TRrw.BaseRate1/TRrw.BaseRate2;
+          if(IVCashr.RecValue3>=0) then begin
+            //TRrw.CurDebVal = round(TRrw.DebVal*frrate/to1,defaultcurroundoff);
+            TRrw.CurDebVal = IVCashr.RecValue3;
+            VATco=TRrw.DebVal;
+            TRrw.CredVal2=blankval; //credit 2
+            TRrw.CurCredVal=blankval; //credit 2
+          end else begin
+            //TRrw.CurCredVal = round(TRrw.CredVal*frrate/to1,defaultcurroundoff);
+            TRrw.CurCredVal = -IVCashr.RecValue3;
+            VATco=TRrw.CredVal;
+            TRrw.DebVal2=blankval; //credit 2
+            TRrw.CurDebVal=blankval; //credit 2
+          end;
+          MatrowInsert(TRr,s,TRrw);
+          s=s+1;
+        end;
+        if(IVCashr.RecValue2!=0)then begin    //-----------------------------------------SERTIFICAT
+          Customer=IVCashr.CustCode;
+          AcccodeMy="";
+          Comment="";
+          GetCashAcc(AcccodeMy,Comment,IVCashr.PayDeal2);// Edit ************************** Thursday, 23 June 2011 16:27:46
+          TRrw.stp=1;
+          TRrw.AccNumber=AcccodeMy;
+          TRrw.Comment=Comment; //коментарий к аккнамберу
+          TRrw.Objects="";//IVCashr.Objects;// Объект
+          TRrw.Curncy=IVCashr.CurncyCode; //валюта (код валюты)
+          TRr.TransDate = IVCashr.TransDate;
+          GetFullCurncyRate(TRrw.Curncy,TRr.TransDate,frrate,to1,to2,br1,br2);
+          if(IVCashr.RecValue2>=0) then begin
+            TRrw.DebVal=MulWithRateToBase1(TRrw.Curncy,TRr.TransDate,IVCashr.RecValue2,defaultcurroundoff); //no comment
+            TRrw.CredVal=BlankVal;
+          end else begin
+            TRrw.CredVal=-MulWithRateToBase1(TRrw.Curncy,TRr.TransDate,IVCashr.RecValue2,defaultcurroundoff); //no comment
+            TRrw.DebVal=BlankVal;
+          end;
+          TRrw.FrRate = frrate;
+          TRrw.ToRateB1 = to1;
+          rate=TRrw.BaseRate1/TRrw.BaseRate2;
+          if(IVCashr.RecValue2>=0) then begin
+            //TRrw.CurDebVal = round(TRrw.DebVal*frrate/to1,defaultcurroundoff);
+            TRrw.CurDebVal = IVCashr.RecValue2;
+            VATco=TRrw.DebVal;
+            TRrw.CredVal2=blankval; //credit 2
+            TRrw.CurCredVal=blankval; //debit 2
+          end else begin
+            //TRrw.CurCredVal = round(TRrw.CredVal*frrate/to1,defaultcurroundoff);
+            TRrw.CurCredVal = -IVCashr.RecValue2;
+            VATco=TRrw.CredVal;
+            TRrw.DebVal2=blankval; //credit 2
+            TRrw.CurDebVal=blankval; //debit 2
+          end;
+          MatrowInsert(TRr,s,TRrw);
+          s=s+1;
+        end;
+        
+        //************************************************* CREDIT
+        Customer=IVCashr.CustCode;
+        AcccodeMy="";
+        Comment="";
+        GetCreditAcc(AcccodeMy,Comment,Customer,IVCashr.LocalMachineCode);
+        TRrw.stp=1;
+        mtrw = matrowcnt(IVCashr);
+        //for(j=0;j<mtrw;j=j+1)begin
+        //  matrowget(IVCashr,j,IVCrw);  
+          TRrw.AccNumber=AcccodeMy;
+          TRrw.Comment=Comment; //коментарий к аккнамберу
+          TRrw.Objects="";//IVCashr.Objects;// Объект
+          TRrw.Curncy=IVCashr.CurncyCode; //валюта (код валюты)
+          TRr.TransDate = IVCashr.TransDate;
+          GetFullCurncyRate(TRrw.Curncy,TRr.TransDate,frrate,to1,to2,br1,br2);
+          if(IVCashr.Sum4>=0) then begin
+            TRrw.CredVal=MulWithRateToBase1(TRrw.Curncy,TRr.TransDate,IVCashr.Sum4,defaultcurroundoff); //no comment
+            TRrw.DebVal=BlankVal;
+          end else begin
+            TRrw.DebVal=-MulWithRateToBase1(TRrw.Curncy,TRr.TransDate,IVCashr.Sum4,defaultcurroundoff); //no comment
+            TRrw.CredVal=BlankVal;
+          end;
+          TRrw.FrRate = frrate;
+          TRrw.ToRateB1 = to1;
+          rate=TRrw.BaseRate1/TRrw.BaseRate2;
+          if(IVCashr.Sum4>=0) then begin
+            TRrw.CurCredVal = IVCashr.Sum4;
+            TRrw.DebVal2=blankval; //credit 2
+            TRrw.CurDebVal=blankval; //debit 2
+          end else begin
+            TRrw.CurDebVal = -IVCashr.Sum4;
+            TRrw.CredVal2=blankval; //credit 2
+            TRrw.CurCredVal=blankval; //debit 2
+          end;
+          MatrowInsert(TRr,s,TRrw);
+          s=s+1;
+        //end;
+      //***********************************************  DEBIT	
+        Customer=IVCashr.CustCode;
+        AcccodeMy="";
+        Comment="";
+        GetCreditAcc(AcccodeMy,Comment,Customer,IVCashr.LocalMachineCode);
+        TRrw.stp=1;
+        TRrw.AccNumber=AcccodeMy;
+        TRrw.Comment=Comment; //коментарий к аккнамберу
+        TRrw.Objects="";//IVCashr.Objects;// Объект
+        TRrw.Curncy=IVCashr.CurncyCode; //валюта (код валюты)
+        TRr.TransDate = IVCashr.TransDate;
+        GetFullCurncyRate(TRrw.Curncy,TRr.TransDate,frrate,to1,to2,br1,br2);
+        if(IVCashr.Sum4>=0) then begin
+          TRrw.DebVal=MulWithRateToBase1(TRrw.Curncy,TRr.TransDate,IVCashr.Sum4,defaultcurroundoff); //no comment
+          TRrw.CredVal=BlankVal;
+        end else begin
+          TRrw.CredVal=-MulWithRateToBase1(TRrw.Curncy,TRr.TransDate,IVCashr.Sum4,defaultcurroundoff); //no comment
+          TRrw.DebVal=BlankVal;
+        end;
+        TRrw.CompCode=IVCashr.CustCode; //Имя компании клиента или поставщика может быть пустым Из актов накладных - ПОКУПАТЕЛЬ!!!!!
+        TRrw.Typ=1; //Тип клиент/поставщик или еще что-то****************
+        TRrw.SerNr=IVCashr.SerNr; //номер акта/накладной
+        TRrw.DueDate =  IVCashr.TransDate;//Термин сплати
+        TRrw.FrRate = frrate;
+        TRrw.ToRateB1 = to1;
+        rate=TRrw.BaseRate1/TRrw.BaseRate2;
+        if(IVCashr.Sum4>=0) then begin
+          //TRrw.CurDebVal = round(TRrw.DebVal*frrate/to1,defaultcurroundoff);
+          TRrw.CurDebVal = IVCashr.Sum4;
+          VATco=TRrw.DebVal;
+          TRrw.CredVal2=blankval; //credit 2
+          TRrw.CurCredVal=blankval; //credit 2
+        end else begin
+          //TRrw.CurCredVal = round(TRrw.CredVal*frrate/to1,defaultcurroundoff);
+          TRrw.CurCredVal = -IVCashr.Sum4;
+          VATco=TRrw.CredVal;
+          TRrw.DebVal2=blankval; //credit 2
+          TRrw.CurDebVal=blankval; //credit 2
+        end;
+        MatrowInsert(TRr,s,TRrw);
+        s=s+1;
+        mtrw = matrowcnt(IVCashr);
+        for(j=0;j<mtrw;j=j+1)begin
+          matrowget(IVCashr,j,IVC1rw);  
+          //************************************************* CREDIT
+          AcccodeMy="";
+          Acccode0My="";
+          Acccode1My="";
+          Comment="";
+          if(IVCashr.Sum4>=0) then begin
+            flag = 0;
+            GetDebitAcc(AcccodeMy,Comment,Customer,IVC1rw.ArtCode,flag,IVCashr.LocalMachineCode);
+          end else begin
+            flag = 1;
+            GetDebitAcc(AcccodeMy,Comment,Customer,IVC1rw.ArtCode,flag,IVCashr.LocalMachineCode);
+          end;
+          TRrw.AccNumber=AcccodeMy;
+          TRrw.Comment=Comment; //коментарий к аккнамберу
+          objstr="";
+          if nonblank(IVC1rw.Objects) then begin
+            objstr=IVC1rw.Objects;
+          end;
+          if nonblank(IVCashr.Objects) then begin
+            if nonblank(objstr) then begin
+              objstr=objstr & "," & IVCashr.Objects;
+            end else begin
+              objstr=IVCashr.Objects;
+            end;
+          end;
+          TRrw.Objects=objstr;//IVCashr.Objects;// Объект
+          blockload(VATb);
+          rwcnt=MatRowCnt(VATb);
+          for (i=0;i<rwcnt;i=i+1) begin
+            MatRowGet(VATb,i,VATrw1);
+            if (VATrw1.VATCode==IVC1rw.VATCode) then begin 
+              VATRate=VATrw1.ExVatpr;
+              if (VATRate!=0) then begin
+                  Acccode0My=VATrw1.SalesVATAcc; 
+              end else begin
+                  Acccode1My=VATrw1.SalesVATAcc;
+              end;
+            end;	
+          end;
+          TRrw.DebVal=blankval; //no comment
+          TRrw.CredVal=blankval;
+          //INr.Code = IVC1rw.ArtCode;
+          //ReadFirstMain(INr,1,true);
+          
+          if(currentcompany == 6)then begin
+          	TRrw.Curncy="UAH_B";
+			/*If(setinset("UAH_PURCHASE2",TRrw.Objects))then begin
+					TRrw.Curncy="UAH_B";
+					end else begin
+						If(setinset("UAH_APPLE",TRrw.Objects))then begin
+						  TRrw.Curncy="UAH_B";
+						end else begin
+							If(setinset("UAH_PURCHASE",TRrw.Objects))then begin
+							TRrw.Curncy="UAH_B";
+							end else begin
+								If(setinset("UAH_JBL",TRrw.Objects))then begin
+								TRrw.Curncy="UAH_B";
+								end else begin
+									If(setinset("UAH_E",TRrw.Objects))then begin
+									TRrw.Curncy="UAH_B";
+									end else begin
+										If(setinset("UAH_B",TRrw.Objects))then begin
+										TRrw.Curncy="UAH_B";
+										end else begin
+											//TRrw.Curncy=IVCashr.CurncyCode;
+											TRrw.Curncy="UAH_B";
+										end;
+									end;
+								end;
+							end;
+						end;
+					end;*/
+				end else begin
+          
+				If(setinset("UAH_PURCHASE2",TRrw.Objects))then begin
+				TRrw.Curncy="UAH_T";
+				end else begin
+					If(setinset("UAH_APPLE",TRrw.Objects))then begin
+					  TRrw.Curncy="UAH_A";
+					end else begin
+						If(setinset("UAH_PURCHASE",TRrw.Objects))then begin
+						TRrw.Curncy="UAH_P";
+			  			end else begin
+			  				If(setinset("UAH_JBL",TRrw.Objects))then begin
+							TRrw.Curncy="UAH_J";
+			  				end else begin
+								If(setinset("UAH_E",TRrw.Objects))then begin
+								TRrw.Curncy="UAH_E";
+								end else begin
+									If(setinset("UAH_B",TRrw.Objects))then begin
+									TRrw.Curncy="UAH_B";
+									end else begin
+										TRrw.Curncy=IVCashr.CurncyCode;
+									end;
+          						end;
+          					end;
+          				end;
+          			end;
+          		end;
+          		end;
+          	
+          
+          GetFullCurncyRate(TRrw.Curncy,TRr.TransDate,frrate,to1,to2,br1,br2);
+          vatrow = 0;
+          if(flag==0) then begin
+            TRrw.VATCode=IVC1rw.VATCode; 
+            vatrow = IVC1rw.Sum;//round((IVC1rw.Sum-FindVAT(IVC1rw.VATCode,IVC1rw.Sum,1,0)),defaultcurroundoff);
+            TRrw.CredVal=MulWithRateToBase1(TRrw.Curncy,TRr.TransDate,vatrow,defaultcurroundoff);//round(IVC1rw.Sum/(100+VATRate)*100,defaultcurroundoff);//IVCashr.Sum4-IVCashr.Sum3; //no comment
+            VATco=VATco-TRrw.CredVal;
+          end else begin
+            TRrw.VATCode=""; 
+            TRrw.DebVal=-MulWithRateToBase1(TRrw.Curncy,TRr.TransDate,(IVC1rw.Sum),defaultcurroundoff);//round(IVC1rw.Sum/(100+VATRate)*100,defaultcurroundoff);//IVCashr.Sum4-IVCashr.Sum3; //no comment
+            VATco=0;
+          end;
+          TRrw.DueDate =  "";//Термин сплати
+          TRrw.CompCode=""; //Имя компании клиента или поставщика может быть пустым Из актов накладных - ПОКУПАТЕЛЬ!!!!!
+          TRrw.Typ=0; //Тип клиент/поставщик или еще что-то****************
+          TRrw.SerNr=""; //номер акта/накладной
+          TRrw.FrRate = frrate;
+          TRrw.ToRateB1 = to1;
+          rate=TRrw.BaseRate1/TRrw.BaseRate2;
+          if(flag==0) then begin
+            TRrw.CurDebVal=blankval; //debit 2
+            TRrw.DebVal2=blankval; //debit 2
+            TRrw.CurCredVal=IVC1rw.Sum;
+          end else begin
+            TRrw.CurCredVal=blankval; //debit 2
+            TRrw.CredVal2=blankval; //debit 2
+            TRrw.CurDebVal=-IVC1rw.Sum;
+          end;
+          MatrowInsert(TRr,s,TRrw);
+          s=s+1;
+        //************************************************* VAT
+          if(false) then begin//if(flag==0) then begin
+            Accr.AccNumber=Acccode0My;
+            ReadFirstMain(Accr,1,false);
+            Comment=Accr.Comment;
+            TRrw.AccNumber=Acccode0My;
+            TRrw.Comment=Comment; //коментарий к аккнамберу
+            TRrw.Objects="";//IVCashr.Objects;// Объект
+            TRrw.DebVal=blankval; //no comment
+            TRrw.CredVal=MulWithRateToBase1(TRrw.Curncy,TRr.TransDate,IVC1rw.Sum-vatrow,defaultcurroundoff); //no comment
+            TRrw.VATCode=""; //НДС код
+            TRrw.DueDate =  "";//Термин сплати
+            TRrw.CompCode=""; //Имя компании клиента или поставщика может быть пустым Из актов накладных - ПОКУПАТЕЛЬ!!!!!
+            TRrw.Typ=0; //Тип клиент/поставщик или еще что-то****************
+            TRrw.SerNr=""; //номер акта/накладной            TRrw.FrRate = frrate;
+            TRrw.FrRate = frrate;
+            TRrw.ToRateB1 = to1;
+            TRrw.DebVal2=blankval; //debit 2
+            TRrw.CurDebVal=blankval; //debit 2
+            TRrw.CurCredVal=round(TRrw.CredVal*frrate/to1,2);
+            if (TRrw.CurCredVal!=0) or (TRrw.CurDebVal!=0) then begin
+           //   MessageBox(0,s);
+              MatrowInsert(TRr,s,TRrw);
+            //  MessageBox(0,TRrw.AccNumber & "_" & s & "_" & IVCashr.SerNr & "_2");
+              s=s+1;
+            end;
+          end;
+        end;  
+      //************************************************** // UAH DIFFERENCE
+      
+        TRrw.Objects="";//IVCashr.Objects;// Объект
+        TRrw.Curncy=""; //валюта (код валюты)
+        GetFullCurncyRate(TRrw.Curncy,TRr.TransDate,frrate,to1,to2,br1,br2);
+        TRrw.DebVal=blankval; //no comment
+        TRrw.CredVal=blankval; //no comment
+        TRrw.VATCode=""; //НДС код
+        TRrw.DueDate =  "";//Термин сплати
+        TRrw.CompCode=""; //Имя компании клиента или поставщика может быть пустым Из актов накладных - ПОКУПАТЕЛЬ!!!!!
+        TRrw.Typ=0; //Тип клиент/поставщик или еще что-то****************
+        TRrw.SerNr=""; //номер акта/накладной        TRrw.FrRate = frrate;
+        TRrw.ToRateB1 = blankval;
+        TRrw.FrRate = blankval;
+        TRrw.DebVal2=blankval; //debit 2
+        TRrw.CurDebVal=blankval; //debit 2
+        sumdeb=0;
+        sumcred=0;
+        sumcurdeb = 0;
+        sumcurcred = 0;
+        rowcount = matrowcnt(TRr);
+        for (r=0;r<rowcount;r=r+1) begin
+          Matrowget(TRr,r,TR1rw);
+          sumcurdeb = sumcurdeb+TR1rw.CurDebVal;
+          sumcurcred = sumcurcred+TR1rw.CurCredVal;
+          TRrw.CurCredVal=blankval;
+          TRrw.CurDebVal=blankval;
+          sumdeb = sumdeb+TR1rw.DebVal;
+          sumcred = sumcred+TR1rw.CredVal;
+          TRrw.CredVal=blankval;
+          TRrw.DebVal=blankval;
+        end;
+        difdeb = sumcred-sumdeb;
+        curdifdeb = sumcurcred-sumcurdeb;
+        
+        blockload(LMAb);
+        
+        locmtrw = matrowcnt(LMAb);
+        for(loci=0;loci<locmtrw;loci=loci+1)begin
+          matrowget(LMAb,loci,LMArw);
+          if(LMArw.LocalMachine==IVCashr.LocalMachineCode)then begin
+            if(difdeb<0)then begin
+              AcccodeMy = LMArw.CurDiffCred;
+            end else begin
+              AcccodeMy = LMArw.CurDiffDeb;
+            end;
+          end;
+        end;
+        Accr.AccNumber=AcccodeMy;
+        ReadFirstMain(Accr,1,false);
+        Comment=Accr.Comment;
+        TRrw.AccNumber=AcccodeMy;
+        TRrw.Comment=Comment; //коментарий к аккнамберу
+        
+        if (difdeb!=0 or curdifdeb!=0) then begin
+          if (difdeb<0)then begin
+            TRrw.CredVal=-difdeb;
+          end;
+          if (difdeb>0)then begin
+            TRrw.DebVal=difdeb;
+          end;
+          if (curdifdeb<0)then begin
+            TRrw.CurCredVal=-curdifdeb;
+          end;
+          if (curdifdeb>0)then begin
+            TRrw.CurDebVal=curdifdeb;
+          end;
+          MatrowInsert(TRr,s,TRrw);
+          s=s+1;
+        end;
+      //*******************************************************
+      
+        TRr.TransDate=IVCashr.TransDate; //Дата транзакции
+        VATco=0;
+        TRr.Number=IVCashr.SerNr;//NextSerNr("TRVc",TRr.TransDate,-1,false,"")-1+1;  //Номер счета
+        TRr.RegDate=CurrentDate; //Дата добавления
+        TRr.Comment="POS " & IVCashr.CustCode & " " & IVCashr.Addr0;//коментарий
+        TRr.Sign=IVCashr.SalesMan; //Имя пользователя Логин
+        TRr.IntYc=666;//GetIntYc(IVCashr.TransDate); //Что-то связаное с датой {отвечает за то из какого документа было сделано. Открывает запись подсистемы - документ типа инвойс или что-то такое
+        TRr.ExportedFlag=0; //Тоже ноль
+        TRSumup1(TRr,base2diff);
+        TRr.LastChangeDate=CurrentDate; //дата последнего изменения - ставить такой же как Дата добавления
+        TRr.RegTime=Currenttime; //Время добавления
+        BaseRate1=TRrw.BaseRate1;
+        Baserate2=TRrw.BaseRate1;
+        TotSum=TRr.DSum2;
+        CheckTrans(TRr,2,false);
+       //MessageBox(0,TRr.Number);
+        
+        
+        RecordInsert(TRr,true);
+      end;
+    end;
+  end;
+return;
+end;
+
+
+global updating procedure MyCreatePerDsm()
+BEGIN
+integer wn,mtrw,i,k,wn1;
+record PUVc PUr;
+record StockMovVc SMr;
+row StockMovVc SMrw;
+row PUVc PUrw;
+string 20 Art,Ser;
+record INVc INr;
+
+	RecordNew(SMr);
+	wn = curwindow;
+	getwindowrecord(wn,PUr);
+	
+	OpenWindow("StockMovDClass",0,0,"","",SMr);
+	wn1 = CurWindow;
+	DeselectWindow(wn1,true);
+		
+	mtrw = MatRowCnt(PUr);
+		for(i=0;i<mtrw;i=i+1) begin
+		matRowGet(PUr,i,PUrw);
+		  INr.Code = PUrw.ArtCode;
+		  ReadFirstMain(INr,1,true);
+		  if(INr.SerNrf==0)then begin
+        SMrw.ArtCode = PUrw.ArtCode;
+        SMrw.Quant = PUrw.Quant;
+        SMrw.OrdQuant = PUrw.Quant;
+        matRowPut(SMr,i,SMrw);
+			end else begin
+			  SMrw.ArtCode = PUrw.ArtCode;
+        SMrw.SerialNr = PUrw.SerialNr;  
+        SMrw.Quant = 1;
+        SMrw.OrdQuant = 1;
+        matRowPut(SMr,i,SMrw);
+
+			end;
+			
+		end;
+		
+		
+	PutWindowRecord(wn1,SMr);
+	//	
+	//DeselectWindow(wn1,true);
+	SelectWindow(wn1);
+	for (k=0;k<mtrw;k=k+1) begin
+		StockMovDClassAfterEditField(wn1,"ArtCode",0, k,1);
+	end;
+	
+return;
+end;
+
+
+
+global updating procedure StockMovImportFromFileDsm()
+begin
+  integer wn,mtrw,i,k,j,g,ii,ch,s;
+	record StockMovVc SMr;
+	row StockMovVc SMrw;
+	record INVc INr;
+	string 20 Art,Ser,Flag,sercut,sercut1;
+	boolean testf,res;
+	string 40 altcode;
+	Array string 40 arArt,arSer,arFlag;
+	area MyArea;
+	
+	wn = CurWindow;	
+	getwindowrecord(wn,SMr);
+	mtrw = MatRowCnt(SMr);
+		SetAreaZeroSize(MyArea);
+	
+	if (SMr.OKFlag==0) then begin
+		if (fileexists("../ImportPU.txt")) then begin
+			OpenFile("../ImportPU.txt");
+			ii=0;
+			
+			while (TestEOF()==false) begin
+					
+					arArt[ii] = importfield;
+					arSer[ii] = importfield;
+					sercut = arSer[ii];
+					sercut1 = "";
+					
+					for(s=0;s<len(sercut);s=s+1)begin
+					  if(mid(sercut,s,1)!=" ")then begin
+					    sercut1 = sercut1 & mid(sercut,s,1);
+					  end;
+					end;
+					arSer[ii] = sercut1;
+					
+					arFlag[ii] = importfield;
+					NextImportLine(true);
+					ii=ii+1;
+			end;
+			Closefile;
+	
+			
+			if (mtrw>0) then begin
+				for(g=0;g<mtrw;g=g+1) begin
+					MatRowGet(SMr,0,SMrw);
+					if (blank(SMrw.ArtCode)) then begin
+						matrowdelete(SMr,g);
+						g=-1;
+						mtrw = mtrw-1;
+					end;
+				end;
+			end;
+			
+			if (mtrw==0) then begin
+				ch = 1;
+				for (i=0;i<ii;i=i+1) begin
+					
+					Art = arArt[i];
+					Ser = arSer[i];
+										
+					SMrw.ArtCode = Art;
+					SMrw.SerialNr = Ser;   
+					matRowPut(SMr,i,SMrw);
+				end;
+			end
+			else
+			begin
+				ch = 2;
+				for (k=0;k<ii;k=k+1) begin
+					Art = arArt[k];
+					Ser = arSer[k];
+					Flag = arFlag[k];
+					testf = true;
+					
+					altcode = "";
+					if (Flag != "+") then begin
+						INr.AlternativeCode = Art;
+						if (ReadFirstKey("AlternativeCode",INr,1,false)) then begin
+							if (INr.AlternativeCode == Art) then begin
+								altcode = INr.Code;
+							end;
+						end;
+						
+						INr.BarCode = Art;
+						if (ReadFirstKey("BarCode",INr,1,false)) then begin
+              if (INr.BarCode == Art) then begin
+                altcode = INr.Code;
+								end;
+            end;
+			  
+						if (nonblank(altcode)) then begin
+							Art = altcode;
+						end;
+						for (i=0;i<mtrw;i=i+1) begin
+							MatRowGet(SMr,i,SMrw);
+							
+							if ((SMrw.ArtCode == Art) and (blank(SMrw.SerialNr)) and testf) then begin
+								SMrw.SerialNr = Ser;
+								Flag = "+";
+								testf = false;
+								matRowPut(SMr,i,SMrw);
+							end;
+						end;
+					end;
+				AddTextToArea(Art & chr(9) & Ser & chr(9) & Flag & chr(13) & chr(10),MyArea);
+				end;
+			WriteAreaToFile(MyArea,"../ImportPU.txt",0);
+			end;
+			if (testf) then begin
+				MessageBox(0,"‚ файле импорта больше строк чем в документе перемещениЯ");
+			end;
+		end;
+		
+		PutWindowRecord(wn,SMr);
+			
+	end;
+		
+	for (k=0;k<i;k=k+1) begin
+		if (ch == 1) then begin
+		StockMovDClassAfterEditField(wn,"ArtCode",0,k,1);
+		millisleep(100);
+		end;
+		if (ch == 2) then begin
+		StockMovDClassAfterEditField(wn,"SerialNr",0,k,1);
+		millisleep(100);
+		end;
+
+	end;	
+	
+	
+return;
+end;
+
+global procedure InsSerNrsm()
+begin
+	record ORVc ORr;
+	row ORVc ORrw;
+	record SHVc SHr;
+	row SHVc SHrw;
+	record RLinkVc RLr;
+	integer wn,cnt,rwcnt,ORrwcnt,SHrwcnt,SMrwcnt,i,k,j;
+	boolean testf,inp;
+	string 40 ttt;
+	
+	wn = CurWindow;
+	GetWindowRecord(wn,SHr);
+	SHrwcnt = MatRowCnt(SHr);
+	
+	if (ReadRecordLink(SHr,1,ORr,RLr)) then begin
+		for(i=0;i<SHrwcnt;i=i+1) begin
+			matrowget(SHr,i,SHrw);
+			if (blank(SHrw.SerialNr)) then begin
+				PasteSernr(SHrw.ArtCode,SHr,ORr,ttt);//-------------------------------------------
+				SHrw.SerialNr = ttt;
+				//messageBox(0,ttt);
+				MatRowPut(SHr,i,SHrw);
+			end;
+		end;
+	end;
+	
+	PutWindowrecord(wn,SHr);
+	for (k=0;k<SHrwcnt;k=k+1) begin
+		SHDClassAfterEditField(wn,"SerialNr",0,k,1);
+	end;
+	
+return
+end;
+
+global updating procedure SHImportFromFileDsm()
+begin
+  integer wn,mtrw,i,k,j,g,ii,s;
+	record SHVc SHr;
+	row SHVc SHrw;
+	record INVc INr;
+	string 20 Art,Ser,Flag;
+	boolean testf,res;
+	string 40 altcode,sercut,sercut1;
+	Array string 40 arArt,arSer,arFlag;
+	area MyArea;
+
+	wn = CurWindow;	
+	getwindowrecord(wn,SHr);
+	mtrw = MatRowCnt(SHr);
+	
+	SetAreaZeroSize(MyArea);
+		
+	if (SHr.OKFlag==0) then begin
+		if (fileexists("../ImportPU.txt")) then begin
+			OpenFile("../ImportPU.txt");
+			ii=0;
+			
+			while (TestEOF()==false) begin
+					
+					arArt[ii] = importfield;
+					arSer[ii] = importfield;
+					sercut = arSer[ii];
+					sercut1 = "";
+					
+					for(s=0;s<len(sercut);s=s+1)begin
+					  if(mid(sercut,s,1)!=" ")then begin
+					    sercut1 = sercut1 & mid(sercut,s,1);
+					  end;
+					end;
+					arSer[ii] = sercut1;
+					
+					arFlag[ii] = importfield;				
+					NextImportLine(true);
+					ii=ii+1;
+			end;
+			Closefile;
+			
+			
+			if (mtrw>0) then begin
+				for(g=0;g<mtrw;g=g+1) begin
+					MatRowGet(SHr,0,SHrw);
+					if (blank(SHrw.ArtCode)) then begin
+						matrowdelete(SHr,g);
+						g=-1;
+						mtrw = mtrw-1;
+					end;
+				end;
+			end;
+			
+			if (mtrw>0) then begin
+					for (k=0;k<ii;k=k+1) begin
+					Art = arArt[k];
+					Ser = arSer[k];
+					Flag = arFlag[k];
+					testf = true;
+					
+					if (Flag != "+") then begin
+						altcode = "";
+						INr.AlternativeCode = Art;
+						if (ReadFirstKey("AlternativeCode",INr,1,false)) then begin
+              if (INr.AlternativeCode == Art) then begin
+                altcode = INr.Code;
+								end;
+            end;
+            
+            INr.BarCode = Art;
+						if (ReadFirstKey("BarCode",INr,1,false)) then begin
+              if (INr.BarCode == Art) then begin
+                altcode = INr.Code;
+								end;
+            end;
+							
+							if (nonblank(altcode)) then begin
+								Art = altcode;
+							end;
+							
+							for (i=0;i<mtrw;i=i+1) begin
+								MatRowGet(SHr,i,SHrw);
+								
+								if ((SHrw.ArtCode == Art) and (blank(SHrw.SerialNr)) and testf) then begin
+									SHrw.SerialNr = Ser;
+									testf = false;
+									Flag = "+";
+									matRowPut(SHr,i,SHrw);
+								end;
+							end;
+						end;
+						
+						
+						
+					AddTextToArea(Art & chr(9) & Ser & chr(9) & Flag & chr(13) & chr(10),MyArea);
+				end;
+				WriteAreaToFile(MyArea,"../ImportPU.txt",0);
+			end;
+				if (testf) then begin
+					MessageBox(0,"‚ файле импорта больше строк чем в документе перемещениЯ");
+				end;
+			end;
+		
+		PutWindowRecord(wn,SHr);
+	end;
+		
+	
+	for (k=0;k<=i;k=k+1) begin
+		SHDClassAfterEditField(wn,"SerialNr",0,k,1);
+	end;	
+	
+	
+return;
+end;
+
+global
+procedure ORDToFilesm()
+begin
+	record ORVc ORr;
+	row ORVc ORrw;
+	integer wn,mtrw,i;
+	
+	wn = CurWindow;
+	GetWindowRecord(wn,ORr);
+	mtrw = MatRowCnt(ORr);
+	createfile("ImportORD.txt");
+	CloseFile;
+	OpenExportFile("ImportORD.txt",true);
+	
+	For(i=0;i<mtrw;i=i+1) begin
+		MatrowGet(ORr,i,ORrw);
+		ExportString(ORrw.ArtCode);
+		ExportString(ORrw.Quant);
+		ExportString(ORrw.SerialNr);
+		ExportString(ORrw.Price);
+		NewLine;
+	end;
+	
+	CloseFile;
+	
+	return;
+end;
+
+global
+procedure SHToFilesm()
+begin
+	record SHVc SHr;
+	row SHVc SHrw;
+	integer wn,mtrw,i;
+	wn = CurWindow;
+	GetWindowRecord(wn,SHr);
+	mtrw = MatRowCnt(SHr);
+	createfile("../ImportPU.txt");
+	CloseFile;
+	OpenExportFile("../ImportPU.txt",true);
+
+	For(i=0;i<mtrw;i=i+1) begin
+		MatrowGet(SHr,i,SHrw);
+		ExportString(SHrw.ArtCode);
+		//ExportString(SHrw.Quant);
+		ExportString(SHrw.SerialNr);
+		ExportString(SHrw.BasePrice);
+		ExportString(SHrw.Ship);
+		NewLine;
+	end;
+	CloseFile;
+	
+	return;
+end;
+
+
+
+
+

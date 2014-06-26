@@ -1,0 +1,439 @@
+external function Boolean GetCostAcc(string,string,record AccBlock,record INVc,integer,var string,var string);
+external procedure WSSumup(record WSVc);
+external procedure B1ToB2Val(val,val,val,var val);
+external procedure SwapM4Val(var val,var val);
+external procedure ConvertToDualBase(var string,date,var val,var val,var val,var val,var val,var val,Boolean);
+external function Boolean CanOKStockRecord();
+external procedure MulVATIV(string,val,var val,var val,Integer,Integer);
+external function val MulRateToBase1(var string,val,val,val,val,val,val,Integer);
+external updating procedure WSOK(record WSVc);
+external updating procedure WSUpdateSVOWSMark(record WSVc);
+external updating procedure WSPrelOK(record WSVc,Boolean);
+external updating procedure UpdateLocOKNr(string,var val);
+external function Boolean CheckIfUpdateLockOKNr(record WSVc);
+external updating procedure WSUpdateStock(record WSVc,Boolean,record WSVc,Boolean);
+external updating procedure WSUpdateSerialNr(record WSVc);
+external updating procedure WSUpdateItemHistory(record WSVc);
+external procedure GetItemGroup(string,var string);
+external procedure GetCurncyRoundoff(string,string,var Integer,var LongInt,var Integer);
+external function longint GetUserSerNrSeries(longint);// Edit ************************** Thursday, 13 February 2014 17:29:44
+
+global
+function Integer GetItemCost(string emcode,string itemcode,string location,val qtyp,val fifop,var val costp)
+BEGIN
+  record UserVc USr;
+  record INVc INr;
+  Integer itemtype;
+  
+  costp = blankval;
+  INr.Code = itemcode;
+  if (ReadFirstMain(INr,1,true)) then begin
+    costp = INr.InPrice;
+    costp = costp + INr.ExtraCost;
+    itemtype = INr.ItemType;
+  end;
+  if (itemtype==3) then begin
+    USr.Code = emcode;
+    if (ReadFirstMain(USr,1,true)) then begin
+      if (USr.CostPrHour!=0) then begin costp = USr.CostPrHour; end;
+    end;
+  end;
+  if (itemtype==1) then begin
+     costp = fifop;
+  end;
+  GetItemCost = itemtype; 
+  RETURN;
+END;
+
+global
+function Integer GetItemType(LongInt sord,LongInt word,string serialnr,Integer itemtype)
+BEGIN
+  record WOVc WOr;
+  record SVOVc SVOr;
+  row WOVc WOrw;
+  row SVOVc SVOrw;
+  Integer rwcnt,i;
+  Integer res;
+  
+  res = itemtype;
+  if (res!=0) then begin goto LGetItemType; end;
+  if (word!=-1) then begin
+    WOr.SerNr = word;
+    if (ReadFirstMain(WOr,1,true)) then begin
+      rwcnt = MatRowCnt(WOr);
+      for (i=0;i<rwcnt;i=i+1) begin
+        MatRowGet(WOr,i,WOrw);
+        if (WOrw.SerialNr==serialnr) then begin
+          res = WOrw.ItemType;
+          goto L88GetItemType;
+        end;
+      end;
+    end;
+  end;
+L88GetItemType:;
+  if (res!=0) then begin goto LGetItemType; end;
+  if (sord!=-1) then begin
+    SVOr.SerNr = sord;
+    if (ReadFirstMain(SVOr,1,true)) then begin
+      rwcnt = MatRowCnt(SVOr);
+      for (i=0;i<rwcnt;i=i+1) begin
+        MatRowGet(SVOr,i,SVOrw);
+        if (SVOrw.SerialNr==serialnr) then begin
+          res = SVOrw.ItemType;
+          goto LGetItemType;
+        end;
+      end;
+    end;
+  end;
+LGetItemType:;
+  GetItemType = res;
+  RETURN;
+END;
+
+global
+updating procedure WSCreateWSIV(record WSVc WSp,Integer rownr,row WSVc wsrp)
+BEGIN
+  record WSIVVc WSIVp;
+  record WSIVVc WSIVr;
+  Boolean found;
+  val t;
+  val cost;
+  val vatv,t1;
+  LongInt roundlines;
+  Integer rndtotal,roundvat;
+  
+  if (wsrp.stp==1) then begin
+    if (wsrp.ovst==0) then begin
+      GetCurncyRoundoff(WSIVp.CurncyCode,"",rndtotal,roundlines,roundvat);
+      WSIVp.Type = GetItemType(WSp.SVONr,WSp.WONr,wsrp.MotherNr,wsrp.ItemType);
+      WSIVp.Row = rownr;
+      WSIVp.SerNr = WSp.SerNr;
+      WSIVp.RecType = 0;
+      WSIVp.SVONr = WSp.SVONr;
+      WSIVp.ContractNr = -1;
+      WSIVp.CurncyCode = WSp.CurncyCode;
+      WSIVp.FrRate = WSp.FrRate;
+      WSIVp.ToRateB1 = WSp.ToRateB1;
+      WSIVp.ToRateB2 = WSp.ToRateB2;
+      WSIVp.BaseRate1 = WSp.BaseRate1;
+      WSIVp.BaseRate2 = WSp.BaseRate2;
+      WSIVp.TransDate = WSp.TransDate;
+      WSIVp.MotherNr = wsrp.MotherNr;
+      WSIVp.SerialNr = wsrp.SerialNr;
+      WSIVp.InvoiceTo = WSp.InvoiceToCode;
+      WSIVp.WONr = WSp.WONr;
+      WSIVp.EMCode = WSp.EMCode;
+      WSIVp.CUCode = WSp.CustCode;
+      WSIVp.ArtCode = wsrp.ArtCode;
+      WSIVp.UsedQty = wsrp.Quant;
+      WSIVp.Coefficient = wsrp.Coefficient;
+      WSIVp.InvQty = wsrp.QtyInvbl;
+      if (WSIVp.InvQty==0) then begin WSIVp.InvQty = wsrp.Quant; end;
+/*      
+      if (WSp.InclVAT!=0) then begin
+        MulVATIV(wsrp.VATCode,wsrp.Price,vatv,t1,WSp.InclVAT,0);
+        WSIVp.Price = wsrp.Price - vatv;
+        WSIVp.Sum = Round(WSIVp.UsedQty*WSIVp.Price,rndtotal);
+      end else begin
+        WSIVp.Price = wsrp.Price;
+        WSIVp.Sum = Round(wsrp.Sum,rndtotal);
+      end;
+*/      
+      WSIVp.Price = wsrp.Price;
+      WSIVp.Sum = Round(wsrp.Sum,rndtotal);
+      
+      WSIVp.Discount = wsrp.vRebate;
+      WSIVp.Comment = wsrp.Spec;
+      WSIVp.InvNr = -1;
+
+      WSIVp.GP = blankval;
+      WSIVp.CostPrice = blankval;
+      WSIVp.ItemType = GetItemCost(WSp.EMCode,WSIVp.ArtCode,WSp.Location,wsrp.Quant,wsrp.FIFO,cost);
+      WSIVp.CostPrice = cost;
+      t = MulRateToBase1(WSIVp.CurncyCode,WSIVp.Sum,WSIVp.FrRate,WSIVp.ToRateB1,WSIVp.ToRateB2,WSIVp.BaseRate1,WSIVp.BaseRate2,rndtotal);      
+      WSIVp.GP = t - WSIVp.CostPrice*WSIVp.InvQty;
+
+      RecordCopy(WSIVr,WSIVp);
+      if (ReadFirstMain(WSIVr,0,true)==false) then begin
+        if (RecordStore(WSIVp,false)) then begin end;
+      end;
+    end;
+    if (wsrp.ovst==1) then begin
+      WSIVp.Type = wsrp.ItemType;
+      WSIVp.SerNr = WSp.SerNr;
+      WSIVp.Row = rownr;
+      WSIVp.CUCode = WSp.CustCode;
+      WSIVp.ArtCode = wsrp.ArtCode;
+      WSIVp.EMCode = WSp.EMCode;
+      found = ReadFirstMain(WSIVp,6,true);
+      if (found) then begin
+        RecordDelete(WSIVp);
+      end;
+    end;
+  end;
+  RETURN;
+END;
+
+global
+updating procedure WSUpdateSVO(record WSVc WSp,row WSVc WSrwp)
+BEGIN
+   record SVOVc oldSVOr;
+   record SVOVc SVOr;
+   row SVOVc SVOrw;
+   Integer i,rwcnt;
+   Boolean updatef;
+
+   SVOr.SerNr = WSp.SVONr;
+   if (ReadFirstMain(SVOr,1,true)) then begin
+     RecordCopy(oldSVOr,SVOr);
+     rwcnt = MatRowCnt(SVOr);
+     for (i=0;i<rwcnt;i=i+1) begin
+       MatRowGet(SVOr,i,SVOrw);
+       if (SVOrw.SerialNr==WSrwp.MotherNr) then begin
+         SVOrw.Cost = SVOrw.Cost + WSrwp.Sum;
+         MatRowPut(SVOr,i,SVOrw);
+         updatef = true;
+         goto LWSUpdateSVO;
+       end;
+     end;       
+   end;
+LWSUpdateSVO:;   
+   if (updatef) then begin
+     if (RecordUpdate(oldSVOr,SVOr,true)==0) then begin end;
+   end;
+  RETURN;
+END;
+
+global
+updating procedure WSUpdatePErs(record WSVc WSp)
+BEGIN
+  record PErsVc PE2rsr;
+  record PErsVc PErsr;
+  row WSVc wsrp;
+  Integer i,rwcnt;
+  record INVc INr;
+  string 255 tstr;
+  
+  rwcnt = MatRowCnt(WSp);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(WSp,i,wsrp);
+    if ((wsrp.stp==1) and (wsrp.ovst==0)) then begin
+      INr.Code = wsrp.ArtCode;
+      if (ReadFirstMain(INr,1,true)) then begin
+        if (INr.ItemType==3) then begin
+          PErsr.FileName = "WSVc";
+          PErsr.Person = WSp.EMCode;
+          PErsr.Date = WSp.TransDate;
+          PErsr.TSSerNr = WSp.SerNr;
+          PErsr.Item = wsrp.ArtCode;
+          PErsr.PRCode = "";
+          GetItemGroup(wsrp.ArtCode,tstr);
+          PErsr.INGroup = tstr;          
+          RecordCopy(PE2rsr,PErsr);
+          if (ReadFirstMain(PE2rsr,0,true)==false) then begin
+            if (RecordStore(PErsr,false)) then begin end;
+          end;
+        end;    
+      end;    
+    end;
+  end;
+  RETURN;
+END;
+
+procedure WSVcConvertB1ToB2(record WSVc WSr,var val to1p,var val to2p,var val br1p,var val br2p)
+BEGIN    
+  val t;
+  row WSVc WSrw;
+  Integer i,rwcnt;
+  
+  SwapM4Val(br1p,br2p);
+  SwapM4Val(to1p,to2p);
+  rwcnt = MatRowCnt(WSr);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(WSr,i,WSrw);
+    B1ToB2Val(WSrw.FIFO,br1p,br2p,t);
+    WSrw.FIFO = t;
+    B1ToB2Val(WSrw.FIFORowVal,br1p,br2p,t);
+    WSrw.FIFORowVal = t;
+    MatRowPut(WSr,i,WSrw);
+  end;
+  WSSumUp(WSr);  
+  RETURN;
+END;
+
+/*global
+function LongInt WSVcRecordImport(var record WSVc WSr,record WSVc WS2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  val t,fr,to1,to2,br1,br2;
+  string 5 curncy;
+  Boolean gToDualBase,gBase1ToBase2;
+  record ConvMasterBlock cvm;
+
+  BlockLoad(cvm);
+  if (cvm.DualBaseCurrencyFlag!=0) then begin gToDualBase = true; end;
+  if (gToDualBase) then begin
+    curncy = WSr.CurncyCode;
+    fr = WSr.FrRate;
+    to1 = WSr.ToRateB1;
+    to2 = WSr.ToRateB2;
+    br1 = WSr.BaseRate1;
+    br2 = WSr.BaseRate2;
+    ConvertToDualBase(curncy,WSr.TransDate,fr,to1,to2,br1,br2,t,true);
+    WSr.CurncyCode = curncy;
+    WSr.FrRate = fr;
+    WSr.ToRateB1 = to1;
+    WSr.ToRateB2 = to2;
+    WSr.BaseRate1 = br1;
+    WSr.BaseRate2 = br2;
+  end;
+  if (cvm.Base1ToBase2Flag!=0) then begin gBase1ToBase2 = true; end;
+  if (gBase1ToBase2) then begin
+    curncy = WSr.CurncyCode;
+    to1 = WSr.ToRateB1;
+    to2 = WSr.ToRateB2;
+    br1 = WSr.BaseRate1;
+    br2 = WSr.BaseRate2;
+    WSVcConvertB1ToB2(WSr,to1,to2,br1,br2);
+    WSr.ToRateB1 = to1;
+    WSr.ToRateB2 = to2;
+    WSr.BaseRate1 = br1;
+    WSr.BaseRate2 = br2;
+  end;
+ 
+  WSVcRecordImport = res;
+  RETURN;
+END;*/
+
+global
+updating function LongInt WSVcRecordImportAfter(var record WSVc WSr,record WSVc WS2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  
+  if (WSr.OKFlag!=0) then begin
+    WSUpdateSerialNr(WSr);
+    WSUpdatePErs(WSr);
+    if (ImportingTextBackup==false and CanOKStockRecord==true) then begin
+      WSUpdateStock(WSr,true,WS2r,false);
+      WSUpdateItemHistory(WSr);
+    end;
+  end;
+  WSVcRecordImportAfter = res; 
+  RETURN;
+END;
+
+global
+updating function LongInt WSVcRecordUpdate(var record WSVc WSr,record WSVc WS2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  val LocOKNr;
+  
+  if ((WS2r.OKFlag==0) and (WSr.OKFlag!=0)) then begin
+    if (CheckIfUpdateLockOKNr(WSr)) then begin
+      LocOKNr = WSr.LocOKNr;
+      UpdateLocOKNr(WSr.Location,LocOKNr);
+      WSr.LocOKNr = LocOKNr;
+    end;
+  end;
+  WSVcRecordUpdate = res; 
+  RETURN;
+END;
+
+global
+updating function LongInt WSVcRecordUpdateAfter(var record WSVc WSr,record WSVc WS2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+
+  WSUpdateSVOWSMark(WSr);
+  if ((WSr.OKFlag==0) and (WS2r.OKFlag==0)) then begin
+    WSUpdateStock(WSr,true,WS2r,true);
+  end else begin
+    WSUpdateStock(WSr,true,WS2r,false);
+  end;
+  
+  
+  if ((WSr.OKFlag!=0) and (WS2r.OKFlag==0)) then begin
+    if(currentuser!="LADA" and  currentuser!="LENAS"  and  currentuser!="SA")then begin
+      WSr.TransDate = currentdate;// Edit ************************** Thursday, 24 November 2011 11:50:11
+    end;
+    WSUpdateItemHistory(WSr);
+    WSUpdateSerialNr(WSr);
+    WSOK(WSr);
+  end;
+
+  if ((WS2r.OKFlag==0) and (WSr.OKFlag!=0)) then begin
+    if (WS2r.PrelOK!=0) then begin 
+      WSPrelOK(WS2r,false);
+    end;
+  end else begin
+    if ((WSr.PrelOK!=0) and (WS2r.PrelOK==0)) then begin 
+      WSPrelOK(WSr,true);
+    end;
+    if ((WSr.PrelOK==0) and (WS2r.PrelOK!=0)) then begin // Edit ************************** Wednesday, 26 October 2011 10:55:42
+      //WSPrelOK(WS2r,false);// Edit ************************** Wednesday, 26 October 2011 10:55:48
+      WSPrelOK(WSr,false);// Edit ************************** Wednesday, 26 October 2011 10:55:49
+    end;
+  end;
+
+  WSVcRecordUpdateAfter = res; 
+  RETURN;
+END;
+
+global
+function LongInt WSVcRecordDefaults(var record WSVc WSr,record WSVc WS2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  record AccBlock ARb;
+  record CostAccBlock CAb;
+  record UserVc Userr;
+  record INVc INr;
+  string 255 tstr;
+      
+  BlockLoad(ARb);
+  BlockLoad(CAb);
+  WSr.SerNr = -1;
+  WSr.WONr = -1;
+  WSr.SVONr = -1;
+  WSr.TransDate = CurrentDate;
+  WSr.InvFlag = 0;
+  if (GetCostAcc("",WSr.CustCode,ARb,INr,CAb.ItemGroupAccounts,WSr.CostAcc,tstr)==false) then begin
+  end;
+//  WSr.CostAcc = ARb.StockCostAcc;
+  Userr.Code = CurrentUser;
+  if (ReadFirstMain(Userr,1,true)) then begin end;
+  WSr.Location = Userr.Location;
+  if (SingleUserMode) then begin
+    WSr.SerNr = NextSerNr("WSVc",WSr.TransDate,GetUserSerNrSeries(-1),false,"");
+  end;
+  WSVcRecordDefaults = res; 
+  RETURN;
+END;
+
+global
+function LongInt WSVcRecordDuplicate(var record WSVc WSr,record WSVc WS2r,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  Integer i,rwcnt;
+  row WSVc WSrw;
+      
+  WSr.SerNr = -1;
+  WSr.TransDate = CurrentDate;
+  WSr.OKFlag = 0;
+  WSr.PrelOK = 0;
+  WSr.InvFlag = 0;
+  WSr.ExportFlag = 0;
+  if (SingleUserMode) then begin
+    WSr.SerNr = NextSerNr("WSVc",WSr.TransDate,GetUserSerNrSeries(-1),false,"");
+  end;
+  rwcnt = MatRowCnt(WSr);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(WSr,i,WSrw);
+    WSrw.FIFO = blankval;
+    WSrw.FIFORowVal = blankval;
+    WSrw.Invd = blankval;
+    MatRowPut(WSr,i,WSrw);
+  end;  
+  WSr.LocOKNr = blankval;
+  WSVcRecordDuplicate = res; 
+  RETURN;
+END;

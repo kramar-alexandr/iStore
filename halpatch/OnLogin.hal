@@ -1,0 +1,287 @@
+external updating procedure AutoSearchForNewerVersion();
+external function Integer GetProgramMode();
+remote updating function Boolean OnLoginRemote(var Boolean,var Boolean,var Boolean,Boolean,Date,string,var Integer,var Integer,var LongInt);
+remote updating function Boolean OnLoginRemote_IV(Boolean,var record IVVc,var Boolean,var Boolean,var Boolean,Boolean,Date,string,var Integer,var Integer,var LongInt);
+remote updating function Boolean OnLoginRemote_RestAcc(var record RestAccvc,var Boolean,var Boolean,var Boolean,Boolean,Date,string,var Integer,var Integer,var LongInt);
+external updating procedure RegisterAtPresenceServer(string,Integer,Integer);
+remote updating function Boolean OnLogoutRemote(string);
+external function Boolean TouchScreenLook();
+external function Boolean CheckIfOfflineCompanyExists(Integer);
+external function LongInt IVDefaultsClient(var record IVVc,record IVVc,LongInt,LongInt);
+
+global
+function Integer GetPOSOffLineCompNo()
+BEGIN 
+  Integer res;
+  record OffLineSetBlock OffLb;
+  
+  BlockLoad(OffLb);
+  res = StringToInt(OffLb.OffLineComp);
+  GetPOSOffLineCompNo = res;
+  RETURN;
+END;
+
+global
+function Boolean CheckOffLineRecords(Boolean openf)
+BEGIN
+  Boolean res;
+  Integer offlinecomp,curcomp,wn;
+  record IVCashVc IVCashr;
+  record RcVc RepSpec;
+  record LocalMachineBlock LocalMachineRec;
+  record OffLineSetBlock OffLb;
+  
+  BlockLoad(OffLb);  
+  res = false;
+  offlinecomp = GetPOSOffLineCompNo;
+  if (offlinecomp<=0) then begin goto LCheckOffLineRecords; end;
+  if (CheckIfOfflineCompanyExists(offlinecomp)==false) then begin goto LCheckOffLineRecords; end;
+  if (openf) then begin
+    BlockLoad(LocalMachineRec);
+    if (blank(LocalMachineRec.LocalMachineCode)) then begin
+      MessageBox(1770,"");
+      goto LCheckOffLineRecords;  
+    end;  
+  end;
+  curcomp = CurrentCompany;
+  SetServerCompany(offlinecomp);
+  switch (OffLb.SyncSumPOS) begin
+    case 0:
+      IVCashr.SerNr = 9999999999;
+      if (ReadLastKey("SerNr",IVCashr,1,false)) then begin
+        if (openf) then begin
+          wn = OpenWindow("OffLineAClass",0,0,"","",RepSpec);
+          SelectWindow(wn);
+        end;
+        res = true;
+      end;
+    case 1:
+      IVCashr.POSSalesNo = -1;
+      if (ReadFirstKey("POSSalesNo",IVCashr,1,true)) then begin
+        if (openf) then begin
+          wn = OpenWindow("OffLineAClass",0,0,"","",RepSpec);
+          SelectWindow(wn);
+        end;
+        res = true;
+      end;
+  end;
+  if (openf) then begin
+    if (OffLb.SyncSettings!=0) then begin
+      wn = OpenWindow("OffLineFromAClass",0,0,"","",RepSpec);
+      SelectWindow(wn);
+      res = true;
+    end;
+  end;
+  SetServerCompany(curcomp);
+LCheckOffLineRecords:;    
+  CheckOffLineRecords = res;
+  RETURN;
+END;
+
+global
+updating function Boolean OnLogin()
+BEGIN
+  record IVVc IVr;
+  record IVCashVc IVCashr;
+  record RestAccVc RestAccr;
+  record RcVc RepSpec;
+  record UserVc Userr;
+  Integer nwn;
+  Boolean res,newf,openmaster;
+  record LocalLoginBlock LLb;
+  row LocalLoginBlock LLbrw;
+  Integer i,rwcnt,onlog;
+  Boolean resve,rescont,resoffl,reshot;
+  string 255 tstr;
+  record CashierDefBlock CashDefRec;
+  Boolean cleanmail;
+  Integer forcestockmaint;
+  record LocalLoginOptBlock LocalLoginOptr;
+  record CostAccBlock CAb;
+  Integer ProgramType,DBStatus;
+  record LocalMachineBlock LMb;
+  Boolean savef;
+  LongInt VEIVNr;
+  
+  savef = true;
+  ProgramType = GetProgramMode;
+  if (CompileType!=ctWindowsCE and CompileType!=ctSeries80 and CompileType!=ctSeries60 and CompileType!=ctNokiaE90) then begin
+    if (PresenceWasSuccessful) then begin // Means that this is called firsttime in OnApplicationStartupComplete, which is CORRECT
+      RegisterAtPresenceServer(CurrentUser,1,1);
+    end;
+  end;
+  BlockLoad(LLb);
+/* This is wierd, if it crashing on Symbian, but I don't see the need for it anyway
+  for (i=1;i<=100;i=i+1) begin
+    if (GetWindowClass(i)=="DayWClass") then begin
+      UpdateBrowses("ActVc");
+    end;
+  end;
+*/
+  rwcnt = MatRowCnt(LLb);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(LLb,i,LLbrw);
+    if (LLbrw.Code==CurrentUser) then begin
+      onlog = LLbrw.OnLoginWindow;
+      i = rwcnt;
+    end;
+  end;
+  if (GatewayMode or ServerMode or SingleUserMode) then begin // Not for normal clients
+    cleanmail = true;
+  end else begin
+    cleanmail = false;
+  end;
+  if (SingleUserMode) then begin
+//    AutoSearchForNewerVersion; // This seems to cause crashes when it is sending TX functions...
+  end;
+  DBStatus = 1;
+  switch (onlog) begin  
+    case 1:
+      reshot = OnLoginRemote_RestAcc(RestAccr,newf,resve,rescont,cleanmail,CurrentDate,CurrentUser,forcestockmaint,DBStatus,VEIVNr);
+      if (newf) then begin
+        nwn = OpenWindow("RestAccDClass",1,0,"","",RestAccr);    
+        DeselectWindow(nwn,false);
+        WindowFieldGoto(nwn,RestAccr,-1,"CustCode",true);
+      end else begin
+        nwn = OpenWindow("RestAccDClass",1,0,"","",RestAccr);    
+        WindowFieldGoto(nwn,RestAccr,-1,"CustCode",true);
+      end;
+      reshot = false;      
+    case 2:
+      reshot = OnLoginRemote(newf,resve,rescont,cleanmail,CurrentDate,CurrentUser,forcestockmaint,DBStatus,VEIVNr);
+      if ((UserModuleAccess("modHotel")) or (UserModuleAccess("modPP"))) then begin
+        RepSpec.d1 = CurrentDate;
+        RepSpec.LastVer = 1;
+        RepSpec.f1 = "";
+        nwn = OpenWindow("ResHotelWClass",1,0,"","",RepSpec);
+        if (nwn==0) then begin
+          RepSpec.d1 = CurrentDate;
+          nwn = OpenWindow("RTMonWClass",1,0,"","",RepSpec);
+          if (nwn!=0) then begin
+            PutWindowRecord(nwn,RepSpec);
+            WindowFieldGoto(nwn,RepSpec,-1,"LastVer",true);
+            KeyPadEnter(nwn);
+          end;
+        end else begin
+          PutWindowRecord(nwn,RepSpec);
+          WindowFieldGoto(nwn,RepSpec,-1,"LastVer",true);
+          KeyPadEnter(nwn);
+        end;
+      end;
+      DeselectWindow(nwn,false);
+      reshot = false;      
+    case 3:
+      reshot = OnLoginRemote_IV(TouchScreenLook,IVr,newf,resve,rescont,cleanmail,CurrentDate,CurrentUser,forcestockmaint,DBStatus,VEIVNr);
+      if (TouchScreenLook) then begin    
+        if (newf) then begin
+          RecordNew(IVr);
+          if (IVDefaultsClient(IVr,IVr,-1,-1)) then begin end;          
+          nwn = OpenWindow("IVDClass",1,0,"","",IVr);    
+          DeselectWindow(nwn,false);
+          WindowFieldGoto(nwn,IVr,-1,"CustCode",true);
+        end else begin
+          nwn = OpenWindow("IVDClass",1,0,"","",IVr);    
+          WindowFieldGoto(nwn,IVr,-1,"CustCode",true);
+        end;
+      end;
+      reshot = false;      
+    case 4:
+      reshot = OnLoginRemote(newf,resve,rescont,cleanmail,CurrentDate,CurrentUser,forcestockmaint,DBStatus,VEIVNr);
+      RecordNew(RestAccr);
+      nwn = OpenWindow("RestAccDClass",1,0,"","",RestAccr);    
+      DeselectWindow(nwn,false);
+      WindowFieldGoto(nwn,RestAccr,-1,"CustCode",true);
+      reshot = true;      
+    case 5:
+      reshot = OnLoginRemote(newf,resve,rescont,cleanmail,CurrentDate,CurrentUser,forcestockmaint,DBStatus,VEIVNr);
+      RepSpec.AccStr = CurrentUser;
+      nwn = OpenWindow("ProdRegTimeOClass",1,0,"","",RepSpec);    
+      DeselectWindow(nwn,false);
+      reshot = false;
+    case 6:
+      reshot = OnLoginRemote(newf,resve,rescont,cleanmail,CurrentDate,CurrentUser,forcestockmaint,DBStatus,VEIVNr);
+      BlockLoad(LMb);
+      RecordNew(IVCashr);
+      IVCashr.CustCode = LMb.DefCustCode;
+      nwn = OpenWindow("POSPIVCashDClass",1,0,"","",IVCashr);    
+      DeselectWindow(nwn,false);
+      WindowFieldGoto(nwn,IVCashr,-1,"ivcashcommand",false);
+    otherwise
+      reshot = OnLoginRemote(newf,resve,rescont,cleanmail,CurrentDate,CurrentUser,forcestockmaint,DBStatus,VEIVNr);
+      reshot = true;      
+  end;
+  if (CurrentUser=="ADMIN") then begin
+    savef = false;
+  end;
+  if (CurrentUser=="$MASTER") then begin
+    RecordNew(Userr);
+    Userr.Closed = 1;
+//    nwn = OpenWindow("US3DClass",1,0,"","",Userr);
+    nwn = OpenWindow("NewUserWClass",1,0,"","",Userr);
+    savef = false;
+    reshot = false;
+  end;
+  if (resve==false) then begin
+    MessageBox(1761,"");
+  end;
+  if (rescont==false) then begin
+    MessageBox(1764,"");
+  end;
+  if (DBStatus==0) then begin
+    if (CurrentUserIsAdmin) then begin
+      nwn = OpenWindow("DBBlessWClass",1,0,"","",RepSpec);
+      reshot = false;
+    end;
+  end;
+  // Edit Start ---------------------------------------------- Edit Start
+	//Tuesday, 16 April 2013 14:27:33
+	
+  /*if (forcestockmaint>0) then begin
+    if (ProgramType!=typFirstOffice) then begin
+    MessageBox(1765,"");
+    end;
+  end;*/
+  
+	// Edit End ---------------------------------------------- Edit End
+	
+  if (VEIVNr>0) then begin
+    if (UserCanAction("VEIVToVI",true)) then begin
+      RepSpec.f1 = USetStr(20937) & ": " & VEIVNr;
+      nwn = OpenWindow("VEIVWClass",1,0,"","",RepSpec);
+      reshot = false;
+//      MessageBox(20937,": " & VEIVNr);
+    end;
+  end;
+  if (savef) then begin
+    BlockLoad(LocalLoginOptr);
+    LocalLoginOptr.LastUserLoggedIn = CurrentUser;
+    LocalLoginOptr.LastUsedCompCode = CurrentCompany;
+    BlockStore(LocalLoginOptr);
+  end;
+
+  resoffl = !CheckOffLineRecords(true);
+  res = resve and resoffl and reshot;
+  OnLogin = (reshot) and (resoffl)/* and (forcestockmaint==0)*/;//when offline records it should not open Master Control
+  RETURN;
+END;
+
+global
+updating function Boolean OnLogout(string user)
+BEGIN
+  Boolean res;
+  string 255 userstr;
+// called on CLIENT
+
+  if (PresenceWasSuccessful) then begin
+    userstr = user;
+    if (blank(userstr)) then begin
+      userstr = CurrentUser;
+    end;
+    if (UserActive) and ((SingleUserMode) or (ClientMode)) then begin
+      RegisterAtPresenceServer(user,0,1);
+      res = OnLogoutRemote(user);
+    end;
+  end;
+  OnLogout = true;
+  RETURN;  
+END;

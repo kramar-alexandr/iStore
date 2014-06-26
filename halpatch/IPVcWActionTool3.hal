@@ -1,0 +1,1107 @@
+// Edited пятница, 25 июня 2010 г. 14:39:15
+external procedure MulVATIV(string,val,var val,var val,Integer,Integer);
+external procedure SetActTypeValues(record ActVc);
+external function Boolean PasteActTypeInAct(var record ActVc);
+external function LongInt NextFreeCashSerNr(row PMBlock,Boolean);
+external function val MulWithRateToBase1(var string,Date,val,Integer);
+external function val MulRateToBase1(var string,val,val,val,val,val,val,Integer);
+external function LongInt DateDiff(Date,Date);
+remote function Boolean PasteInvIn2IPr(var record IPVc,Integer,Date,var val,Integer,var Boolean);
+external function Integer PMCheckType(string,var string,var string);
+external procedure Mul2VAT(string,val,var val,var val,Integer);
+external procedure ChangeSVIPRecCur(row IPVc,Date,val);
+external procedure IPInvsum(record IPVc,LongInt,string,var val);
+external procedure MatchIPRowSums(string,string,Date,string,var val,var string,var val,string,var val,Boolean,Boolean,Boolean);
+external function Boolean GetPMCurrency(string,var string);
+external procedure IPSumup(var record IPVc);
+external procedure Base1ToOther(var string,val,val,val,val,val,val,var val,Integer);
+external function Boolean GetFullCurncyRateDate(var string,Date,var val,var val,var val,var val,var val,var Date);
+external procedure CurValToOtherCur(Date,string,val,string,var val,Integer);
+external procedure GetFullCurncyRate(var string,Date,var val,var val,var val,var val,var val);// Edit ************************** пятница, 25 июня 2010 г. 14:03:51
+
+
+// Edit Start ---------------------------------------------- Edit Start
+	//пятница, 25 июня 2010 г. 14:03:55
+	function val conv(string curcode,date curdate)
+begin
+val frrate,to1,to2,br1,br2;
+//String 5 curcode;
+val rank;
+  
+  GetFullCurncyRate(curcode,curdate,frrate,to1,to2,br1,br2);
+  rank=frrate/to1;
+  conv = rank;
+  if(blank(rank)) then begin conv=1; rank = 1; end;
+
+return;
+end;
+	// Edit End ---------------------------------------------- Edit End
+	
+procedure CurValToOtherCurWithRate(Date td,string frcur,val frval,string tocur,val abr1,var val toval,Integer roundof)
+BEGIN
+  string 20 curncy;
+  val fr,to1,to2,br1,br2;
+  val temp;
+  Date ed;
+  Boolean testf;
+
+  temp = MulWithRateToBase1(frcur,td,frval,7);    
+  testf = GetFullCurncyRateDate(tocur,td,fr,to1,to2,br1,br2,ed); 
+  if (nonblank(abr1)) then begin
+    br1 = abr1;
+  end;
+  curncy = tocur;
+  Base1ToOther(curncy,temp,fr,to1,to2,br1,br2,toval,roundof);  
+  RETURN;
+END;
+
+global
+procedure IPVc_PasteVATCode(var record IPVc IPp,Integer rownr)
+BEGIN
+  row IPVc IPrw;
+  val rs,t,t1;
+  record RoundBlock Rb;
+  record AccBlock Accb;
+  
+  BlockLoad(Rb);  
+  MatRowGet(IPp,rownr,IPrw);  
+  if (nonblank(IPrw.VATCode)) then begin
+    if (IPrw.InvoiceNr<0) then begin
+      BlockLoad(Accb);  
+      MulVATIV(IPrw.VATCode,IPrw.InvVal,t,t1,1,Accb.NoTAXonVAT);
+      IPrw.VATVal = Round(t,Rb.RndVat);
+      IPrw.TAX1Sum = Round(t1,Rb.RndVat);
+    end else begin
+      Mul2VAT(IPrw.VATCode,IPrw.InvVal,t,rs,1);
+      IPrw.VATVal = t;
+      IPrw.VATVal = Round(t,Rb.RndVat);
+    end;
+  end else begin
+    IPrw.VATVal = blankval;
+    IPrw.TAX1Sum = blankval;
+  end;  
+  MatRowPut(IPp,rownr,IPrw);
+  RETURN;
+END;
+
+// Not used anywhere else, removed the global.
+function Boolean GetORRate(LongInt cupnr,var val fr,var val to1,var val to2,var val br1,var val br2)
+BEGIN
+  record ORVc ORr;
+  Boolean res;
+  
+  ORr.SerNr = cupnr;
+  if (ReadFirstMain(ORr,1,true)) then begin
+    fr = ORr.FrRate;
+    to1 = ORr.ToRateB1;
+    to2 = ORr.ToRateB2;
+    br1 = ORr.BaseRate1;
+    br2 = ORr.BaseRate2;
+    res = true;
+  end;
+  GetORRate = res;
+  RETURN;
+END;
+
+global
+procedure ChangeIPInvVal(row IPVc IPrw,Date tdp)
+begin
+  val fr,to1,to2,br1,br2,t;
+
+  if (IPrw.InvCurncy==IPrw.RecCurncy) then begin
+    IPrw.InvVal = IPrw.RecVal;
+  end else begin
+    if (IPrw.CUPNr==-1) then begin
+      CurValToOtherCurWithRate(tdp,IPrw.RecCurncy,IPrw.RecVal,IPrw.InvCurncy,IPrw.ToRateB1BankVal,t,DefaultCurRoundOff);
+      IPrw.InvVal = t;
+    end else begin      
+      if (GetORRate(IPrw.OrderNr,fr,to1,to2,br1,br2)) then begin//CUPNr
+        t = MulRateToBase1(IPrw.RecCurncy,IPrw.RecVal,fr,to1,to2,br1,br2,DefaultCurRoundOff);      
+      end else begin
+        t = MulWithRateToBase1(IPrw.RecCurncy,tdp,IPrw.RecVal,DefaultCurRoundOff);
+      end;
+      Base1ToOther(IPrw.InvCurncy,t,fr,to1,to2,br1,br2,t,DefaultCurRoundOff); 
+      IPrw.InvVal = t;
+    end;  
+  end;
+  return;
+end;
+
+procedure ChangeIPRecVal(Integer rownr,row IPVc IPrw,Date tdp)
+BEGIN
+  val fr,to1,to2,br1,br2,t;
+  
+  ChangeIPInvVal(IPrw,tdp);
+  if (IPrw.BankCurncy==IPrw.InvCurncy) then begin
+    IPrw.BankVal = IPrw.InvVal;
+  end else begin
+    if (IPrw.BankCurncy==IPrw.RecCurncy) then begin
+      IPrw.BankVal = IPrw.RecVal;
+    end else begin
+      if (IPrw.CUPNr==-1) then begin
+        CurValToOtherCur(tdp,IPrw.RecCurncy,IPrw.RecVal,IPrw.BankCurncy,t,DefaultCurRoundOff);
+        IPrw.BankVal = t;
+      end else begin      
+        if (GetORRate(IPrw.OrderNr,fr,to1,to2,br1,br2)) then begin//CUPNr 
+          //t = MulRateToBase1(IPrw.RecCurncy,IPrw.RecVal,fr,to1,to2,br1,br2,DefaultCurRoundOff);
+          CurValToOtherCur(tdp,IPrw.RecCurncy,IPrw.RecVal,IPrw.BankCurncy,t,DefaultCurRoundOff);// Edit ************************** Thursday, 5 August 2010 10:41:07
+        end else begin
+          t = MulWithRateToBase1(IPrw.RecCurncy,tdp,IPrw.RecVal,DefaultCurRoundOff);
+        end;
+        Base1ToOther(IPrw.BankCurncy,t,fr,to1,to2,br1,br2,t,DefaultCurRoundOff); 
+        IPrw.BankVal = t;
+      end;  
+    end;
+  end;
+  t = IPrw.RecVal/IPrw.InvOutstand;
+  IPrw.TAX1Sum = t*IPrw.TAX1Sum;  
+  if (IPrw.TAX1Sum==0) then begin
+    IPrw.TAX1Sum = blankval;
+  end;
+  if (IPrw.InvVal<0) then begin
+    if (IPrw.B1BankVal>0) then begin
+      IPrw.B1BankVal = -IPrw.B1BankVal;
+    end;
+    if (IPrw.B2BankVal>0) then begin
+      IPrw.B2BankVal = -IPrw.B2BankVal;
+    end;
+  end;
+  RETURN;
+END;
+
+procedure ChangeIPBankCurncy(var record IPVc IPp,string curcode)
+BEGIN
+  row IPVc IPrw;
+  Integer rwcnt,i;
+  
+  rwcnt = MatRowCnt(IPp);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(IPp,i,IPrw);
+    IPrw.BankCurncy= curcode;
+    ChangeIPRecVal(i,IPrw,IPp.TransDate);
+    MatRowPut(IPp,i,IPrw);
+  end;
+  RETURN;
+END;
+
+global
+procedure IPVc_PastePayCurCode(var record IPVc IPp)
+BEGIN
+  ChangeIPBankCurncy(IPp,IPp.PayCurCode);
+  IPSumup(IPp);
+  RETURN;
+END;
+
+function val IPPrepaysum(var record IPVc IPp,LongInt cupnr,Integer currow)
+BEGIN
+  Integer i,rwcnt;
+  row IPVc IPrw;
+  val isp;
+  
+  isp = blankval;
+  rwcnt = MatRowCnt(IPp);
+  for (i=0;i<rwcnt;i=i+1) begin
+    if (currow!=i) then begin
+      MatRowGet(IPp,i,IPrw);
+      if (IPrw.ovst==0) then begin
+      switch (IPrw.stp) begin
+        case 1:
+          if (IPrw.CUPNr==cupnr) then begin isp = isp + IPrw.InvVal; end;
+        case 5:
+          if (IPrw.CUPNr==cupnr) then begin isp = isp + IPrw.InvVal; end;
+        case 6:
+          if (IPrw.CUPNr==cupnr) then begin isp = isp + IPrw.InvVal; end;
+        case 7:
+          if (IPrw.CUPNr==cupnr) then begin isp = isp + IPrw.InvVal; end;
+      end;
+      end;
+    end;  
+  end;
+  IPPrepaysum = isp;
+  RETURN;
+END;
+
+global
+procedure IPUsedPrepaysum(LongInt CUPNr,var val usedvp,var val usedvatp,var val taxusedp)
+BEGIN
+  record ARPayHistVc ARPayHistr;
+  record IVVc IVr;
+  row IVVc IVrw;
+  Integer i,rwcnt;
+  Boolean TrHs;
+  
+  usedvp = blankval;
+  usedvatp = blankval;
+  ARPayHistr.CUPNr = CUPNr;
+  ARPayHistr.FileName = "IVVc";
+  TrHs = true;
+  while (LoopMain(ARPayHistr,2,TrHs)) begin  
+    if (ARPayHistr.CUPNr!=CUPNr) then begin TrHs = false; end;
+    if (ARPayHistr.FileName!="IVVc") then begin TrHs = false; end;
+    if (TrHs) then begin
+      IVr.SerNr = ARPayHistr.SerNr;
+      if (ReadFirstMain(IVr,1,true)) then begin
+        rwcnt = MatRowCnt(IVr);
+        for (i=0;i<rwcnt;i=i+1) begin
+          MatRowGet(IVr,i,IVrw);
+          if (IVrw.stp==6) then begin
+            if (IVrw.CUPNr==CUPNr) then begin
+              usedvp = usedvp + IVrw.Sum;
+              usedvatp = usedvatp + IVrw.Price;
+              taxusedp = taxusedp + IVrw.TAX1Reb;
+            end;  
+          end;
+        end;        
+      end;  
+    end;  
+  end;  
+  RETURN;
+END;
+
+procedure PasteORIn2IPr(var record IPVc IPp,row IPVc IPrwp,Integer rownr,Date tdp,val checkamountp)
+BEGIN
+  record ORVc ORr;
+  record CUVc CUr;
+  row ORVc ORrw;
+  record ARPayVc ARPayr;
+  record AccBlock ARAccRec;
+  val rv,rebval,t;
+  val fr,to1,to2,br1,br2;
+  val vatval,vatused,taxused;
+  string 2 vatcod;
+  record RoundBlock RoundRec;
+  string 20 curncycode,thepm,bankcurncy;
+  Integer i,rwcnt;
+  string 10 invcur,bankcur,reccur;
+  val invval,bankval,recval;  
+  
+  BlockLoad(RoundRec);  
+  ORr.SerNr = IPrwp.CUPNr;
+  curncycode = IPrwp.InvCurncy;
+  if (ReadFirstMain(ORr,1,true)) then begin
+    if (nonblank(ORr.InvoiceToCode)) then begin
+      CUr.Code = ORr.InvoiceToCode;
+      if (ReadFirstMain(CUr,1,true)) then begin
+        IPrwp.CustCode = CUr.Code;
+        IPrwp.CustName = CUr.Name;
+      end else begin
+        IPrwp.CustCode = ORr.CustCode;
+        IPrwp.CustName = ORr.Addr0;
+      end;
+    end else begin
+      IPrwp.CustCode = ORr.CustCode;
+      IPrwp.CustName = ORr.Addr0;
+    end;
+    IPrwp.Objects = ORr.Objects;
+    IPrwp.PayDate = tdp;
+    curncycode = ORr.CurncyCode;
+    fr = ORr.FrRate;
+    to1 = ORr.ToRateB1;
+    to2 = ORr.ToRateB2;
+    br1 = ORr.BaseRate1;
+    br2 = ORr.BaseRate2;
+    rwcnt = MatRowCnt(ORr);
+    for (i=0;i<rwcnt;i=i+1) begin
+      MatRowGet(ORr,i,ORrw);
+      if (ORrw.Sum!=0) then begin
+        if (blank(vatcod)) then begin
+          vatcod = ORrw.VATCode;
+        end else begin
+          if (vatcod!=ORrw.VATCode) then begin
+            vatcod = "";
+            goto L33PasteORIn2IPr;
+          end;
+        end;
+      end;
+    end;
+L33PasteORIn2IPr:;
+  end else begin
+    BlockLoad(ARAccRec);
+    CUr.Code = IPrwp.CustCode;
+    if (ReadFirstMain(CUr,1,true)) then begin
+      vatcod = CUr.VATCode;
+    end;
+    if (blank(vatcod)) then begin
+      switch (CUr.ExportFlag) begin
+        case 4: vatcod = ARAccRec.VATCodeExp;
+        case 3: vatcod = ARAccRec.VATCodeEU;
+        case 2: vatcod = ARAccRec.VATCodeExp;
+        case 1: vatcod = ARAccRec.VATCodeEU;
+        otherwise vatcod = ARAccRec.VATCodeDom;
+      end;
+    end;
+    if (ARAccRec.PreIPBookVAT!=0) then begin
+      IPrwp.VATCode = vatcod;
+    end;
+    goto LPasteORIn2IPr;
+  end;
+  rv = ORr.Sum4;
+  rv = rv + ORr.Commision;
+  rv = rv - IPPrepaysum(IPp,IPrwp.CUPNr,rownr);  
+  ARPayr.CUPNr = IPrwp.CUPNr;
+  if (ReadFirstMain(ARPayr,1,true)) then begin
+    rv = rv - ARPayr.RVal;    
+  end;  
+  IPUsedPrepaysum(IPrwp.CUPNr,t,vatused,taxused);
+  rv = rv - t;      
+  if (nonblank(IPrwp.PayMode)) then begin
+    thepm = IPrwp.PayMode;
+  end else begin
+    thepm = IPp.PayMode;
+  end;
+  if (GetPMCurrency(thepm,bankcurncy)) then begin end;
+  IPrwp.BankCurncy = bankcurncy;
+  IPrwp.RecCurncy = curncycode;
+  IPrwp.InvCurncy = curncycode;
+  IPrwp.InvVal = rv;
+  IPrwp.RecVal = rv;
+  if (bankcurncy!=curncycode) then begin
+    CurValToOtherCur(IPp.TransDate,curncycode,rv,bankcurncy,t,DefaultCurRoundOff);
+    IPrwp.BankVal = t;
+   end else begin
+    IPrwp.BankVal = rv;
+  end;
+  invcur = IPrwp.InvCurncy;
+  invval = IPrwp.InvVal;
+  bankcur = IPrwp.BankCurncy;
+  bankval = IPrwp.BankVal;
+  reccur = IPrwp.RecCurncy;
+  recval = IPrwp.RecVal;  
+  MatchIPRowSums(IPp.PayMode,IPrwp.PayMode,IPp.TransDate,invcur,invval,bankcur,bankval,reccur,recval,true,true,true);
+  IPrwp.InvCurncy = invcur;
+  IPrwp.InvVal = invval;
+  IPrwp.BankCurncy = bankcur;
+  IPrwp.BankVal = bankval;
+  IPrwp.RecCurncy = reccur;
+  IPrwp.RecVal = recval;
+  IPrwp.InvOutstand = blankval;
+  IPrwp.VATCode = vatcod;
+  vatval = ORr.Sum3 - ARPayr.VATVal;
+  IPrwp.VATVal = vatval - vatused;
+  vatval = ORr.TAX1Sum - ARPayr.TAX1Sum;
+  IPrwp.TAX1Sum = vatval - taxused;
+LPasteORIn2IPr:;
+  RETURN;
+END;
+
+global
+procedure IPVc_PasteCUPNr(var record IPVc IPp,Integer rownr)
+BEGIN
+  val t,rs;
+  row IPVc IPrw;
+  
+  MatRowGet(IPp,rownr,IPrw);
+  PasteORIn2IPr(IPp,IPrw,rownr,IPp.TransDate,t);
+  if (nonblank(IPrw.VATCode)) then begin
+    Mul2VAT(IPrw.VATCode,IPrw.InvVal,t,rs,1);
+    IPrw.VATVal = t;
+  end else begin
+    IPrw.VATVal = blankval;
+  end;
+  MatRowPut(IPp,rownr,IPrw);
+  IPSumup(IPp);
+  RETURN;
+END;
+
+global
+procedure IPVc_PasteOrderNr(var record IPVc IPp,Integer rownr)
+BEGIN
+  val t;
+  row IPVc IPrw;
+  
+  MatRowGet(IPp,rownr,IPrw);
+  IPrw.CUPNr = IPrw.OrderNr;  
+  PasteORIn2IPr(IPp,IPrw,rownr,IPp.TransDate,t);
+  MatRowPut(IPp,rownr,IPrw);
+  IPSumup(IPp);
+  RETURN;
+END;
+
+function Boolean PasteCustIn2IPr(var record IPVc IPp,Integer rownr,Date tdp)
+BEGIN
+  Boolean res;
+  record AccBlock ARAccRec;
+  record BaseCurBlock bascur;
+  record CUVc CUr;
+  row IPVc IPrw;
+  val tot;
+  string 5 crncy,thepm;
+
+  MatRowGet(IPp,rownr,IPrw);
+  if (IPrw.InvoiceNr!=-1) then begin
+    goto LPasteCustIn2IPr;
+  end;
+  BlockLoad(ARAccRec);
+  CUr.Code = IPrw.CustCode;
+  if (ReadFirstMain(CUr,1,true)) then begin
+    crncy = CUr.CurncyCode; 
+    if (blank(crncy)) then begin
+      BlockLoad(bascur);
+      crncy = bascur.StdBaseCur;
+    end;             
+    IPrw.CustCode = CUr.Code;
+    IPrw.CustName = CUr.Name;
+    IPrw.PayDate = tdp;
+    IPrw.InvVal = tot;    
+    IPrw.InvCurncy = crncy;
+    IPrw.BankVal = tot;
+    IPrw.BankCurncy = crncy;
+    IPrw.RecVal = tot;
+    IPrw.RecCurncy = crncy;
+    if (nonblank(IPrw.PayMode)) then begin
+      thepm = IPrw.PayMode;
+    end else begin
+      thepm = IPp.PayMode;
+    end;    
+    if (GetPMCurrency(thepm,crncy)) then begin end;    
+    if (nonblank(crncy)) then begin
+      IPrw.BankCurncy = crncy;
+    end;
+    if (ARAccRec.ARUseObj!=0) then begin
+      IPrw.Objects = CUr.Objects;
+    end;
+    MatRowPut(IPp,rownr,IPrw);
+    IPSumup(IPp);
+    res = true;
+  end else begin
+    res = false;
+  end;
+LPasteCustIn2IPr:;  
+  PasteCustIn2IPr = res;
+  RETURN;
+END;
+
+global
+function Boolean IPVc_PasteCustCode(var record IPVc IPp,Integer rownr)
+BEGIN
+  Boolean res;
+  
+  res = PasteCustIn2IPr(IPp,rownr,IPp.TransDate);
+  IPVc_PasteCustCode = res;
+  RETURN;
+END;
+
+procedure IPChangePayDate(record IPVc IPp,row IPVc iprp,Integer rownr,Date tdp)
+BEGIN
+  record ARVc ARr;
+  record IVVc IVr;
+  string 20 pmod,curncy,bankcurncy;
+  val tv,rv,rebval,t;
+  LongInt rebdays;
+  record RoundBlock RoundRec;
+  row IPVc locIPrw;
+  Boolean bankvalcf;
+  string 10 invcur,bankcur,reccur;
+  val invval,bankval,recval;  
+
+  BlockLoad(RoundRec);
+  IPInvsum(IPp,iprp.InvoiceNr,iprp.InvCurncy,tv);
+  tv = tv - iprp.InvVal; 
+  pmod = IPp.PayMode;
+  IVr.SerNr = iprp.InvoiceNr;
+  if (ReadFirstMain(IVr,1,true)) then begin
+    if (IVr.Invalid!=0) then begin goto LIPChangePayDate; end;
+  end else begin
+    goto LIPChangePayDate;
+  end;
+  curncy = IVr.CurncyCode;
+  if (GetPMCurrency(pmod,bankcurncy)) then begin end;
+  ARr.InvoiceNr = iprp.InvoiceNr;
+  if (ReadFirstMain(ARr,1,true)) then begin
+    rv = ARr.RVal - tv;
+  end;
+  if (iprp.InvVal!=rv) then begin goto LIPChangePayDate; end;
+  if (IVr.pdvrebt!=0) then begin
+    rebdays = DateDiff(ARr.ARRebDate,tdp);
+    if (rebdays>=0) then begin
+      rebval = iprp.InvVal*IVr.pdvrebt;    
+      rebval = rebval/100;
+      rebval = Round(rebval,RoundRec.RndTotal);
+      rv = iprp.InvVal - rebval;      
+      iprp.InvVal = rv;
+      bankvalcf = true;      
+    end;
+  end;
+  if (IVr.pdvrebt2!=0) then begin
+    rebdays = DateDiff(ARr.ARRebDate2,tdp);
+    if (rebdays>=0) then begin
+      rebval = iprp.InvVal*IVr.pdvrebt2;    
+      rebval = rebval/100;
+      rebval = Round(rebval,RoundRec.RndTotal);
+      rv = iprp.InvVal - rebval;      
+      iprp.InvVal = rv;
+      bankvalcf = true;      
+    end;
+  end;
+  iprp.InvVal = rv;
+  iprp.RecVal = rv;
+  if (bankcurncy!=curncy) then begin
+    CurValToOtherCur(IPp.TransDate,curncy,rv,bankcurncy,t,DefaultCurRoundOff);
+    iprp.BankVal = t;
+   end else begin
+    iprp.BankVal = rv;
+  end;
+  invcur = iprp.InvCurncy;
+  invval = iprp.InvVal;
+  bankcur = iprp.BankCurncy;
+  bankval = iprp.BankVal;
+  reccur = iprp.RecCurncy;
+  recval = iprp.RecVal;  
+  MatchIPRowSums(IPp.PayMode,iprp.PayMode,IPp.TransDate,invcur,invval,bankcur,bankval,reccur,recval,false,false,true);
+  iprp.InvCurncy = invcur;
+  iprp.InvVal = invval;
+  iprp.BankCurncy = bankcur;
+  iprp.BankVal = bankval;
+  iprp.RecCurncy = reccur;
+  iprp.RecVal = recval;
+  MatRowPut(IPp,rownr,iprp);  
+  if (rebval!=0) then begin
+    ClearRow(IPp,locIPrw,5);
+    locIPrw.InvoiceNr = iprp.InvoiceNr;
+    locIPrw.BankCurncy = bankcurncy;
+    locIPrw.RecCurncy = curncy;
+    locIPrw.InvCurncy = curncy;
+    locIPrw.InvVal = rebval;
+    locIPrw.RecVal = rebval;
+    if (bankcurncy!=curncy) then begin
+      CurValToOtherCur(IPp.TransDate,curncy,rebval,bankcurncy,t,DefaultCurRoundOff);
+      iprp.BankVal = t;
+     end else begin
+      iprp.BankVal = rebval;
+    end;    
+    if (GetPMCurrency(IPp.PayMode,bankcurncy)) then begin end;
+    locIPrw.BankCurncy = bankcurncy;
+    locIPrw.RecCurncy = curncy;
+    locIPrw.InvCurncy = curncy;
+    
+    invcur = locIPrw.InvCurncy;
+    invval = locIPrw.InvVal;
+    bankcur = locIPrw.BankCurncy;
+    bankval = locIPrw.BankVal;
+    reccur = locIPrw.RecCurncy;
+    recval = locIPrw.RecVal;  
+    MatchIPRowSums(IPp.PayMode,pmod,IPp.TransDate,locIPrw.InvCurncy,locIPrw.InvVal,locIPrw.BankCurncy,locIPrw.BankVal,locIPrw.RecCurncy,locIPrw.RecVal,true,true,true);
+    locIPrw.InvCurncy = invcur;
+    locIPrw.InvVal = invval;
+    locIPrw.BankCurncy = bankcur;
+    locIPrw.BankVal = bankval;
+    locIPrw.RecCurncy = reccur;
+    locIPrw.RecVal = recval;    
+    locIPrw.CustCode = IVr.CustCode;
+    locIPrw.CustName = IVr.Addr0;
+    MatRowInsert(IPp,rownr+1,locIPrw);
+  end;
+LIPChangePayDate:;
+  RETURN;
+END;
+
+global
+procedure IPVc_PastePayDate(var record IPVc IPp,Integer rownr)
+BEGIN
+  Boolean testf;
+  row IPVc IPrw;
+  row IPVc IP2rw;
+  Integer rwcnt;
+  
+  rwcnt = MatRowCnt(IPp);
+  MatRowGet(IPp,rownr,IPrw);            
+  if (rownr<(rwcnt-1)) then begin
+    MatRowGet(IPp,rownr+1,IP2rw);            
+    if (IP2rw.stp!=5) then begin testf = true; end;
+  end;
+  if (rownr==rwcnt-1) then begin testf = true; end;
+  if (testf) then begin
+    IPChangePayDate(IPp,IPrw,rownr,IPrw.PayDate);
+  end;
+  IPSumup(IPp);
+  RETURN;
+END;
+
+procedure ChangeIPRecCur(row IPVc iprp,Date tdp)
+BEGIN
+  val t;
+
+  ChangeSVIPRecCur(iprp,tdp,t);
+  if (iprp.InvoiceNr==-1) then begin
+    iprp.InvVal = iprp.RecVal;
+    //iprp.InvCurncy = iprp.BankCurncy;
+    iprp.InvCurncy = iprp.RecCurncy;// Edit ************************** Thursday, 27 January 2011 11:41:51
+  end;  
+  RETURN;
+END;
+
+global
+procedure IPVc_PasteRecCurncy(var record IPVc IPp,Integer rownr)
+BEGIN
+  row IPVc IPrw;
+  
+  MatRowGet(IPp,rownr,IPrw);    
+  ChangeIPRecCur(IPrw,IPp.TransDate);
+  MatRowPut(IPp,rownr,IPrw);
+  IPSumup(IPp);
+  RETURN;
+END;
+
+global
+procedure IPVc_PasteRecVal(var record IPVc IPp,Integer rownr)
+BEGIN
+  row IPVc IPrw;
+  val rs,t,t1;
+  record AccBlock Accb;
+  
+  MatRowGet(IPp,rownr,IPrw);  
+  ChangeIPRecVal(rownr,IPrw,IPp.TransDate);
+  if (nonblank(IPrw.VATCode)) then begin
+    if (IPrw.InvoiceNr<0) then begin
+      BlockLoad(Accb);  
+      MulVATIV(IPrw.VATCode,IPrw.InvVal,t,t1,1,Accb.NoTAXonVAT);
+      IPrw.VATVal = Round(t,2);
+      IPrw.TAX1Sum = Round(t1,2);
+    end else begin
+      Mul2VAT(IPrw.VATCode,IPrw.InvVal,t,rs,1);
+      IPrw.VATVal = t;
+    end;
+  end else begin
+    IPrw.VATVal = blankval;
+    IPrw.TAX1Sum = blankval;
+  end;
+  //ChangeIPBankCurncy(IPp,IPrw.BankCurncy);
+  MatRowPut(IPp,rownr,IPrw);
+  IPSumup(IPp);
+  RETURN;
+END;
+
+// Edit Start ---------------------------------------------- Edit Start
+	//пятница, 25 июня 2010 г. 14:15:05
+	global
+procedure IPVc_PasteBankVal(var record IPVc IPp,Integer rownr)
+BEGIN
+  row IPVc IPrw;
+  val rs,t,oldBank;
+  
+  MatRowGet(IPp,rownr,IPrw);
+  if (IPrw.BankCurncy==IPrw.RecCurncy) then begin
+    ChangeIPRecVal(rownr,IPrw,IPp.TransDate);
+    if (nonblank(IPrw.VATCode)) then begin
+      Mul2VAT(IPrw.VATCode,IPrw.InvVal,t,rs,1);
+      IPrw.VATVal = t;
+    end else begin
+      IPrw.VATVal = blankval;
+    end;
+    MatRowPut(IPp,rownr,IPrw);
+  end else begin
+  oldBank = IPrw.BankVal;
+  IPrw.RecVal = round(IPrw.BankVal*conv(IPrw.RecCurncy,IPp.TransDate)/conv(IPrw.BankCurncy,IPp.TransDate),DefaultCurRoundoff);// Edit ************************** пятница, 25 июня 2010 г. 14:15:13
+  MatRowPut(IPp,rownr,IPrw);
+  IPVc_PasteRecVal(IPp,rownr);
+  // Edit Start ---------------------------------------------- Edit Start
+	//Monday, 15 November 2010 10:32:39
+	MatRowGet(IPp,rownr,IPrw);
+  IPrw.BankVal = oldBank;
+  MatRowPut(IPp,rownr,IPrw);
+	// Edit End ---------------------------------------------- Edit End
+	
+  
+  end;
+  IPSumup(IPp);
+  RETURN;
+END;
+	// Edit End ---------------------------------------------- Edit End
+	
+
+function val FindCheckAmount(var record IPVc IPp,Integer rownr,record CheckVc Checkr)
+BEGIN
+  val res,t,v;
+  row IPVc IPrw;
+  Integer i;
+  
+  res = Checkr.Amount;  
+  for (i=0;i<rownr;i=i+1) begin
+    MatRowGet(IPp,i,IPrw);
+    if (IPrw.ChequeNr==Checkr.SerNr) then begin
+      CurValToOtherCur(IPp.TransDate,IPrw.RecCurncy,IPrw.RecVal,Checkr.CurncyCode,t,DefaultCurRoundOff);
+      v = v + t;
+    end;
+  end;
+  res = res - v;  
+  FindCheckAmount = res;
+  RETURN;
+END;
+
+function Boolean PasteCheckInIP(var record IPVc IPp,Integer rownr,row IPVc iprp,LongInt checknr)
+BEGIN
+  Boolean res,installmentf;
+  row IPVc IPrw;
+  row IPVc IP2rw;
+  record CheckVc Checkr;
+  record CouponVc Couponr;
+  val temp,checkamount,recamount,t;
+  Integer i,cht,row1,newrownr;
+  string 2 thepm;
+  string 255 tstr;
+  Integer n;
+  Boolean rowfound;
+  
+  if (nonblank(iprp.PayMode)) then begin
+    thepm = iprp.PayMode;
+  end else begin
+    thepm = IPp.PayMode;
+  end;
+  MatRowGet(IPp,rownr,IPrw);
+  if (nonblank(IPrw.PayMode)) then begin
+    cht = PMCheckType(IPrw.PayMode,tstr,tstr);
+  end else begin
+    cht = PMCheckType(IPp.PayMode,tstr,tstr);
+  end;
+  if (cht==1) then begin
+    Checkr.SerNr = checknr;
+    if (ReadFirstMain(Checkr,1,true)) then begin
+      if (true) then begin//strpeq(iprp.RecCurncy,Checkr.CurncyCode)==false
+        if (GetPMCurrency(thepm,tstr)) then begin end;
+        checkamount = FindCheckAmount(IPp,rownr,Checkr);
+        iprp.BankCurncy = tstr;
+        IPrw.RecCurncy = Checkr.CurncyCode;
+        CurValToOtherCurWithRate(IPp.TransDate,Checkr.CurncyCode,checkamount,iprp.RecCurncy,iprp.ToRateB1BankVal,recamount,DefaultCurRoundOff);
+        if (recamount>iprp.RecVal) and (iprp.RecVal<>0) then begin
+          CurValToOtherCur(IPp.TransDate,iprp.RecCurncy,iprp.RecVal,Checkr.CurncyCode,t,DefaultCurRoundOff);
+          IPrw.RecVal = t;
+        end else begin
+          IPrw.RecVal = checkamount;
+        end;
+        iprp.RecVal = IPrw.RecVal;
+        iprp.RecCurncy = Checkr.CurncyCode;
+        MatRowPut(IPp,rownr,iprp);        
+        IPVc_PasteRecVal(IPp,rownr);
+        MatRowGet(IPp,rownr,iprp);        
+      end else begin
+      end;
+      if (true) then begin
+        CurValToOtherCur(IPp.TransDate,Checkr.CurncyCode,checkamount,iprp.RecCurncy,recamount,DefaultCurRoundOff);
+        if (checkamount<0) then begin checkamount = blankval; end;
+        if (recamount<0) then begin recamount = blankval; end;
+            
+        if (iprp.RecVal<recamount) then begin
+          CurValToOtherCur(IPp.TransDate,iprp.RecCurncy,iprp.RecVal,Checkr.CurncyCode,recamount,DefaultCurRoundOff);
+          temp = checkamount - recamount;
+          if (rownr<99) then begin
+            
+            n = 1;
+            rowfound = false;
+            
+            while (((rownr + n)<MatRowCnt(IPp)) and (rowfound==false)) begin
+              MatRowGet(IPp,rownr + n,IP2rw);
+              if ((IP2rw.stp==1) and (IP2rw.ChequeNr==-1) and (iprp.CustCode==IP2rw.CustCode) and (IP2rw.RecCurncy==Checkr.CurncyCode)) then begin
+                rowfound = true;
+              end else begin
+                n = n + 1;
+              end;
+            end;
+            
+            if (rowfound) then begin
+              IP2rw.ChequeNr = iprp.ChequeNr;
+              newrownr = rownr + n;
+              res = PasteCheckInIP(IPp,newrownr,IP2rw,iprp.ChequeNr);
+            end else begin
+              ClearRow(IPp,IP2rw,1);
+              IP2rw.CustCode = IPrw.CustCode;
+              MatRowInsert(IPp,rownr+1,IP2rw);
+              if (PasteCustIn2IPr(IPp,rownr+1,IPp.TransDate)) then begin end;
+              MatRowGet(IPp,rownr+1,IP2rw);
+              IP2rw.ChequeNr = IPrw.ChequeNr;
+              IP2rw.PayMode = IPrw.PayMode;
+              IP2rw.BankCurncy = Checkr.CurncyCode;
+              IP2rw.RecCurncy = Checkr.CurncyCode;
+              IP2rw.InvCurncy = Checkr.CurncyCode;
+              IP2rw.BankVal = temp;
+              IP2rw.InvVal = temp;
+              IP2rw.RecVal = temp;
+              MatRowPut(IPp,rownr+1,IP2rw);
+            end;
+          end;
+        end else begin        
+          temp = iprp.RecVal;
+          for (i=0;i<=rownr;i=i+1) begin
+            MatRowGet(IPp,i,IPrw);
+            if (IPrw.ChequeNr==iprp.ChequeNr) then begin
+              if (iprp.RecCurncy==Checkr.CurncyCode) then begin
+                temp = temp - IPrw.RecVal;
+              end;
+            end;
+          end;          
+          if (temp>0) then begin
+            ClearRow(IPp,IPrw,1);
+            temp = iprp.RecVal;
+            MatRowInsert(IPp,rownr + 1,IPrw);
+            if (PasteInvIn2IPr(IPp,rownr + 1,IPp.TransDate,temp,5,installmentf)) then begin end;
+          end;
+        end;
+      end else begin
+        MessageBox(1217,"");
+      end;
+      res = true;
+    end else begin
+      res = false;
+    end;
+  end;
+  if (cht==3) then begin
+    Couponr.SerNr = checknr;
+    if (ReadFirstMain(Couponr,1,true)) then begin
+      checkamount = Couponr.Amount;
+      for (i=0;i<rownr;i=i+1) begin
+        MatRowGet(IPp,i,IPrw);
+        if (IPrw.ChequeNr==checknr) then begin
+          checkamount = checkamount - IPrw.BankVal;
+        end;
+      end;
+      if (checkamount<0) then begin checkamount = blankval; end;
+      if (iprp.BankVal>checkamount) then begin
+        temp = iprp.BankVal - checkamount;        
+        iprp.BankVal = checkamount;
+        iprp.RecVal = checkamount;
+        iprp.InvVal = checkamount;
+        if (iprp.BankCurncy!=iprp.RecCurncy) then begin
+        end;
+        MatRowPut(IPp,rownr,iprp);
+        if (iprp.BankCurncy!=iprp.RecCurncy) then begin
+          ChangeIPRecVal(rownr,iprp,IPp.TransDate);
+          MatRowPut(IPp,rownr,iprp);
+        end;
+        if (temp!=0) then begin
+          if (rownr<99) then begin
+            ClearRow(IPp,IPrw,1);
+            CopyRow(IPp,iprp,IPrw);
+            if (temp>0) then begin
+              IPrw.ChequeNr = -1;
+              MatRowInsert(IPp,rownr + 1,IPrw);
+              if (PasteInvIn2IPr(IPp,rownr + 1,IPp.TransDate,temp,5,installmentf)) then begin end;            
+            end else begin
+            end;
+          end;
+        end;
+      end else begin
+        if (iprp.InvoiceNr==-1) then begin
+          iprp.BankVal = checkamount;
+          iprp.RecVal = checkamount;
+          iprp.InvVal = checkamount;
+          MatRowPut(IPp,rownr,iprp);              
+        end;
+      end;
+      res = true;
+    end else begin
+      res = false;
+    end;
+  end;
+  PasteCheckInIP = res;
+  RETURN;
+END;
+
+global
+function Boolean IPVc_PasteChequeNr(var record IPVc IPp,Integer rownr)
+BEGIN
+  Boolean res;
+  row IPVc IPrw;
+  
+  MatRowGet(IPp,rownr,IPrw);  
+  if (IPrw.ChequeNr!=-1) then begin
+    res = PasteCheckInIP(IPp,rownr,IPrw,IPrw.ChequeNr);  
+    IPSumup(IPp);
+  end;
+  IPVc_PasteChequeNr = res;
+  RETURN;
+END;
+
+function Boolean FindChequenr(string cucode,var val chval,var LongInt lastchnr)
+BEGIN
+  Boolean res;
+  record CheckVc Checkr;
+  Boolean found;
+  
+  chval = blankval;
+  found = true;
+  Checkr.Openf = 0;
+  Checkr.CUCode = cucode;
+  Checkr.SerNr = lastchnr + 1;
+  while (LoopKey("RegCUCode",Checkr,3,found)) begin
+    if (Checkr.Openf!=0) then begin found = false; end;
+    if (Checkr.CUCode!=cucode) then begin found = false; end;
+    if (found) then begin
+      lastchnr = Checkr.SerNr;
+      chval = Checkr.Amount;
+      found = false;
+      res = true;
+    end;
+  end;
+  FindChequenr = res;
+  RETURN;
+END;
+
+function val ThisCheuqeAmount(record IPVc IPp,Integer rwcnt,LongInt lastchnr)
+begin
+  val res;
+  row IPVc IPrw;
+  Integer i;
+  
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(IPp,i,IPrw);
+    if (IPrw.ChequeNr==lastchnr) then begin
+      res = res + IPrw.RecVal;
+    end;
+  end;
+  ThisCheuqeAmount = res;
+  return;
+end;
+
+global
+procedure DoDistributeChequesIP(var record IPVc IPp,Integer currow,var string gotofieldname,var Integer gotorownr)
+BEGIN
+  row IPVc IPrw;
+  row IPVc newIPrw;
+  row IPVc curIPrw;
+  row IPVc nextIPrw;
+  Integer i,rwcnt;
+  LongInt lastchnr;
+  val chval;
+
+  if (currow>=0) then begin
+    MatRowGet(IPp,currow,curIPrw);
+    rwcnt = MatRowCnt(IPp);
+    for (i=currow;i<rwcnt;i=i+1) begin
+      MatRowGet(IPp,i,IPrw);
+      if (IPrw.ChequeNr<0) and (IPrw.CustCode==curIPrw.CustCode) then begin
+        if (FindChequenr(IPrw.CustCode,chval,lastchnr)) then begin
+          chval = chval - ThisCheuqeAmount(IPp,i,lastchnr);
+          IPrw.ChequeNr = lastchnr;
+          if (chval==IPrw.RecVal) then begin
+            MatRowPut(IPp,i,IPrw);
+          end;
+          if (chval>IPrw.RecVal) then begin
+            MatRowPut(IPp,i,IPrw);                                    
+            ClearRow(IPp,newIPrw,1);
+            CopyRow(IPp,IPrw,newIPrw);
+            newIPrw.RecVal = chval - newIPrw.RecVal;
+            ChangeIPRecVal(i+1,newIPrw,IPp.TransDate);  
+            if (newIPrw.RecVal>0) then begin  
+              nextIPrw.CustCode = "";
+              if ((i+1)<rwcnt) then begin
+                MatRowGet(IPp,i+1,nextIPrw); 
+              end;                                   
+              if (nextIPrw.CustCode!=newIPrw.CustCode) then begin
+                newIPrw.InvoiceNr = -1;
+                newIPrw.PayMode = "";
+                MatRowInsert(IPp,i+1,newIPrw);
+                rwcnt = MatRowCnt(IPp);
+              end else begin
+                lastchnr = lastchnr - 1;
+              end;
+            end;
+            gotofieldname = "InvoiceNr";
+            gotorownr = i + 1;
+          end;
+          if (chval<IPrw.RecVal) then begin
+            ClearRow(IPp,newIPrw,1);
+            CopyRow(IPp,IPrw,newIPrw);
+            IPrw.RecVal = chval;
+            ChangeIPRecVal(i,IPrw,IPp.TransDate);          
+            MatRowPut(IPp,i,IPrw);
+            newIPrw.ChequeNr = -1;          
+            newIPrw.RecVal = newIPrw.RecVal - chval;
+            ChangeIPRecVal(i+1,newIPrw,IPp.TransDate);    
+            MatRowInsert(IPp,i+1,newIPrw);
+            rwcnt = MatRowCnt(IPp);
+            gotofieldname = "ChequeNr";
+            gotorownr = i + 1;
+          end;
+        end;
+      end;
+    end;
+  end;
+  RETURN;
+END;
+
+global
+updating function Boolean CreateActFromIP(record IPVc IPr,Integer rownr,var record ActVc Actr)
+BEGIN
+  Boolean res;
+  row IPVc IPrw;
+  record CUVc CUr;
+  Integer curcomp;
+  record ASTBlock ASTb;
+
+  if (rownr>=0) then begin
+    BlockLoad(ASTb);
+    MatRowGet(IPr,rownr,IPrw);
+    curcomp = CurrentCompany;
+    Actr.MainPersons = CurrentUser;
+
+    Actr.TransDate = IPr.TransDate;
+    Actr.SerNr = NextSerNr("ActVc",Actr.TransDate,-1,false,"");
+    Actr.Invalid = 0;
+    Actr.TodoFlag = 1;
+    Actr.CUCode = IPrw.CustCode;
+    Actr.Comment = IPrw.Comment;
+    CUr.Code = IPrw.CustCode;
+    if (ReadFirstMain(CUr,1,true)) then begin
+      Actr.CUName = CUr.Name;
+      Actr.Phone = CUr.Phone;
+      if (blank(Actr.Contact)) then begin Actr.Contact = CurrentUser; end;
+    end;
+    Actr.ActType = ASTb.Receipts;
+    if (PasteActTypeInAct(Actr)) then begin
+    end;
+    SetActTypeValues(Actr);
+    Actr.OKFlag = ASTb.ReceiptsDone;
+    if (RecordInsert(Actr,false)) then begin
+      CreateRecordLink(Actr,curcomp,IPr,curcomp);  
+      CreateRecordLink(IPr,curcomp,Actr,curcomp);  
+      res = true;
+    end;
+  end;
+  CreateActFromIP = res;
+  RETURN;
+END;
+
+global
+procedure IPPastePayMode(var record IPVc IPp)
+BEGIN
+  Integer i,rwcnt,rn;
+  record PMBlock PMRec;
+  row PMBlock pmrw;
+  record MainCLBlock MainCLRec;
+
+  BlockLoad(MainCLRec);
+  BlockLoad(PMRec);
+  rwcnt = MatRowCnt(PMRec);
+  rn = 0;
+  if (blank(IPp.PayMode)) then begin goto L88IPPastePayMode; end;
+  for (i = 0; i<rwcnt; i=i+1) begin
+    MatRowGet(PMRec,i,pmrw);
+    if (pmrw.Code==IPp.PayMode) then begin
+      if (MainCLRec.CommonNoSer!=0) then begin
+        if (pmrw.TSerStartIn!=-1) then begin
+          IPp.SerNr = NextFreeCashSerNr(pmrw,true);
+        end else begin
+          IPp.SerNr = -1;
+          if (SingleUserMode) then begin
+            IPp.SerNr = NextSerNr("IPVc",IPp.TransDate,-1,false,"");
+          end;
+        end;
+      end;
+      rn = i;
+      goto L88IPPastePayMode;
+    end;
+  end;
+
+L88IPPastePayMode:;
+  if (rwcnt>0) then begin
+    MatRowGet(PMRec,rn,pmrw);      
+    IPp.PayMode = pmrw.Code;
+    IPp.Comment = pmrw.Comment;
+    IPp.Objects = pmrw.Objects;
+    if (pmrw.TSerStartIn!=-1) and (MainCLRec.CommonNoSer!=0) then begin
+      IPp.SerNr = NextFreeCashSerNr(pmrw,true);
+    end;
+  end;
+LIPPastePayMode:;
+  RETURN;
+END;
+

@@ -1,0 +1,87 @@
+remote inner procedure UpdateStockTakeFIFO(var record StockTakeVc,Boolean);
+external inner function string 40 SerialNrSClassSpecPName(string);
+remote inner function Boolean StockTakeVc_PasteArtCode(var record StockTakeVc,Integer,Integer,var string);
+external inner procedure SerialNrDimensions(string,string,var val,var val,var val);
+external inner function Integer CheckSerialStatus(string,string,var string);
+external inner function val CalculateSerialNrQuantity(string,string,string,Boolean,val,val,val,val);
+
+// Edit Start ---------------------------------------------- Edit Start
+	//Friday, 26 November 2010 14:47:28
+procedure StockTakePasteSerial(var string location,var string artcode,string serial)
+begin
+record SerBalVc SBr;
+boolean TrHs,testf;
+
+  TrHs = true;
+  SBr.Serial=serial;
+  While(loopkey("Serial",SBr,1,TrHs))begin
+  testf = true;
+    if(SBr.Serial!=serial) then begin testf = false; TrHs = false; end;
+    if(SBr.Quant==0) then begin testf = false; end;
+    //messagebox(0,SBr.Item & "_" & SBr.Quant);
+    
+    if(testf and SBr.Quant>0) then begin
+      location = SBr.Location;
+      artcode = SBr.Item;
+      TrHs = false;
+    end;
+    
+  end;
+
+return;
+end;
+
+	// Edit End ---------------------------------------------- Edit End
+	
+function Boolean StockTakeDClassSerialNrEFAfter(Integer wn,Integer fn, Integer rownr,Integer changed)
+BEGIN
+  row StockTakeVc StockTakerw;
+  record StockTakeVc StockTaker;
+  Boolean res;
+  val UnitXval,UnitYval,UnitZval;
+  string 255 tstr;
+  string 25 artcode,location;
+  record INVc INr;
+  
+  res = true;
+  if ((changed!=0) and (rownr>=0)) then begin
+    GetWindowRecord(wn,StockTaker);
+    MatRowGet(StockTaker,rownr,StockTakerw);
+    
+    StockTakePasteSerial(location,artcode,StockTakerw.SerialNr);// Edit ************************** Friday, 26 November 2010 14:46:43
+    
+    StockTakerw.Location = location;
+    StockTakerw.ArtCode = artcode;
+    StockTakerw.Qty = 1;
+    INr.Code = StockTakerw.ArtCode;
+    if(ReadFirstMain(INr,1,true)) then begin StockTakerw.Spec = INr.Name;  end;
+    
+    SerialNrDimensions(StockTakerw.ArtCode,StockTakerw.SerialNr,UnitXval,UnitYval,UnitZval);
+    StockTakerw.UnitXval = UnitXval;
+    StockTakerw.UnitYval = UnitYval;
+    StockTakerw.UnitZval = UnitZval;
+    if (CheckSerialStatus(StockTakerw.ArtCode,StockTakerw.SerialNr,tstr)==1) then begin
+      MessageBox(0,tstr);
+    end;
+    StockTakerw.Qty = CalculateSerialNrQuantity(StockTakerw.ArtCode,"","",false,StockTakerw.UnitXval,StockTakerw.UnitYval,StockTakerw.UnitZval,StockTakerw.Qty);    
+    MatRowPut(StockTaker,rownr,StockTakerw);
+    PutWindowRecord(wn,StockTaker);    
+  end;
+  StockTakeDClassSerialNrEFAfter = res;
+  RETURN;
+END;
+
+global
+function Boolean StockTakeDClassAfterEditField(Integer wn,string fieldname,Integer fn, Integer rownr,Integer changed)
+BEGIN
+  Boolean res;
+  
+  res = inner.StockTakeDClassAfterEditField(wn,fieldname,fn,rownr,changed);
+  
+  switch (fieldname) begin
+    case "SerialNr": res = StockTakeDClassSerialNrEFAfter(wn,fn,rownr,changed);
+  end;
+  StockTakeDClassAfterEditField = res;
+  RETURN;
+END;
+

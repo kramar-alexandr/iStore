@@ -1,0 +1,1791 @@
+remote procedure WriteRepTofSrvFile(Area,string);
+remote procedure fil();
+remote procedure MyItemReport();
+remote procedure MyItemReportNoCost();
+external function val ItemInStock(var record INVc,string);
+external function LongInt NumberOfJunkLeadingCharactersInArea(Area);
+remote procedure LocStockToArrea(var string);
+remote procedure runscript(string,string);
+external remote procedure GetMyDebCred(Date,Date,string,var val,var val,Var Val);
+external function val conv1(date,string);
+remote procedure GetItemName(string,var string,var string);
+external procedure ExtractObj(string,var Integer,var string);
+//remote procedure LocManyStock2Rn(record RcVc);
+
+	SetLangMode(LangUkrainian,"UKR",0);
+
+global procedure MyVendorStockRn(record RcVc RepSpec)
+begin
+record ItemStatusVc ISr;
+record INVc INr;
+string 20 group,gr1,gr2,gr;
+boolean TrHs,testf;
+record LocationVc Locr;
+integer i,s,g;
+array string 20 Stocks;
+array val sumitem,sumcost;
+array val grandsumitem,grandsumcost;
+val sumrowit,sumrowcost,sumtotit,sumtotcost;
+record ITVc ITr;
+
+  group = RepSpec.f1;
+  
+  INr.Group = "";
+  if(nonblank(group)) then begin
+    INr.Group=group;
+  end;
+  
+  StartReportJob("Vendor/Stock");
+  EndHeader;
+  
+  StartFormat(15);
+    OutString(0,0,"Brand",false);
+    OutString(50,0,"PartNo.",false);
+    OutString(100,0,"Description",false);
+    OutString(150,0,"Unit Cost",false);
+    OutString(200,0,"Site",false);
+    //OutString(250,0,"Data",false);
+  endformat;
+  
+  i=5;
+  s=0;
+  StartFormat(15);
+    OutString(0,0,"",false);
+    OutString(50,0,"",false);
+    OutString(100,0,"",false);
+    OutString(150,0,"",false);
+    Locr.Code = "";
+    While(loopmain(Locr,1,true)) begin
+      IF(Locr.Code!="OFFICE_EQU" and Locr.Code!="EQUI_DREAM" and Locr.Code!="EQUI_D_DEK" and Locr.Code!="EQUI_KARAV" and Locr.Code!="EQUI_KH_KR" and Locr.Code!="EQUI_OFFIC" and Locr.Code!="EQUI_OLIMP" and Locr.Code!="EQUI_O_SAD") then begin// Edit ************************** Monday, 26 July 2010 10:03:49
+        OutString(150+i,0,Locr.Code,false);
+        i=i+5;
+        OutString(150+i,0,"",false);
+        i=i+5;
+        Stocks[s] = Locr.Code;
+        s=s+1;
+      end;
+      
+    end;
+    Stocks[s] = ";;;";
+    s=s+1;
+    i=i+5;
+    OutString(150+i,0,"TOTAL",false);
+    i=i+5;
+    OutString(150+i,0,"",false);
+  endformat; 
+  
+  i=5;
+    StartFormat(15);
+    OutString(0,0,"",false);
+    OutString(50,0,"",false);
+    OutString(100,0,"",false);
+    OutString(150,0,"",false);
+    for(g=0;g<s;g=g+1) begin
+      OutString(150+i,0,"Qt-ty",false);
+      i=i+5;
+      OutString(150+i,0,"Ext Cost",false);
+      i=i+5;
+    end;
+  endformat; 
+  
+  TrHs = true;
+  While(loopkey("Group",INr,1,TrHs)) begin
+    If(nonblank(group) and group!=INr.Group) then begin
+	    TrHs = false;
+    end;
+    gr1 = INr.Group;
+    testf = true;
+    if(TrHs and nonblank(INr.Group)) then begin
+    
+      If(gr1!=gr2 and nonblank(gr2)) then begin
+        StartFormat(15);
+          OutString(150+i,0,"",false);
+        endformat;
+	      StartFormat(15);
+          OutString(0,0,"",false);
+          OutString(50,0,"",false);
+          OutString(100,0,"",false);
+          OutString(150,0,"Total " & gr2,false);
+	      i=5;
+	      for(g=0;g<s;g=g+1) begin
+          OutString(150+i,0,sumitem[g],false);
+          i=i+5;
+          OutString(150+i,0,sumcost[g],false);
+          i=i+5;
+          grandsumitem[g] = grandsumitem[g] + sumitem[g];
+          grandsumcost[g] = grandsumcost[g] + sumcost[g];
+          sumitem[g] = 0;
+          sumcost[g] = 0;
+	      end;
+	      endformat;
+	      StartFormat(15);
+          OutString(150+i,0,"",false);
+        endformat;
+      end; 
+      gr2 = INr.Group;
+
+      StartFormat(15);
+      
+      ITr.Code = INr.Group;
+      If(readfirstmain(ITr,1,true)) then begin
+	      gr = ITr.Comment;
+      end else begin
+        gr = INr.Group;
+      end;
+      //OutString(0,0,INr.Group,false);
+      OutString(0,0,gr,false);
+      OutString(50,0,INr.Code,false);
+      OutString(100,0,INr.Name,false);
+      OutString(150,0,INr.InPrice,false);
+      
+      i=5;
+      sumrowit = 0;
+      sumrowcost = 0;
+      for(g=0;g<s;g=g+1) begin
+        ISr.Code = INr.Code;
+        ISr.Location = Stocks[g];
+        testf = true;
+        If(readfirstmain(ISr,2,true)) then begin
+          if(ISr.Code!=INr.Code) then begin testf = false; end;
+          If(testf) then begin
+            if(ISr.Location==Stocks[g])then begin
+              if(Stocks[g]==";;;") then begin
+                 OutString(150+i,0,sumrowit,false);
+                 i=i+5;
+                 OutString(150+i,0,sumrowcost,false);
+                 i=i+5;
+                 sumitem[g] = sumitem[g] + sumrowit;
+                 sumcost[g] = sumcost[g] + sumrowcost;
+                 sumtotit = sumtotit + sumrowit;
+                 sumtotcost = sumtotcost + sumrowcost;
+              
+               end else begin
+                 OutString(150+i,0,ISr.Instock,false);
+                 i=i+5;
+                 OutString(150+i,0,ISr.Instock*INr.InPrice,false);
+                 i=i+5;
+                 sumrowit = sumrowit + ISr.Instock;
+                 sumrowcost = sumrowcost + ISr.Instock*INr.InPrice;
+                 sumitem[g] = sumitem[g] + ISr.Instock;
+                 sumcost[g] = sumcost[g] + ISr.Instock*INr.InPrice;
+               end;
+            end;
+          end; 
+        end else begin
+          OutString(150+i,0,"",false);
+          i=i+5;
+          OutString(150+i,0,"",false);
+          i=i+5;
+        end;  
+      end;
+    resetloop(ISr);
+    endformat;
+    end;
+	end;
+	
+	StartFormat(15);
+    OutString(150+i,0,"",false);
+  endformat;
+    
+  StartFormat(15);
+    OutString(0,0,"",false);
+    OutString(50,0,"",false);
+    OutString(100,0,"",false);
+    OutString(150,0,"Total " & gr1,false);
+    i=5;
+    for(g=0;g<s;g=g+1) begin
+      OutString(150+i,0,sumitem[g],false);
+      i=i+5;
+      OutString(150+i,0,sumcost[g],false);
+      i=i+5;
+      grandsumitem[g] = grandsumitem[g] + sumitem[g];
+      grandsumcost[g] = grandsumcost[g] + sumcost[g];
+      sumitem[g] = 0;
+      sumcost[g] = 0;
+    end;
+  endformat;
+  
+  StartFormat(15);
+    OutString(0,0,"",false);
+    OutString(50,0,"",false);
+    OutString(100,0,"",false);
+    OutString(150,0,"Grand Total",false);
+    i=5;
+    for(g=0;g<s;g=g+1) begin
+      OutString(150+i,0,grandsumitem[g],false);
+      i=i+5;
+      OutString(150+i,0,grandsumcost[g],false);
+      i=i+5;
+    end;
+  endformat;
+  
+  /*StartFormat(15);
+    OutString(0,0,"",false);
+    OutString(50,0,"",false);
+    OutString(100,0,"",false);
+    OutString(150,0,"Grand Total",false);
+    i=5;
+      OutString(150+i,0,sumtotit,false);
+      i=i+5;
+      OutString(150+i,0,sumtotcost,false);
+      i=i+5;
+  endformat;*/
+  
+  endJob;
+return;
+end;
+
+
+global
+procedure MySalerepPhotoTeck(record RcVc RepSpec)
+begin
+record CUVc CUr;
+record ORVc ORr;
+record IVVc IVr;
+record SHVc SHr;
+row ORVc ORrw;
+row IVVc IVrw;
+row SHVc SHrw;
+integer i,j,k,mtrw,mtrw1;
+boolean TrHs,testf,ShHs;
+string 100 client,name,group;
+date d1,d2;
+val rate,cost,profit,rateusd;
+record INVc INr;
+
+  client = RepSpec.f1;
+  
+  d1 = RepSpec.sStartDate;
+  d2 = RepSpec.sEndDate;
+  //stopalert(d1 & d2);
+  
+  StartReportJob("ItemStatistic");
+
+  EndHeader;
+  
+  StartFormat(15);
+    //OutString(10,0,"Invoice Type",false);
+    OutString(0,0,"Inv_No",false);
+    OutString(20,0,"Cust.",false);
+    //OutString(50,0,"Sup.",false);
+    OutString(70,0,"Date",false);
+    OutString(90,0,"Part_No.",false);
+    OutString(120,0,"Description",false);
+    OutString(140,0,"Quant",false);
+    //OutString(160,0,"Serial",false);
+    OutString(200,0,"Price",false);
+    OutString(220,0,"Price(UAH)",false);
+    OutString(225,0,"Sum",false);
+    OutString(230,0,"Sum(UAH)",false);
+    OutString(240,0,"Rebate",false);
+    OutString(250,0,"Serial",false);// Edit ************************** Friday, 3 September 2010 15:43:05
+    OutString(260,0,"Cost",false);
+    OutString(280,0,"Cost(UAH)",false);
+    OutString(285,0,"Cost Sum",false);
+    OutString(290,0,"Cost Sum(UAH)",false);
+    OutString(300,0,"Profit",false);
+    OutString(320,0,"Profit(UAH)",false);
+    OutString(340,0,"Curncy",false);
+    OutString(350,0,"Region",false);
+    OutString(355,0,"SalesMan",false);
+    OutString(360,0,"Group",false);
+  EndFormat;
+  
+  If(nonblank(client)) then begin
+    IVr.CustCode = client;
+	end else begin
+    IVr.CustCode = "";
+	end;
+  TrHs = true;
+  While(loopkey("CustCode",IVr,1,TrHs)) begin
+	  testf = true;
+	  if(nonblank(client) and IVr.CustCode!=client) then begin TrHs = false; testf = false; end;
+	  if((IVr.InvDate<d1) or (IVr.InvDate>d2)) then begin testf = false; end;
+	  if(IVr.OKFlag==0) then begin testf = false; end;
+    if(IVr.Invalid==1) then begin testf = false; end;
+    if(IVr.InvType==3) then begin testf = false; end;
+    matrowget(IVr,0,IVRw);
+    if(IVrw.stp==3) then begin testf = false; end;
+    
+	  If(testf) then begin
+	  
+	    mtrw = matrowcnt(IVr);
+	    for(i=0;i<mtrw;i=i+1) begin
+	      MatRowget(IVr,i,IVrw);
+	      If(nonblank(IVrw.ArtCode)) then begin
+          StartFormat(15)
+            OutString(0,0,IVr.SerNr,false);//Inv_No
+            OutString(20,0,IVr.CustCode,false);//Cust
+            OutString(70,0,IVr.InvDate,false);//Date
+            OutString(90,0,IVrw.ArtCode,false);//Part_No
+            OutString(120,0,IVrw.Spec,false);//Description
+            OutString(120,0,IVrw.Quant,false);//Quant
+            OutString(200,0,IVrw.Price,false);//Price
+            rate = round(conv1(IVr.InvDate,IVr.CurncyCode)/conv1(IVr.InvDate,"UAH_B"),defaultcurroundoff);
+            OutString(220,0,IVrw.Price/rate,false);//"Price(UAH)"
+            OutString(225,0,IVrw.Price*IVrw.Quant,false);//Sum
+            OutString(230,0,IVrw.Price/rate*IVrw.Quant,false);//"Sum(UAH)"
+            OutString(230,0,IVrw.vRebate,false);//Rebate
+            profit = 0;
+            cost = 0;
+            
+            INr.Code = IVrw.ArtCode;
+            If(ReadFirstMain(INr,1,true)) then begin
+              if(INr.ItemType==1) then begin
+                if(INr.SerNrf==0) then begin
+                  If(nonblank(IVr.OrderNr)) then begin
+                    SHr.OrderNr = IVr.OrderNr;
+                    ShHs = true;
+                    while(loopkey("OrderKey",SHr,1,ShHs)) begin
+                      If(SHr.OrderNr != IVr.OrderNr) then begin ShHs = false; end;
+                      if(ShHs) then begin
+                        mtrw1 = matrowcnt(SHr);
+                        For(j=0;j<mtrw1;j=j+1) begin
+                          MatRowget(SHr,j,SHrw);
+                          If(SHrw.OrdRow==IVrw.OrdRow) then begin
+                            ShHs = false;
+                            cost = SHrw.FIFORowVal/SHrw.Ship*rateusd;
+                            profit = (IVrw.Price - cost);
+                          end; 
+                        end; 
+                      end;
+                    end;
+                  end else begin
+                    cost = IVrw.FIFO*rateusd;
+                    profit = (IVrw.Price - cost);
+                  end;
+                  resetloop(SHr);
+                  
+                  StartFormat(15);
+                  OutString(0,0,IVr.SerNr,false);//Inv_No
+                  OutString(20,0,IVr.CustCode,false);//Cust
+                  OutString(70,0,IVr.InvDate,false);//Date
+                  OutString(90,0,IVrw.ArtCode,false);//Part_No
+                  OutString(120,0,IVrw.Spec,false);//Description
+                  OutString(120,0,IVrw.Quant,false);//Quant
+                  OutString(200,0,IVrw.Price/rateusd,false);//Price USD 
+                  OutString(220,0,IVrw.Price/rate,false);//"Price(UAH)"
+                  OutString(225,0,IVrw.Price*IVrw.Quant/rateusd,false);//Sum USD
+                  OutString(230,0,IVrw.Price/rate*IVrw.Quant,false);//"Sum(UAH)"
+                  OutString(230,0,IVrw.vRebate,false);//Rebate
+                  OutString(250,0,"",false);//Cost
+                  OutString(260,0,cost/rateusd,false);//Cost
+                  OutString(280,0,cost/rate,false);//"Cost(UAH)"
+                  OutString(280,0,cost*IVrw.Quant/rateusd,false);//"Cost Sum"
+                  OutString(280,0,cost/rate*IVrw.Quant,false);//"Cost Sum(UAH)"
+                  OutString(300,0,profit*IVrw.Quant/rateusd,false);//Profit
+                  OutString(320,0,profit/rate*IVrw.Quant,false);//"Profit(UAH)"
+                  OutString(340,0,IVr.CurncyCode,false);//"Curncy"
+                  CUr.Code = IVr.CustCode;
+                  ReadFirstMain(CUr,1,true);
+                  OutString(350,0,CUr.Region,false);//"Region"
+                  OutString(355,0,IVr.SalesMan,false);//SalesMan
+                  GetItemName(IVrw.ArtCode,name,group);
+                  OutString(360,0,group,false);//Group
+                  endformat;
+                  
+                end else begin
+                  If(nonblank(IVr.OrderNr)) then begin
+                    SHr.OrderNr = IVr.OrderNr;
+                    ShHs = true;
+                    while(loopkey("OrderKey",SHr,1,ShHs)) begin
+                      If(SHr.OrderNr != IVr.OrderNr) then begin ShHs = false; end;
+                      if(ShHs) then begin
+                        mtrw1 = matrowcnt(SHr);
+                        For(j=0;j<mtrw1;j=j+1) begin
+                          MatRowget(SHr,j,SHrw);
+                          If(SHrw.OrdRow==IVrw.OrdRow) then begin
+                            ShHs = false;
+                            cost = SHrw.FIFORowVal/SHrw.Ship*rateusd;
+                            profit = (IVrw.Price - cost);
+                            
+                            StartFormat(15);
+                            OutString(0,0,IVr.SerNr,false);//Inv_No
+                            OutString(20,0,IVr.CustCode,false);//Cust
+                            OutString(70,0,IVr.InvDate,false);//Date
+                            OutString(90,0,IVrw.ArtCode,false);//Part_No
+                            OutString(120,0,IVrw.Spec,false);//Description
+                            OutString(120,0,IVrw.Quant,false);//Quant
+                            OutString(200,0,IVrw.Price/rateusd,false);//Price USD
+                            OutString(220,0,IVrw.Price/rate,false);//"Price(UAH)"
+                            OutString(225,0,IVrw.Price*IVrw.Quant/rateusd,false);//Sum USD
+                            OutString(230,0,IVrw.Price/rate*IVrw.Quant,false);//"Sum(UAH)"
+                            OutString(230,0,IVrw.vRebate,false);//Rebate
+                            OutString(250,0,SHrw.SerialNr,false);//Cost
+                            OutString(260,0,cost/rateusd,false);//Cost
+                            OutString(280,0,cost/rate,false);//"Cost(UAH)"
+                            OutString(280,0,cost*IVrw.Quant/rateusd,false);//"Cost Sum"
+                            OutString(280,0,cost/rate*IVrw.Quant,false);//"Cost Sum(UAH)"
+                            OutString(300,0,profit*IVrw.Quant/rateusd,false);//Profit
+                            OutString(320,0,profit/rate*IVrw.Quant,false);//"Profit(UAH)"
+                            OutString(340,0,IVr.CurncyCode,false);//"Curncy"
+                            CUr.Code = IVr.CustCode;
+                            ReadFirstMain(CUr,1,true);
+                            OutString(350,0,CUr.Region,false);//"Region"
+                            OutString(355,0,IVr.SalesMan,false);//SalesMan
+                            GetItemName(IVrw.ArtCode,name,group);
+                            OutString(360,0,group,false);//Group
+                            endformat;
+                            
+                          end; 
+                        end; 
+                      end;
+                    end;
+                  end else begin
+                    cost = IVrw.FIFO*rateusd;
+                    profit = (IVrw.Price - cost);
+                    
+                    StartFormat(15);
+                    OutString(0,0,IVr.SerNr,false);//Inv_No
+                    OutString(20,0,IVr.CustCode,false);//Cust
+                    OutString(70,0,IVr.InvDate,false);//Date
+                    OutString(90,0,IVrw.ArtCode,false);//Part_No
+                    OutString(120,0,IVrw.Spec,false);//Description
+                    OutString(120,0,IVrw.Quant,false);//Quant
+                    OutString(200,0,IVrw.Price/rateusd,false);//Price USD
+                    OutString(220,0,IVrw.Price/rate,false);//"Price(UAH)"
+                    OutString(225,0,IVrw.Price*IVrw.Quant/rateusd,false);//Sum
+                    OutString(230,0,IVrw.Price/rate*IVrw.Quant,false);//"Sum(UAH)"
+                    OutString(230,0,IVrw.vRebate,false);//Rebate
+                    OutString(250,0,SHrw.SerialNr,false);//Cost
+                    OutString(260,0,cost/rateusd,false);//Cost
+                    OutString(280,0,cost/rate,false);//"Cost(UAH)"
+                    OutString(280,0,cost*IVrw.Quant/rateusd,false);//"Cost Sum"
+                    OutString(280,0,cost/rate*IVrw.Quant,false);//"Cost Sum(UAH)"
+                    OutString(300,0,profit*IVrw.Quant/rateusd,false);//Profit
+                    OutString(320,0,profit/rate*IVrw.Quant,false);//"Profit(UAH)"
+                    OutString(340,0,IVr.CurncyCode,false);//"Curncy"
+                    CUr.Code = IVr.CustCode;
+                    ReadFirstMain(CUr,1,true);
+                    OutString(350,0,CUr.Region,false);//"Region"
+                    OutString(355,0,IVr.SalesMan,false);//SalesMan
+                    GetItemName(IVrw.ArtCode,name,group);
+                    OutString(360,0,group,false);//Group
+                    endformat;
+                    
+                  end;
+                  resetloop(SHr);
+                  
+                end;
+              end else begin
+                StartFormat(15);
+                    OutString(0,0,IVr.SerNr,false);//Inv_No
+                    OutString(20,0,IVr.CustCode,false);//Cust
+                    OutString(70,0,IVr.InvDate,false);//Date
+                    OutString(90,0,IVrw.ArtCode,false);//Part_No
+                    OutString(120,0,IVrw.Spec,false);//Description
+                    OutString(120,0,IVrw.Quant,false);//Quant
+                    OutString(200,0,IVrw.Price/rateusd,false);//Price USD
+                    OutString(220,0,IVrw.Price/rate,false);//"Price(UAH)"
+                    OutString(225,0,IVrw.Price*IVrw.Quant/rateusd,false);//Sum USD
+                    OutString(230,0,IVrw.Price/rate*IVrw.Quant,false);//"Sum(UAH)"
+                    OutString(230,0,IVrw.vRebate,false);//Rebate
+                    OutString(250,0,"",false);//Cost
+                    cost = INr.InPrice*rateusd;
+                    profit = (IVrw.Price - cost);
+                    OutString(260,0,cost/rateusd,false);//Cost
+                    OutString(280,0,cost/rate,false);//"Cost(UAH)"
+                    OutString(280,0,cost*IVrw.Quant/rateusd,false);//"Cost Sum"
+                    OutString(280,0,cost/rate*IVrw.Quant,false);//"Cost Sum(UAH)"
+                    OutString(300,0,profit*IVrw.Quant/rateusd,false);//Profit
+                    OutString(320,0,profit/rate*IVrw.Quant,false);//"Profit(UAH)"
+                    OutString(340,0,IVr.CurncyCode,false);//"Curncy"
+                    CUr.Code = IVr.CustCode;
+                    ReadFirstMain(CUr,1,true);
+                    OutString(350,0,CUr.Region,false);//"Region"
+                    OutString(355,0,IVr.SalesMan,false);//SalesMan
+                    GetItemName(IVrw.ArtCode,name,group);
+                    OutString(360,0,group,false);//Group
+                    endformat;
+              end;
+            end else begin
+              cost = IVrw.FIFO;
+              profit = IVrw.Price - cost;
+            end;
+            resetloop(SHr);
+            OutString(260,0,cost,false);//Cost
+            OutString(280,0,cost/rate,false);//"Cost(UAH)"
+            OutString(280,0,cost*IVrw.Quant,false);//"Cost Sum"
+            OutString(280,0,cost/rate*IVrw.Quant,false);//"Cost Sum(UAH)"
+            OutString(300,0,profit*IVrw.Quant,false);//Profit
+            OutString(320,0,profit/rate*IVrw.Quant,false);//"Profit(UAH)"
+            OutString(340,0,IVr.CurncyCode,false);//"Curncy"
+            
+            CUr.Code = IVr.CustCode;
+            ReadFirstMain(CUr,1,true);
+            OutString(350,0,CUr.Region,false);//"Region"
+            OutString(355,0,IVr.SalesMan,false);//SalesMan
+            GetItemName(IVrw.ArtCode,name,group);
+            OutString(360,0,group,false);//Group
+          endformat;
+	      end;
+	    end;
+    end; 
+	  
+	end; 
+
+
+endjob;
+return;
+end;
+
+global procedure LocManyStockRn(record RcVc RepSpec)///new procedure
+begin
+record ItemStatusVc ISr;
+record INVc INr;
+string 50 location;
+integer i;
+boolean TrHs,testf;
+record PLVc PLr;
+record ITVc ITr;
+
+  startreportnoheaderjob("LocManyStockRn");
+  StartFormat(15)
+    OutString(0,0,"PartNo",false);
+    OutString(1,0,"Name",false);
+    OutString(2,0,"In Stock",false);
+    OutString(3,0,"Available",false);
+    OutString(4,0,"Stock",false);
+    if(CurrentCompany==2)then begin
+      if(nonblank(RepSpec.f3))then begin
+      OutString(4,0,"Price " & RepSpec.f3,false);
+      end else begin
+      OutString(4,0,"Price P1",false);
+      OutString(4,0,"Price RRP",false);
+      end;
+    end;
+    if(CurrentCompany==1)then begin
+      if(nonblank(RepSpec.f3))then begin
+      OutString(4,0,"Price " & RepSpec.f3,false);
+      end else begin
+      OutString(4,0,"Price RRP_U",false);
+      end;
+    end;
+    if(CurrentCompany==5)then begin
+      if(nonblank(RepSpec.f3))then begin
+      OutString(4,0,"Price " & RepSpec.f3,false);
+      end else begin
+      OutString(4,0,"Price DL",false);
+      OutString(4,0,"Price IS",false);
+      end;
+    end;
+    if(CurrentCompany==6)then begin
+      if(nonblank(RepSpec.f3))then begin
+      OutString(4,0,"Price " & RepSpec.f3,false);
+      end else begin
+      OutString(4,0,"Price P111",false);
+      OutString(4,0,"Price P211",false);
+      end;
+    end;
+    OutString(5,0,"Group",false);
+    OutString(1,0,"Alternative code",false);
+  endformat;
+  
+  i=0;
+  ExtractObj(RepSpec.f1,i,location);
+  while (nonblank(location)) begin
+    ISr.Location = location;
+    TrHs = true;
+    while(loopkey("Location",ISr,1,Trhs)) begin
+      testf = true;
+      if(ISr.Location!=location) then begin Trhs = false; testf = false; end;
+      if(ISr.Instock==0) then begin testf = false; end;
+      
+      if(testf) then begin
+        StartFormat(15)
+          OutString(0,0,ISr.Code,false);
+          INr.Code = ISr.Code;
+          ReadFirstMain(INr,1,true);
+          OutString(1,0,INr.Name,false);
+          OutString(2,0,ISr.Instock,false);
+          OutString(3,0,ISr.Instock-ISr.RsrvQty-ISr.StockRsrvQty,false);
+          OutString(4,0,ISr.Location,false);
+          if(CurrentCompany==2)then begin
+            if(nonblank(RepSpec.f3))then begin
+              PLr.ArtCode = ISr.Code;
+              PLr.PLCode = RepSpec.f3;
+              if(ReadFirstMain(PLr,2,true))then begin
+                OutString(4,0,PLr.ExVatPrice,false);
+              end else begin
+                OutString(4,0,0,false);
+              end;
+            end else begin
+              PLr.ArtCode = ISr.Code;
+              PLr.PLCode = "P1";
+              if(ReadFirstMain(PLr,2,true))then begin
+                OutString(4,0,PLr.ExVatPrice,false);
+              end else begin
+                OutString(4,0,0,false);
+              end;
+              PLr.ArtCode = ISr.Code;
+              PLr.PLCode = "RRP";
+              if(ReadFirstMain(PLr,2,true))then begin
+                OutString(4,0,PLr.ExVatPrice,false);
+              end else begin
+                OutString(4,0,0,false);
+              end;
+            end;
+          end;
+          
+          if(CurrentCompany==1)then begin
+            if(nonblank(RepSpec.f3))then begin
+              PLr.ArtCode = ISr.Code;
+              PLr.PLCode = RepSpec.f3;
+              if(ReadFirstMain(PLr,2,true))then begin
+                OutString(4,0,PLr.ExVatPrice,false);
+              end else begin
+                OutString(4,0,0,false);
+              end;
+            end else begin
+              PLr.ArtCode = ISr.Code;
+              PLr.PLCode = "RRP_U";
+              if(ReadFirstMain(PLr,2,true))then begin
+                OutString(4,0,PLr.ExVatPrice,false);
+              end else begin
+                OutString(4,0,0,false);
+              end;
+            end;
+          end;
+          
+          if(CurrentCompany==5)then begin
+            if(nonblank(RepSpec.f3))then begin
+              PLr.ArtCode = ISr.Code;
+              PLr.PLCode = RepSpec.f3;
+              if(ReadFirstMain(PLr,2,true))then begin
+                OutString(4,0,PLr.ExVatPrice,false);
+              end else begin
+                OutString(4,0,0,false);
+              end;
+            end else begin
+              PLr.ArtCode = ISr.Code;
+              PLr.PLCode = "DL";
+              if(ReadFirstMain(PLr,2,true))then begin
+                OutString(4,0,PLr.ExVatPrice,false);
+              end else begin
+                OutString(4,0,0,false);
+              end;
+              PLr.ArtCode = ISr.Code;
+              PLr.PLCode = "IS";
+              if(ReadFirstMain(PLr,2,true))then begin
+                OutString(4,0,PLr.ExVatPrice,false);
+              end else begin
+                OutString(4,0,0,false);
+              end;
+            end;
+            end;
+            
+           if(CurrentCompany==6)then begin
+            if(nonblank(RepSpec.f3))then begin
+              PLr.ArtCode = ISr.Code;
+              PLr.PLCode = RepSpec.f3;
+              if(ReadFirstMain(PLr,2,true))then begin
+                OutString(4,0,PLr.ExVatPrice,false);
+              end else begin
+                OutString(4,0,0,false);
+              end;
+            end else begin
+              PLr.ArtCode = ISr.Code;
+              PLr.PLCode = "P111";
+              if(ReadFirstMain(PLr,2,true))then begin
+                OutString(4,0,PLr.ExVatPrice,false);
+              end else begin
+                OutString(4,0,0,false);
+              end;
+              PLr.ArtCode = ISr.Code;
+              PLr.PLCode = "P211";
+              if(ReadFirstMain(PLr,2,true))then begin
+                OutString(4,0,PLr.ExVatPrice,false);
+              end else begin
+                OutString(4,0,0,false);
+              end;
+            end;
+            end;
+          
+          
+          ITr.Code = INr.Group;
+          readfirstmain(ITr,1,true);
+          OutString(5,0,ITr.Comment,false);
+          OutString(1,0,INr.AlternativeCode,false);
+          
+        endformat;
+      end;  
+    end;
+    resetloop(ISr);
+  ExtractObj(RepSpec.f1,i,location);
+  end;
+  
+  endjob;
+return;
+end;
+
+
+
+/*global procedure LocManyStock1Rn(record RcVc RepSpec)///new procedure
+begin
+record ItemStatusVc ISr;
+record INVc INr;
+string 50 location;
+integer i;
+boolean TrHs,testf,x;
+record PLVc PLr;
+record ITVc ITr;
+
+  startreportnoheaderjob("LocManyStockRn");
+  StartFormat(15)
+    OutString(0,0,"PartNo",false);
+    OutString(1,0,"Name",false);
+    OutString(2,0,"In Stock",false);
+    OutString(3,0,"Available",false);
+    OutString(4,0,"Stock",false);
+    if(CurrentCompany==2)then begin
+      if(nonblank(RepSpec.f3))then begin
+      OutString(4,0,"Price " & RepSpec.f3,false);
+      end else begin
+      OutString(4,0,"Price P1",false);
+      OutString(4,0,"Price RRP",false);
+      end;
+    end;
+    if(CurrentCompany==1)then begin
+      if(nonblank(RepSpec.f3))then begin
+      OutString(4,0,"Price " & RepSpec.f3,false);
+      end else begin
+      OutString(4,0,"Price RRP_U",false);
+      end;
+    end;
+    if(CurrentCompany==6)then begin
+      if(nonblank(RepSpec.f3))then begin
+      OutString(4,0,"Price " & RepSpec.f3,false);
+      end else begin
+      OutString(4,0,"Price P111",false);
+      end;
+    end;
+    OutString(5,0,"Group",false);
+  endformat;
+  
+  i=0;
+  ExtractObj(RepSpec.f1,i,location);
+  while (nonblank(location)) begin
+    ISr.Location = location;
+    TrHs = true;
+    while(loopkey("Location",ISr,1,Trhs)) begin
+      testf = true;
+      if(ISr.Location!=location) then begin Trhs = false; testf = false; end;
+      if(ISr.Instock==0) then begin testf = false; end;
+      
+      if(testf) then begin
+        StartFormat(15)
+          INr.Code = ISr.Code;
+          x = ReadFirstMain(INr,1,true);
+          if(INr.Group=="FOL" or INr.Group=="PROMS")then begin  // Edit ************************** Friday, 11 February 2011 13:47:45
+            OutString(0,0,ISr.Code,false);
+            OutString(1,0,INr.Name,false);
+            OutString(2,0,ISr.Instock,false);
+            OutString(3,0,ISr.Instock-ISr.RsrvQty-ISr.StockRsrvQty,false);
+            OutString(4,0,ISr.Location,false);
+            if(CurrentCompany==2)then begin
+              PLr.ArtCode = ISr.Code;
+              PLr.PLCode = "P1";
+              if(ReadFirstMain(PLr,2,true))then begin
+                OutString(4,0,PLr.ExVatPrice,false);
+              end else begin
+                OutString(4,0,0,false);
+              end; 
+              PLr.ArtCode = ISr.Code;
+              PLr.PLCode = "RRP";
+              if(ReadFirstMain(PLr,2,true))then begin
+                OutString(4,0,PLr.ExVatPrice,false);
+              end else begin
+                OutString(4,0,0,false);
+              end;
+            end;
+            if(CurrentCompany==1)then begin
+              PLr.ArtCode = ISr.Code;
+              PLr.PLCode = "RRP_U";
+              if(ReadFirstMain(PLr,2,true))then begin
+                OutString(4,0,PLr.ExVatPrice,false);
+              end else begin
+                OutString(4,0,0,false);
+              end;
+            end;
+            
+            if(CurrentCompany==6)then begin
+              PLr.ArtCode = ISr.Code;
+              PLr.PLCode = "P111";
+              if(ReadFirstMain(PLr,2,true))then begin
+                OutString(4,0,PLr.ExVatPrice,false);
+              end else begin
+                OutString(4,0,0,false);
+              end;
+            end;
+            ITr.Code = INr.Group;
+						readfirstmain(ITr,1,true);
+						OutString(5,0,ITr.Comment,false);
+          end;// Edit ************************** Friday, 11 February 2011 13:47:50
+        endformat;
+      end;  
+    end;
+    resetloop(ISr);
+  ExtractObj(RepSpec.f1,i,location);
+  end;
+  
+  endjob;
+return;
+end;
+
+*/
+
+global procedure LocManyStockEn(record RcVc RepSpec)///new procedure
+begin
+
+  switch (RepSpec.Media) begin
+      case 0: CreateFile("Stock/ITEKManagerStocks1.xls");
+              closefile;
+              openexportfile("Stock/ITEKManagerStocks1.xls",true);
+              LocManyStockRn(RepSpec);
+              RunProgram("Stock/ITEKManagerStocks1.sh", "");
+      
+      case 1: CreateFile("Stock/ITEKManagerStocks2.xls");
+              closefile;
+              openexportfile("Stock/ITEKManagerStocks2.xls",true);
+              LocManyStockRn(RepSpec);
+              RunProgram("Stock/ITEKManagerStocks2.sh", "");
+      
+       case 11: CreateFile("Stock/ITEKRtnSrvStock.xls");
+              closefile;
+              openexportfile("Stock/ITEKRtnSrvStock.xls",true);
+              LocManyStockRn(RepSpec);
+              RunProgram("Stock/ITEKRtnSrvStock.sh", "");      
+        
+        /*case 12: CreateFile("Stock/ITEKNOVUSStock.xls");
+              closefile;
+              openexportfile("Stock/ITEKNOVUSStock.xls",true);
+              LocManyStockRn(RepSpec);
+              RunProgram("Stock/ITEKNOVUSStock.sh", ""); */
+
+        /*case 14: CreateFile("Stock/SamsungStock.xls");
+              closefile;
+              openexportfile("Stock/SamsungStock.xls",true);
+              LocManyStockRn(RepSpec);
+              RunProgram("Stock/SamsungStock.sh", "");*/
+       /* case 13: CreateFile("Stock/ITEKSKYMALLStock.xls");
+              closefile;
+              openexportfile("Stock/ITEKSKYMALLStock.xls",true);
+              LocManyStockRn(RepSpec);
+              RunProgram("Stock/ITEKSKYMALLStock.sh", "");         
+      */
+      case 2: CreateFile("Stock/PHTManagerStocks.xls");
+              closefile;
+              openexportfile("Stock/PHTManagerStocks.xls",true);
+              LocManyStockRn(RepSpec);
+              RunProgram("Stock/PHTManagerStocks.sh", "");
+              
+              
+      case 3: CreateFile("Stock/ISTOREManagerStocks.xls");         //ISTORE
+              closefile;
+              openexportfile("Stock/ISTOREManagerStocks.xls",true);
+              LocManyStockRn(RepSpec);
+              RunProgram("Stock/ISTOREManagerStocks.sh", "");
+      
+      case 31: CreateFile("Stock/ISTORERtnSrvStocks.xls");         //ISTORE
+              closefile;
+              openexportfile("Stock/ISTORERtnSrvStocks.xls",true);
+              LocManyStockRn(RepSpec);
+              RunProgram("Stock/ISTORERtnSrvStocks.sh", "");  
+      
+      case 32: CreateFile("Stock/ISTOREDEMOOFStocks.xls");         //ISTORE
+              closefile;
+              openexportfile("Stock/ISTOREDEMOOFStocks.xls",true);
+              LocManyStockRn(RepSpec);
+              RunProgram("Stock/ISTOREDEMOOFStocks.sh", "");  
+              
+              
+              
+      case 7: CreateFile("Stock/TNMManagerStocks.xls");
+              closefile;
+              openexportfile("Stock/TNMManagerStocks.xls",true);
+              LocManyStockRn(RepSpec);
+              RunProgram("Stock/TNMManagerStocks.sh", "");
+              
+      case 8: CreateFile("Stock/AServiceManagerStocks.xls");
+              closefile;
+              openexportfile("Stock/AServiceManagerStocks.xls",true);
+              LocManyStockRn(RepSpec);
+              RunProgram("Stock/AServiceManagerStocks.sh", "");
+              
+      case 61: CreateFile("Stock/SMGManagerStocks.xls");         //Samsung
+              closefile;
+              openexportfile("Stock/SMGManagerStocks.xls",true);
+              RepSpec.f3 = "P111";
+              LocManyStockRn(RepSpec);
+              RunProgram("Stock/SMGManagerStocks.sh", "");    
+              
+      case 62: CreateFile("Stock/OPManagerStocks.xls");         //Ocean Plaza
+              closefile;
+              openexportfile("Stock/OPManagerStocks.xls",true);
+              RepSpec.f3 = "P211";
+              LocManyStockRn(RepSpec);
+              RunProgram("Stock/OPManagerStocks.sh", "");        
+  end;
+
+  closefile;
+  
+return;
+end;
+
+global procedure LocManyStockGroupRn(record RcVc RepSpec)///new procedure
+begin
+record ItemStatusVc ISr;
+record INVc INr;
+string 50 location;
+integer i;
+boolean TrHs,testf,x;
+record ITVc ITr;
+
+  startreportnoheaderjob("LocManyStockRn");
+  StartFormat(15)
+    OutString(0,0,"PartNo",false);
+    OutString(1,0,"Name",false);
+    OutString(2,0,"In Stock",false);
+    OutString(3,0,"Available",false);
+    OutString(4,0,"Stock",false);
+    OutString(5,0,"Group",false);
+  endformat;
+  
+  i=0;
+  ExtractObj(RepSpec.f1,i,location);
+  while (nonblank(location)) begin
+    ISr.Location = location;
+    TrHs = true;
+    while(loopkey("Location",ISr,1,true)) begin
+      testf = true;
+      if(ISr.Location!=location) then begin Trhs = false; testf = false; end;
+      if(ISr.Instock==0) then begin testf = false; end;
+      INr.Code = ISr.Code;
+      x = ReadFirstMain(INr,1,true);
+      if(not(SetInSet("," & INr.Group & ",",RepSpec.f2))) then begin testf = false; end;
+      
+      if(testf) then begin
+        StartFormat(15)
+          OutString(0,0,ISr.Code,false);
+          OutString(1,0,INr.Name,false);
+          OutString(2,0,ISr.Instock,false);
+          OutString(3,0,ISr.Instock-ISr.RsrvQty-ISr.StockRsrvQty,false);
+          OutString(4,0,ISr.Location,false);
+          ITr.Code = INr.Group;
+          readfirstmain(ITr,1,true);
+          OutString(5,0,ITr.Comment,false);
+        endformat;
+      end;  
+    end;
+    resetloop(ISr);
+  ExtractObj(RepSpec.f1,i,location);
+  end;
+  
+  endjob;
+return;
+end;
+
+global procedure LocManyStockGroupEn(record RcVc RepSpec)///new procedure
+begin
+
+  switch (RepSpec.Media) begin
+      
+      case 2: CreateFile("Stock/PHTManagerStocksGroup.xls");
+              closefile;
+              openexportfile("Stock/PHTManagerStocksGroup.xls",true);
+              LocManyStockGroupRn(RepSpec);
+              RunProgram("Stock/PHTManagerStocksGroup.sh", "");
+  end;
+
+  closefile;
+
+return;
+end;
+
+//тут була MyItemRep1
+
+global procedure MyPOQCRn(record RcVc RepSpec)
+begin
+string 50 key,vender,status;
+record POVc POr;
+record CUVc CUr;
+record POCQStatVc POCQr;
+boolean TrHs,testf,stat;
+date d1,d2;
+record RLinkVc RLr;
+integer i;
+
+vender = RepSpec.f1;
+d1 = RepSpec.sStartDate;
+d2 = RepSpec.sEndDate;
+
+if(nonblank(vender)) then begin key = "VECode"; end else begin key = "PreQualSentPl"; end;
+
+  startreportnoheaderjob("Процеси по замовленнях");
+ 
+  startFormat(15);
+    outstring(0,0,"ПП",false);
+    outstring(0,0,"BILLED TO",false);
+    outstring(0,0,"Вид",false);
+    outstring(0,0,"Постачальник",false);
+    outstring(0,0,"Статус Замовлення",false);
+    outstring(0,0,"Транзитний склад",false);
+    outstring(0,0,"Валюта",false);
+    outstring(0,0,"Ammount",false);
+    outstring(0,0,"Дата підтвердження замовлення",false);
+    outstring(0,0,"Дата передплати",false);
+    outstring(0,0,"Відвантаження на транзитний склад",false);
+    outstring(0,0,"Надходження на транзитний склад",false);
+    outstring(0,0,"Відвантаження на склад Кіїв",false);
+    outstring(0,0,"Надходження на склад Київ",false);
+    outstring(0,0,"Коментар",false);
+  endformat;
+   
+  if(nonblank(vender)) then begin POCQr.VECode = vender; end;
+  //POCQ.PreQualSentPl = d1;
+  TrHs = true;
+  While(loopkey(key,POCQr,1,TrHs)) begin
+	  testf = true;
+	  if(nonblank(vender) and vender!=POCQr.VECode) then begin testf = false; TrHs = false; end;
+	  if(nonblank(RepSpec.f2) and RepSpec.f2!=POCQr.POClass) then begin testf = false; end;
+	  if(nonblank(RepSpec.f3) and RepSpec.f3!=POCQr.Object) then begin testf = false; end;
+	  
+	  if(POCQr.PreQualSentPl<d1) then begin testf = false; end;
+	  if(POCQr.PreQualSentPl>d2) then begin testf = false; end;
+	  if(POCQr.Closed>0) then begin testf = false; end;// Edit ************************** Thursday, 23 December 2010 10:35:39
+	  if((POCQr.PreQualSentPl>d2) and blank(vender)) then begin testf = false; TrHs = false; end;
+	  
+	  stat = true;
+    status = "";
+	  If(stat and (nonblank(POCQr.CustData01) and nonblank(POCQr.CustData02))) then begin
+	  status = "Товар у Києві";
+	  stat = false;
+	  end; 
+	
+	  If(stat and nonblank(POCQr.PreQualNoObjPl) and nonblank(POCQr.PreQualNoObjAct) and nonblank(POCQr.BidOpenAct)) then begin//Оба Пол-Цел і 2й ТРВХ
+	  status = "Відправлено до Києва";
+	  stat = false;
+	  end;
+	  
+	  If(stat and (nonblank(POCQr.PreQualNoObjPl) and nonblank(POCQr.PreQualNoObjAct))) then begin //Оба Пол-Цел
+	  status = "Товар на TRWH";//"Товар на TRWH Pol-Cel"
+	  stat = false;
+	  end;
+	  
+	  // Edit ************************** Wednesday, 24 November 2010 16:55:08	  
+	  If(stat and nonblank(POCQr.ContrEndPl) and nonblank(POCQr.ContrEndAct) and nonblank(POCQr.BidOpenAct)) then begin //Оба Ліра і 2й ТРВХ
+	  status = "Відправлено до Києва";
+	  stat = false;
+	  end;
+	  
+	  If(stat and nonblank(POCQr.ContrEndPl) and nonblank(POCQr.ContrEndAct) and nonblank(POCQr.PreQualNoObjPl)) then begin //Оба Ліра і 1й Пол-Цел
+	  status = "Відправлено";//"Відправлено Pol-Cel"
+	  stat = false;
+	  end;
+	  
+	  If(stat and (nonblank(POCQr.ContrEndPl) and nonblank(POCQr.ContrEndAct))) then begin //Оба Ліра
+	  status = "Товар на TRWH";//"Товар на TRWH Lira"
+	  stat = false;
+	  end;
+	  // Edit ************************** Wednesday, 24 November 2010 16:55:12
+	  
+	  If(stat and (nonblank(POCQr.ContrSignPl) and nonblank(POCQr.ContrSignAct))) then begin
+	  status = "Відправлено до TRWH";
+	  stat = false;
+	  end; 
+	  
+	  If(stat and (nonblank(POCQr.ContrNoObjPl) and nonblank(POCQr.ContrNoObjAct))) then begin
+	  status = "Комплектування завершене";
+	  stat = false;
+	  end; 
+	  
+	  If(stat and ((nonblank(POCQr.BidPackAvPl) and nonblank(POCQr.BidPackAvAct)) or nonblank(POCQr.CustVal5))) then begin
+	  status = "Комплектування замовлення";
+	  stat = false;
+	  end; 
+	  
+	  If(stat and (nonblank(POCQr.BidDocNoObjPl) and nonblank(POCQr.BidDocNoObjAct) and nonblank(POCQr.CustVal4))) then begin
+	  status = "Оплачено";
+	  stat = false;
+	  end; 
+	  
+	  If(stat and (nonblank(POCQr.BidDocSentPl) and nonblank(POCQr.BidDocSentAct) and nonblank(POCQr.CustVal1) and nonblank(POCQr.CustVal2))) then begin
+	  status = "Оплачено";
+	  stat = false;
+	  end; 
+	  
+	  If(stat and (nonblank(POCQr.PreQualSentAct))) then begin
+	  status = "Підтверджено постачальником";
+	  stat = false;
+	  end; 
+	  
+	  If(stat and (nonblank(POCQr.PreQualSentPl))) then begin
+	  status = "Розміщене";
+	  stat = false;
+	  end; 
+	
+	  i=1;
+	  while(ReadRecordLink(POCQr,i,POr,RLr)) begin
+      i= i+1;
+    end;
+	  
+	  if(testf) then begin
+      
+      startformat(15);
+        outstring(0,0,POCQr.SerNr,false);
+        outstring(0,0,POCQr.Object,false);
+        outstring(0,0,POCQr.POClass,false);
+        outstring(0,0,POCQr.VECode,false);
+        outstring(0,0,status,false);
+        outstring(0,0,POCQr.CustText2,false);//loc
+        outstring(0,0,POCQr.CurncyCode,false);
+        outstring(0,0,POCQr.Sum,false);
+        outstring(0,0,POCQr.PreQualSentAct,false);
+        outstring(0,0,POCQr.BidDocSentAct,false);//Передплата факт
+        
+        outstring(0,0,POCQr.ContrSignAct,false);
+        outstring(0,0,POCQr.ContrEndAct,false);
+        outstring(0,0,POCQr.BidOpenAct,false);
+        outstring(0,0,POCQr.CustData02,false);
+        outstring(0,0,POCQr.Comment,false);
+      endformat;
+	  end;
+	end; 
+  endjob;
+return;
+end;
+
+global updating procedure ChangeINMn()
+begin
+record INVc INr;
+
+  INr.Code = "";
+  
+  while(loopmain(INr,1,true))begin
+    INr.SRUpdateCost = 1;
+    recordstore(INr,true);
+  end;
+return;
+end;
+
+global procedure MyShopsReportRn(record RcVc RepSpec)
+begin
+record ORVc ORr;
+row ORVc ORrw;
+record INVc INr;
+record StockMovVc SMr;
+row StockMovVc SMrw;
+record SHVc SHr;
+row SHVc SHrw;
+record RLinkVc RLr;
+boolean TrHs,testf,testf1,TrHs1;
+record StockMovVc Simr;
+row StockMovVc Simrw;
+record ItemHistVc IHr;
+integer i,j,k,rl,mtrw,simmtrw,rl1;
+record RetVc Retr;
+row RetVc Retrw;
+Record CUVc CUr;// Edit ************************** Wednesday, 26 January 2011 11:06:12
+
+  startreportnoheaderjob("Shops report");
+  
+  StartFormat(15);
+    outstring(0,0,"Клієнт",false);
+    outstring(0,0,"Найменування",false);
+    outstring(0,0,"Рахунок",false);
+    outstring(0,0,"Вид",false);
+    outstring(0,0,"Склад",false);
+    outstring(0,0,"Дата рахунку",false);
+    outstring(50,0,"Артикул",false);
+    outstring(100,0,"Опис",false);
+    outstring(200,0,"Серійний номер",false);
+    outstring(200,0,"Кількість",false);
+    outstring(200,0,"Ціна за од.",false);
+    outstring(200,0,"Знижка",false);
+    outstring(200,0,"Валюта",false);
+    outstring(200,0,"Менеджер",false);// Edit ************************** Wednesday, 26 January 2011 11:06:11
+    outstring(200,0,"Бренд",false);
+  endformat;
+  
+  
+  ORr.OrderClass = "SHOPS";
+  TrHs = false;
+  if(RepSpec.flags[1]==1 or RepSpec.flags[1]==3) begin
+  TrHs = true;
+  end;
+  while(loopkey("OrderClass",ORr,1,TrHs))begin
+    testf = true;
+    if(ORr.OrderClass!="SHOPS")then begin TrHs = false; testf = false; end;
+    if(ORr.OrdDate<RepSpec.sStartDate or ORr.OrdDate>RepSpec.sEndDate)then begin testf = false; end;
+    //if(ORr.OrdDate>RepSpec.sEndDate)then begin testf = false; end;
+    if(nonblank(RepSpec.f1) and ORr.CustCode!=RepSpec.f1)then begin testf = false; end;
+    if(ORr.Closed==1)then begin testf = false; end;
+    
+    if(testf)then begin
+    
+      recordNew(Simr);
+      rl = 1;
+      SMr.SerNr = "";
+      while(ReadRecordLink(ORr,rl,SMr,RLr)) begin
+      testf = true;
+        if(blank(SMr.SerNr)) then begin testf = false; end;
+        if(SMr.OKFlag!=1) then begin testf = false; end;
+        
+        if(testf) then begin
+          simmtrw = matrowCnt(Simr);
+          if(SMr.ToLocation=="INV_OUT#1" and SMr.FrLocation!="INV_OUT#1") then begin
+            mtrw = matrowcnt(SMr);
+            for(j=0;j<mtrw;j=j+1)begin
+              matrowget(SMr,j,SMrw);
+              testf1 = true;
+              for(i=0;i<simmtrw;i=i+1)begin
+                matrowget(Simr,i,Simrw);
+                if(Simrw.ArtCode==SMrw.ArtCode and Simrw.SerialNr==SMrw.SerialNr) then begin
+                  testf1 = false;
+                  Simrw.Quant = Simrw.Quant + SMrw.Quant;
+                  matrowput(Simr,i,Simrw);
+                end;
+              end;
+              if(testf1)then begin
+              Simrw.ArtCode = SMrw.ArtCode;
+              Simrw.Spec = SMrw.Spec;
+              Simrw.SerialNr = SMrw.SerialNr;
+              Simrw.Quant = SMrw.Quant;
+              matrowinsert(Simr,simmtrw,Simrw);
+              simmtrw = simmtrw+1;
+            end;
+            end;
+          end;
+          
+          if(SMr.ToLocation!="INV_OUT#1" and SMr.FrLocation=="INV_OUT#1") then begin
+            mtrw = matrowcnt(SMr);
+            for(j=0;j<mtrw;j=j+1)begin
+              matrowget(SMr,j,SMrw);
+              testf1 = true;
+              for(i=0;i<simmtrw;i=i+1)begin
+                matrowget(Simr,i,Simrw);
+                if(Simrw.ArtCode==SMrw.ArtCode and Simrw.SerialNr==SMrw.SerialNr) then begin
+                  testf1 = false;
+                  Simrw.Quant = Simrw.Quant - SMrw.Quant;
+                  matrowput(Simr,i,Simrw);
+                end;
+              end;
+              if(testf1)then begin
+              Simrw.ArtCode = SMrw.ArtCode;
+              Simrw.Spec = SMrw.Spec;
+              Simrw.SerialNr = SMrw.SerialNr;
+              Simrw.Quant = -SMrw.Quant;
+              matrowinsert(Simr,simmtrw,Simrw);
+              simmtrw = simmtrw+1;
+            end;
+            end;
+          end;
+        end;
+      
+      rl = rl+1;
+      end;
+      
+      SHr.OrderNr = ORr.SerNr;
+      TrHs1 = true;
+      while(LoopKey("OrderKey",SHr,1,TrHs1)) begin
+        testf = true;
+        simmtrw = matrowcnt(Simr);
+        if(SHr.OKFlag!=1)then begin testf=false; end;
+        if(SHr.OrderNr!=ORr.SerNr)then begin TrHs1 = false; testf = false; end;
+        
+        if(testf)then begin
+        mtrw = matrowcnt(SHr);
+          for(j=0;j<mtrw;j=j+1)begin
+            matrowget(SHr,j,SHrw);
+            for(i=0;i<simmtrw;i=i+1)begin
+              matrowget(Simr,i,Simrw);
+              if(Simrw.ArtCode==SHrw.ArtCode and Simrw.SerialNr==SHrw.SerialNr) then begin
+              Simrw.Quant = Simrw.Quant - SHrw.Ship;
+              matrowput(Simr,i,Simrw);// Edit ************************** Tuesday, 7 December 2010 13:56:41
+              end;
+            end;
+          end;
+        end;
+      end;
+      resetloop(SHr);
+      Retr.OrdNr = ORr.SerNr;
+      TrHs1 = true;
+      while(loopkey("OrdNr",Retr,1,TrHs1)) begin// Edit ************************** Tuesday, 7 December 2010 14:03:22
+        testf = true;
+        if(Retr.OrdNr!=ORr.SerNr)then begin testf = false; TrHs1 = false; end;
+        if(Retr.OKFlag!=1)then begin testf = false; end;
+        if(Retr.Location!="INV_OUT#1")then begin testf = false; end;
+        
+        if(testf)then begin
+          mtrw = matrowcnt(Retr);
+          for(j=0;j<mtrw;j=j+1)begin
+            matrowget(Retr,j,Retrw);
+            for(i=0;i<simmtrw;i=i+1)begin
+              matrowget(Simr,i,Simrw);
+              if(Simrw.ArtCode==Retrw.ArtCode and Simrw.SerialNr==Retrw.SerialNr) then begin
+              Simrw.Quant = Simrw.Quant + Retrw.Quant;
+              matrowput(Simr,i,Simrw);// Edit ************************** Tuesday, 7 December 2010 13:56:41
+              end;
+            end;
+          end;
+        end;
+      end;
+      resetloop(Retr);
+      
+      simmtrw = matrowcnt(Simr);
+      for(i=0;i<simmtrw;i=i+1)begin
+        matrowget(Simr,i,Simrw);
+        mtrw = matrowcnt(ORr);
+        for(j=0;j<mtrw;j=j+1)begin
+          matrowget(ORr,j,ORrw);
+            if(Simrw.ArtCode==ORrw.ArtCode)then begin
+              Simrw.NewPrice = ORrw.Price;
+              Simrw.OldPrice = ORrw.vRebate;
+              j=mtrw;
+            end;
+        end;     
+        matrowput(Simr,i,Simrw);
+      end;   
+      
+      simmtrw = matrowcnt(Simr);
+      for(i=0;i<simmtrw;i=i+1)begin
+        matrowget(Simr,i,Simrw);
+        if(Simrw.Quant!=0)begin
+          StartFormat(15);
+            OutString(0,0,ORr.CustCode,false);
+            OutString(0,0,ORr.Addr0,false);
+            //name// Edit ************************** Friday, 19 November 2010 14:12:07
+            OutString(70,0,ORr.SerNr,false);
+            OutString(70,0,ORr.OrderClass,false);
+            OutString(70,0,ORr.Location,false);
+            OutString(70,0,ORr.OrdDate,false);
+            OutString(130,0,Simrw.ArtCode,false);//Артикул
+            OutString(130,0,Simrw.Spec,false); //Опис
+            OutString(200,0,Simrw.SerialNr,false);
+            OutString(300,0,Simrw.Quant,false);
+            OutString(350,0,Simrw.NewPrice,false);
+            OutString(400,0,Simrw.OldPrice,false);
+            OutString(400,0,ORr.CurncyCode,false);
+            CUr.Code = ORr.CustCode;// Edit ************************** Wednesday, 26 January 2011 11:06:03
+            readfirstmain(CUr,1,true);// Edit ************************** Wednesday, 26 January 2011 11:06:04
+            OutString(400,0,CUr.SalesMan,false);// Edit ************************** Wednesday, 26 January 2011 11:06:05
+			INr.Code = Simrw.ArtCode;
+			readfirstmain(INr, 1, true);
+				
+         	OutString(470,0,INr.Group,false);
+          endFormat;
+        end;
+      end;   
+    end;
+  end;
+  resetloop(ORr);
+  ORr.OrderClass = "EXB";
+  TrHs = false;
+  if(RepSpec.flags[1]==2 or RepSpec.flags[1]==3) begin
+  TrHs = true;
+  end;
+  while(loopkey("OrderClass",ORr,1,TrHs))begin
+    testf = true;
+    if(ORr.OrderClass!="EXB")then begin TrHs = false; testf = false; end;
+    if(ORr.OrdDate<RepSpec.sStartDate or ORr.OrdDate>RepSpec.sEndDate)then begin testf = false; end;
+    //if(ORr.OrdDate>RepSpec.sEndDate)then begin testf = false; end;
+    if(nonblank(RepSpec.f1) and ORr.CustCode!=RepSpec.f1)then begin testf = false; end;
+    if(ORr.Closed==1)then begin testf = false; end;
+    
+    if(testf)then begin
+    
+      recordNew(Simr);
+      rl = 1;
+      SMr.SerNr = "";
+      while(ReadRecordLink(ORr,rl,SMr,RLr)) begin
+      testf = true;
+        if(blank(SMr.SerNr)) then begin testf = false; end;
+        if(SMr.OKFlag!=1) then begin testf = false; end;
+        
+        if(testf) then begin
+          simmtrw = matrowCnt(Simr);
+          if(SMr.ToLocation=="EXHIBITION" and SMr.FrLocation!="EXHIBITION") then begin
+            mtrw = matrowcnt(SMr);
+            for(j=0;j<mtrw;j=j+1)begin
+              matrowget(SMr,j,SMrw);
+              testf1 = true;
+              for(i=0;i<simmtrw;i=i+1)begin
+                matrowget(Simr,i,Simrw);
+                if(Simrw.ArtCode==SMrw.ArtCode and Simrw.SerialNr==SMrw.SerialNr) then begin
+                  testf1 = false;
+                  Simrw.Quant = Simrw.Quant + SMrw.Quant;
+                  matrowput(Simr,i,Simrw);
+                end;
+              end;
+              if(testf1)then begin
+              Simrw.ArtCode = SMrw.ArtCode;
+              Simrw.Spec = SMrw.Spec;
+              Simrw.SerialNr = SMrw.SerialNr;
+              Simrw.Quant = SMrw.Quant;
+              matrowinsert(Simr,simmtrw,Simrw);
+              simmtrw = simmtrw+1;
+            end;
+            end;
+          end;
+          
+          if(SMr.ToLocation!="EXHIBITION" and SMr.FrLocation=="EXHIBITION") then begin
+            mtrw = matrowcnt(SMr);
+            for(j=0;j<mtrw;j=j+1)begin
+              matrowget(SMr,j,SMrw);
+              testf1 = true;
+              for(i=0;i<simmtrw;i=i+1)begin
+                matrowget(Simr,i,Simrw);
+                if(Simrw.ArtCode==SMrw.ArtCode and Simrw.SerialNr==SMrw.SerialNr) then begin
+                  testf1 = false;
+                  Simrw.Quant = Simrw.Quant - SMrw.Quant;
+                  matrowput(Simr,i,Simrw);
+                end;
+              end;
+              if(testf1)then begin
+              Simrw.ArtCode = SMrw.ArtCode;
+              Simrw.Spec = SMrw.Spec;
+              Simrw.SerialNr = SMrw.SerialNr;
+              Simrw.Quant = -SMrw.Quant;
+              matrowinsert(Simr,simmtrw,Simrw);
+              simmtrw = simmtrw+1;
+            end;
+            end;
+          end;
+        end;
+      
+      rl = rl+1;
+      end;
+      
+      SHr.OrderNr = ORr.SerNr;
+      TrHs1 = true;
+      while(LoopKey("OrderKey",SHr,1,TrHs1)) begin
+        testf = true;
+        simmtrw = matrowcnt(Simr);
+        if(SHr.OKFlag!=1)then begin testf=false; end;
+        if(SHr.OrderNr!=ORr.SerNr)then begin TrHs1 = false; testf = false; end;
+        
+        if(testf)then begin
+        mtrw = matrowcnt(SHr);
+          for(j=0;j<mtrw;j=j+1)begin
+            matrowget(SHr,j,SHrw);
+            for(i=0;i<simmtrw;i=i+1)begin
+              matrowget(Simr,i,Simrw);
+              if(Simrw.ArtCode==SHrw.ArtCode and Simrw.SerialNr==SHrw.SerialNr) then begin
+              Simrw.Quant = Simrw.Quant - SHrw.Ship;
+              matrowput(Simr,i,Simrw);// Edit ************************** Tuesday, 7 December 2010 13:56:41
+              end;
+            end;
+          end;
+        end;
+      end;
+      resetloop(SHr);
+      Retr.OrdNr = ORr.SerNr;
+      TrHs1 = true;
+      while(loopkey("OrdNr",Retr,1,TrHs1)) begin// Edit ************************** Tuesday, 7 December 2010 14:03:22
+        testf = true;
+        if(Retr.OrdNr!=ORr.SerNr)then begin testf = false; TrHs1 = false; end;
+        if(Retr.OKFlag!=1)then begin testf = false; end;
+        if(Retr.Location!="EXHIBITION")then begin testf = false; end;
+        
+        if(testf)then begin
+          mtrw = matrowcnt(Retr);
+          for(j=0;j<mtrw;j=j+1)begin
+            matrowget(Retr,j,Retrw);
+            for(i=0;i<simmtrw;i=i+1)begin
+              matrowget(Simr,i,Simrw);
+              if(Simrw.ArtCode==Retrw.ArtCode and Simrw.SerialNr==Retrw.SerialNr) then begin
+              Simrw.Quant = Simrw.Quant + Retrw.Quant;
+              matrowput(Simr,i,Simrw);// Edit ************************** Tuesday, 7 December 2010 13:56:41
+              end;
+            end;
+          end;
+        end;
+      end;
+      resetloop(Retr);
+      
+      simmtrw = matrowcnt(Simr);
+      for(i=0;i<simmtrw;i=i+1)begin
+        matrowget(Simr,i,Simrw);
+        mtrw = matrowcnt(ORr);
+        for(j=0;j<mtrw;j=j+1)begin
+          matrowget(ORr,j,ORrw);
+            if(Simrw.ArtCode==ORrw.ArtCode)then begin
+              Simrw.NewPrice = ORrw.Price;
+              Simrw.OldPrice = ORrw.vRebate;
+              j=mtrw;
+            end;
+        end;     
+        matrowput(Simr,i,Simrw);
+        
+      end;   
+      
+      simmtrw = matrowcnt(Simr);
+      for(i=0;i<simmtrw;i=i+1)begin
+        matrowget(Simr,i,Simrw);
+        if(Simrw.Quant!=0)begin
+          StartFormat(15);
+            OutString(0,0,ORr.CustCode,false);
+            OutString(0,0,ORr.Addr0,false);
+            OutString(70,0,ORr.SerNr,false);
+            OutString(70,0,ORr.OrderClass,false);
+            OutString(70,0,ORr.Location,false);
+            OutString(70,0,ORr.OrdDate,false);
+            OutString(130,0,Simrw.ArtCode,false);
+            OutString(130,0,Simrw.Spec,false);
+            OutString(200,0,Simrw.SerialNr,false);
+            OutString(300,0,Simrw.Quant,false);
+            OutString(350,0,Simrw.NewPrice,false);
+            OutString(400,0,Simrw.OldPrice,false);
+            OutString(400,0,ORr.CurncyCode,false);
+            CUr.Code = ORr.CustCode;// Edit ************************** Wednesday, 26 January 2011 11:06:03
+            readfirstmain(CUr,1,true);// Edit ************************** Wednesday, 26 January 2011 11:06:04
+            OutString(400,0,CUr.SalesMan,false);// Edit ************************** Wednesday, 26 January 2011 11:06:05
+            INr.Code = Simrw.ArtCode;
+            readfirstmain(INr, 1, true);
+			   	OutString(470,0,INr.Group,false);
+          endFormat;
+        end;
+      end;   
+    end;
+  end;
+  
+  
+  endjob;
+
+return;
+end;
+
+global procedure MyShopsReportEn(integer compnr)
+begin
+record RcVc RepSpec;
+string 50 filename;
+      
+      if(GetDateID(currentdate)==1 or GetDateID(currentdate)==3)then begin
+        switch(compnr)begin
+          case 1: filename = "Stock/ISTORShops.xls";
+          case 2: filename = "Stock/ITEKUAShops.xls";
+          case 3: filename = "Stock/WDShops.xls";
+          case 5: filename = "Stock/TXTShops.xls";
+          case 7: filename = "Stock/TNMShops.xls";
+          case 8: filename = "Stock/A-SRVShops.xls";
+        end;
+        
+        CreateFile(filename);
+        closefile;
+        millisleep(100);
+        openexportfile(filename,true);
+        RepSpec.flags[1] = 1;
+        RepSpec.sStartDate = "1/1/2009";
+        RepSpec.sEndDate = Currentdate;
+        MyShopsReportRn(RepSpec);
+        closefile;
+        switch(compnr)begin
+          case 1: RunProgram("Stock/ISTORShops.sh","");
+          case 2: RunProgram("Stock/ITEKUAShops.sh","");
+          case 3: RunProgram("Stock/WDShops.sh","");
+          case 5: RunProgram("Stock/TXTShops.sh","");
+          case 7: RunProgram("Stock/TNMShops.sh","");
+          case 8: RunProgram("Stock/A-SRVShops.sh","");
+        end;
+      end;
+return;
+end;
+
+
+
+
+global procedure MyShopsRecordRClassReportDefaults(integer wn)
+begin
+record RcVc RepSpec;
+
+  getwindowrecord(wn,RepSpec);
+  ReportDefaults(RepSpec,"MyShopsRecordRClass");
+  RepSpec.flags[1] = 1;
+  putwindowrecord(wn,RepSpec);
+
+return;
+end;
+
+
+global procedure InventMyRn(record RcVc RepSpec)
+begin
+record SerBalVc SBr;
+record StockTakeVc STr;
+row StockTakeVc STrw;
+boolean TrHs,testf,testf1,findf;
+record ItemStatusVc ISr;
+integer i,mtrw;
+record ORVc ORr,OR1r;
+row ORVc ORrw,OR1rw;
+integer s,g,j,mtrw1;
+record INVc INr;
+
+  startreportnoheaderjob("Інвентаризація");
+  
+  startformat(15);
+    Outstring(0,0,"Парт.№",false);
+    Outstring(0,0,"Опис",false);
+    Outstring(0,0,"Серійний номер",false);
+    Outstring(0,0,"К-сть на складі",false);
+    Outstring(0,0,"К-сть фактично",false);
+    Outstring(0,0,"Тип",false);
+    Outstring(0,0,"Група",false);
+  endformat;
+  
+  TrHs = true;
+  testf1 = true;
+  if(blank(RepSpec.f1))then begin
+    TrHs = false;
+    testf1 = false;
+    startformat(15);
+    Outstring(150,0,"Визначте склад!",false);
+    endformat
+  end;
+  
+  
+  ISr.Location = RepSpec.f1;
+  
+  recordNew(ORr);
+  STr.TransDate = RepSpec.sStartDate;
+  findf = false;
+  s=0;
+  g=0;
+  while(loopkey("TransDate",STr,1,testf1))begin
+    if(STr.TransDate>RepSpec.sEndDate) then begin testf1=false; end;
+    if(STr.Location==RepSpec.f1 and STr.OKFlag==1 and testf1)then begin
+      mtrw = matrowcnt(STr);
+      For(i=0;i<mtrw;i=i+1) begin
+        MatRowGet(STr,i,STrw);
+          mtrw1 = matrowcnt(ORr);
+          findf = false;
+          if(mtrw1==0)then begin goto L1; end;
+          for(j=0;j<mtrw1;j=j+1)begin
+            matrowget(ORr,j,ORrw);
+            if(ORrw.ArtCode==STrw.ArtCode and ORrw.SerialNr==STrw.SerialNr)then begin
+              ORrw.Quant = ORrw.Quant+STrw.Qty;
+              matrowput(ORr,j,ORrw);
+              findf = true;
+              goto L1;
+            end;
+          end;
+L1:;          
+          if(findf==false)then begin
+            if(nonblank(STrw.ArtCode) or nonblank(STrw.SerialNr))then begin
+              ORrw.ArtCode = STrw.ArtCode;
+              ORrw.Quant = STrw.Qty;
+              ORrw.SerialNr = STrw.SerialNr;
+              matrowinsert(ORr,s,ORrw);
+              s=s+1;
+            end;
+          end;
+      end;
+    end;
+  end;
+    
+  
+  g=0;
+  recordNew(OR1r);
+  while(loopkey("Location",ISr,1,TrHs))begin
+  testf = true;
+    if(ISr.Location!=RepSpec.f1)then begin TrHs = false; testf = false; end;
+    if(ISr.Instock<1) then begin testf = false; end;
+    if(testf)then begin
+    		INr.Code = ISr.Code;
+    		readfirstmain(INr,1,true);
+    		if(INr.SerNrf>0)then begin
+				SBr.Item = ISr.Code;
+				SBr.Location = RepSpec.f1;
+				SBr.Quant = 1;
+				While(loopkey("ItemQuant",SBr,3,testf))begin
+					if(SBr.Item!=ISr.Code)then begin testf = false; end;
+					if(SBr.Location==RepSpec.f1 and SBr.Quant>=1 and testf)then begin
+						OR1rw.ArtCode = SBr.Item;
+						OR1rw.Quant = SBr.Quant;
+						OR1rw.SerialNr = SBr.Serial;
+						OR1rw.Spec = "Недостача";
+						matrowinsert(OR1r,g,OR1rw);
+						g=g+1;
+					end;
+				end;
+				resetloop(SBr);
+      end else begin
+      		OR1rw.ArtCode = ISr.Code;
+				OR1rw.Quant = ISr.Instock;
+				OR1rw.SerialNr = "";
+				OR1rw.Spec = "Недостача";
+				matrowinsert(OR1r,g,OR1rw);
+				g=g+1;
+      end;
+    end;
+  end;
+
+  for(i=0;i<s;i=i+1)begin
+    matrowget(ORr,i,ORrw);
+    findf = false;
+    for(j=0;j<g;j=j+1)begin
+      matrowget(OR1r,j,OR1rw);
+      INr.Code = ORrw.ArtCode;
+      readfirstmain(INr,1,true);
+      if(INr.SerNrf>0 or blank(ORrw.ArtCode))then begin
+				if(ORrw.SerialNr==OR1rw.SerialNr)then begin
+					if(ORrw.Quant==OR1rw.Quant)then begin
+						OR1rw.Spec = "Норма";
+						OR1rw.Shipd1 = ORrw.Quant;
+					end else begin
+						OR1rw.Shipd1 = ORrw.Quant;
+						OR1rw.Spec = "Пересорт (задвоение)";
+					end;
+					matrowput(OR1r,j,OR1rw);
+					findf = true;
+					goto L2;
+				end;
+      end else begin
+      		if(ORrw.ArtCode==OR1rw.ArtCode and nonblank(ORrw.ArtCode))then begin
+					if(ORrw.Quant==OR1rw.Quant)then begin
+						OR1rw.Spec = "Норма";
+						OR1rw.Shipd1 = ORrw.Quant;
+					end else begin
+						if(ORrw.Quant>OR1rw.Quant)then begin
+							OR1rw.Spec = "Лишний";
+							OR1rw.Shipd1 = ORrw.Quant;
+						end else begin
+							OR1rw.Spec = "Недостача";
+							OR1rw.Shipd1 = ORrw.Quant;
+						end;
+					end;
+					matrowput(OR1r,j,OR1rw);
+					findf = true;
+					goto L2;
+				end;
+      end;      
+    end;
+L2:;   
+    if(findf==false)then begin
+      OR1rw.ArtCode = ORrw.ArtCode;
+      OR1rw.Quant = ORrw.Quant;
+      OR1rw.SerialNr = ORrw.SerialNr;
+      OR1rw.Shipd1 = ORrw.Quant;
+      OR1rw.Spec = "Пересорт (лишний)";
+      matrowinsert(OR1r,g,OR1rw);
+      g=g+1;
+    end;    
+  end;
+  
+  for(i=1;i<g;i=i+1)begin
+    matrowget(OR1r,i,OR1rw);
+    INr.Code = OR1rw.ArtCode;
+    Readfirstmain(INr,1,true);
+    startformat(15);
+      Outstring(0,0,OR1rw.ArtCode,false);
+      Outstring(0,0,INr.Name,false);
+      Outstring(0,0,OR1rw.SerialNr,false);
+      Outstring(0,0,OR1rw.Quant,false);
+      Outstring(0,0,OR1rw.Shipd1,false);
+      Outstring(0,0,OR1rw.Spec,false);
+      Outstring(0,0,INr.Group,false);
+    endformat;
+  end;
+  
+  endjob;
+return;
+end;

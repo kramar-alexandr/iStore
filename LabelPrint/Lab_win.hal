@@ -1,0 +1,265 @@
+procedure FORMDEF begin
+  real h,h1,h2,h3,h4,v;
+
+  SetLangMode(LangUkrainian,"UKR",0);
+
+  SetWRect(20,80,600,298);
+  Sizeable(-1,-1,0,0);
+  MatrixBegin(5,27,-21,-20,FormDefRowType,99);
+  MatCol(1,24,"Посл.",0,intdocnr,false,0);
+  MatCol(1,54,"Мова",0,LangCode,false,LangSClass);
+  MatCol(1,94,"Гр. дост.",0,UserGroup,false,AccessSClass);
+  MatCol(1,154,"Серії №",0,SerNr,false,0);
+  MatCol(1,224,"Форма",0,FPCode,false,DocSClass);
+/* No code behind this */
+//  MatCol(1,324,"E-Form",0,EformCode,false,0);
+  MatCol(1,424,"Принтер",0,PrintGroupCode,false,PrintGroupSClass);
+  MatCol(1,-60,"Статус",0,Typ,false,SetSClass);
+  EndMatrix;
+  return;
+end;
+
+event DefineWindows
+begin
+string 255 tstr;
+integer v,h,vs,t;
+
+	SetLangMode(LangUkrainian,"UKR",0);
+  
+  WindowBegin("Definition Service Orders",MyLabelItemFClass,CGHbl,HBlRecType);
+  SetBlid(ItemLabFormBlock);
+  FORMDEF;
+  EndWindow;
+  
+  WindowBegin("Етикетки товару",MyLabelItemLClass,CGmlist,-);
+    SpawnClass(MyLabelItemDClass);
+    SetWRect(20,80,900,298);
+    Sizeable(-1,-1,0,0);
+    UseView(MyLabelItemVc);
+    RecordList(4,17,-21,-39);
+    RlColKey(4,2,"Товар",ArtCode,false,ArtCode);
+    RlCol(120,120,"Прайс",PriceList,false);
+    RlCol(170,170,"Форма",DefFormCode,false);
+    RlCol(270,270,"Назва",Name,false);
+    RlCol(-270,-270,"Коментар",Comment,false); 
+    SearchField("Пошук");
+    //BrowseSubsetButton(-40,-15);
+  EndWindow;
+  
+  WindowBegin("Definition Service Orders",MyLabelItemFClass,CGHbl,HBlRecType);
+  SetBlid(ItemLabFormBlock);
+  FORMDEF;
+  EndWindow;
+  
+  WindowBegin("Definition Service Orders",GigieneTextFClass,CGHbl,HBlRecType);
+  SetBlid(GigieneTextFormBlock);
+  FORMDEF;
+  EndWindow;
+  
+  WindowBegin("Definition label PU",LabelPartPUFClass,CGHbl,HBlRecType);
+  SetBlid(LPPUFormBlock);
+  FORMDEF;
+  EndWindow;
+  
+  WindowBegin("Definition label StockMov",LabelPartStockMovFClass,CGHbl,HBlRecType);
+  SetBlid(LPSMFormBlock);
+  FORMDEF;
+  EndWindow;
+
+  
+  WindowBegin("Етикетка товару",MyLabelItemDClass,CGview,-);
+    SetWRect(20,80,700,298);
+    Sizeable(-1,-1,0,0);
+    UseView(MyLabelItemVc);
+    //FormName(ItemLabForm);
+    v=20;
+    h=120;
+    EditField(h,v, 100,"Товар",Normal,ArtCode,false,INSClass);
+    EditField(h,v+=20,400, "Найменування товару",Normal,Name,false,0);
+    EditField(h,v+=20,400, "Коментар",Normal,Comment,false,0);
+    v=v+20;
+    EditField(h,v+=20,100, "Прайс",Normal,PriceList,false,PLDefSClass);
+    EditField(h,v+=20,100, "Форма документа",Normal,DefFormCode,false,DocSClass);
+    EditField(h,v+=20,100, "Валюта",Normal,CurncyCode,false,CurncyCodeSClass);
+    vs=v;
+    v=20;
+    ButtonFrame(h+=450,v,60,5,"Розмір");
+    RadioButton(h,v,0,0,"1*1 A4",Size);
+    RadioButton(h,v+=16,1,0,"1*2 A5 гориз.",Size);
+    RadioButton(h,v+=16,2,0,"2*2 A6",Size);
+    RadioButton(h,v+=16,3,0,"4*3",Size);
+    RadioButton(h,v+=16,4,0,"2*4",Size);
+    RadioButton(h,v+=16,5,0,"4*4",Size);
+    RadioButton(h,v+=16,6,0,"7*3 стик.",Size);
+    v=vs;
+    Tile(0,v+=40,false,"",ArtCode);
+    TileButton(1,"Опис");    
+    Tile(1,v,true,"1",Math);
+    v = 24;
+    MatrixBegin(3,v,-50,-44,-,199);
+      t=1;
+      Flip(1);
+      //MatTypedRow(0);
+      MatCol(t,24,"Товар - Тип",0,Param,false,0);
+      MatCol(t,-350,"Товар - Варіанти",0,Name,false,0);
+      Flip(2);
+      MatCol(t,24,"Опис",0,Comment1,false,0);
+      Flip(3);
+      MatCol(t,24,"Підпис",0,Comment2,false,0);
+      Flip(4);
+      MatCol(t,24,"Додатковий текст",0,Comment3,false,0);
+      MatCol(t,150,"Країна походження",0,Comment4,false,0);
+      InsertRowTest;
+      DeleteRowTest;
+    EndMatrix;
+    vs = 20;
+    v = 18;  VTab(-35,v,-16,v+vs,ToolFlip,1,"A");
+    v=v+vs;  VTab(-35,v,-16,v+vs,ToolFlip,2,"B");
+    v=v+vs;  VTab(-35,v,-16,v+vs,ToolFlip,3,"C");
+    v=v+vs;  VTab(-35,v,-16,v+vs,ToolFlip,4,"D");
+  EndWindow;
+  
+  WindowBegin("Вставити етикетку",MyLabelItemSClass,CGslist,-);
+  SetWRect(210,80,750,298);
+  Sizeable(-1,-1,0,0);
+  UseView(MyLabelItemVc);
+  SpawnClass(MyLabelItemDClass);
+  RecordList(4,17,-21,-39);
+  RlColKey(4,20,"Товар",ArtCode,false,ArtCode);
+  RlCol(120,120,"Назва",Name,false);
+  RlCol(-130,-130,"Прайс",PriceList,false);
+  RlCol(-40,-40,"Форма",DefFormCode,false);
+  SearchField("Search");
+  EndWindow;
+  
+  WindowBegin("Друк етикеток",MyRepricingLClass,CGmlist,-);
+    SpawnClass(MyRepricingDClass);
+    SetWRect(20,80,900,298);
+    Sizeable(-1,-1,0,0);
+    UseView(MyRepricingVc);
+    RecordList(4,17,-21,-39);
+    RlColKey(4,2,"Номер",SerNr,false,SerNr);
+    RlCol(120,120,"Дата",TransDate,false);
+    RlCol(170,170,"Коментар",Comment,false);
+    RlCol(270,270,"Склад",SalesMan,false);
+    RlCol(-270,-270,"Склад",Location,false); 
+    SearchField("Пошук");
+    //BrowseSubsetButton(-40,-15);
+  EndWindow;
+
+  
+  WindowBegin("Друк етикеток",MyRepricingDClass,CGview,-);
+    SetWRect(20,80,700,298);
+    Sizeable(-1,-1,0,0);
+    //FormName(ItemLabForm1);
+    UseView(MyRepricingVc);
+    v=5;
+    h=80;
+    EditField(h,v, 100,"Номер",Normal,SerNr,false,TSerSClass);
+    EditField(h+180,v,300,"Коментар",Normal,Comment,false,0);
+    EditField(h,v+=20,100, "Редактував",ViewOnly,SalesMan,false,UserSClass);
+    EditField(h,v+=20,100, "Магазин",Normal,Cust2,false,LocalMachineSClass);
+    EditField(h,v+=20,100, "Склад",Normal,Location,false,LocationSClass);
+    EditField(h,v+=20,100, "Дата",Normal,TransDate,false,PasteCurDate);
+    v = 45;
+    EditField(h+380,v-20,100, "Форма за замовчанням",Normal,DefFormCode,false,DocSClass);
+    EditField(h+380,v,100, "Прайс за замовченням",Normal,DefPriceCode,false,PLDefSClass);
+    EditField(h+380,v+20,100, "Валюта за зам.",Normal,DefFormName,false,CurncyCodeSClass);
+    v=20;
+    ButtonFrame(h+=500,v,60,5,"Розмір");
+    RadioButton(h,v,0,0,"1*1 A4",Size);
+    RadioButton(h,v+=16,1,0,"1*2 A5 грз.",Size);
+    RadioButton(h,v+=16,2,0,"2*2 A6",Size);
+    RadioButton(h,v+=16,3,0,"4*3",Size);
+    RadioButton(h,v+=16,4,0,"2*4",Size);
+    RadioButton(h,v+=16,5,0,"4*4",Size);
+    RadioButton(h,v+=16,6,0,"7*3 стик.",Size);
+    RadioButton(h,v+=16,7,0,"5*13 стик.",Size);
+  
+    vs=v;
+    v=vs;
+
+    Tile(0,v+=40,false,"",SerNr);
+    TileButton(1,"Етикетки");    
+    Tile(1,v,true,"1",Math);
+    CheckBox(20,-20,0,"OK",OKFlag);
+    v = 18;
+    MatrixBegin(3,v,-50,-44,-,199);
+      t=1;
+      Flip(0);
+      MatCol(t,24,"Товар",0,ArtCode,false,MyLabelItemSClass);
+      MatCol(t,150,"Назва",0,Spec,false,0);
+      Flip(1);
+      //MatTypedRow(0);
+      MatCol(t,24,"Товар",0,ArtCode,false,MyLabelItemSClass);
+      MatCol(t,150,"Назва",0,Spec,false,0);
+      MatCol(t,-220,"Прайс",0,PriceList,false,0);
+      MatCol(t,-170,"Кіл-ть",0,Quant,false,0);
+      MatCol(t,-110,"Форма",0,FormCode,false,DocSClass);
+      MatCol(t,-30,"Розмір",0,Size,false,DocSClass);
+      Flip(2);
+      //MatTypedRow(0);
+      MatCol(t,24,"Товар",0,ArtCode,false,MyLabelItemSClass);
+      MatCol(t,150,"Назва",0,Spec,false,0);
+      MatCol(t,-220,"Ціна",0,Price,false,0);
+
+      InsertRowTest;
+      DeleteRowTest;
+    EndMatrix;
+    vs = 20;
+    v = 18;  VTab(-35,v,-16,v+vs,ToolFlip,1,"A");
+    v=v+vs;  VTab(-35,v,-16,v+vs,ToolFlip,2,"B");
+    //v=v+vs;  VTab(-35,v,-16,v+vs,ToolFlip,3,"C");
+    //v=v+vs;  VTab(-35,v,-16,v+vs,ToolFlip,4,"C");
+  EndWindow;
+  
+  
+  WindowBegin("Змінити валюту цінників",UpdateLablCurncyVClass,CGMnt,RcType);
+    UseView(RcVc);
+    SetWRect(90,80,300,300);
+    h=70;
+    v = 20;
+    EditField(h,v, 100,"Валюта",Normal,f1,false,CurncyCodeSClass);
+    EditField(h,v+=20,100,"Пайс лист",Normal,f2,false,PLDefSClass);
+    
+   // HalPushButton(10,15,160,130,"RunItemReport","Запустить отчет");
+  EndWindow;
+  
+  WindowBegin("Надрукуваті наклейки",MyPrintLabelDialogTClass,CGother,RcType);
+    UseView(RcVc);
+    SetWRect(90,80,450,400);
+    h=50;
+    v = 20;
+    
+    ButtonFrame(h,v,80,2,"Наклейки");                   HalPushButton(h+150,10,350,66,"ZebraFont","Завантажити шрифт");
+    RadioButton(h,v,0,0,"ZEBRA",flags[3]);
+    RadioButton(h,v+=16,1,0,"ZEBRA BIG",flags[3]);
+    
+    v=v+32;
+    
+    ButtonFrame(h,v,80,2,"Друк");
+    RadioButton(h,v,0,0,"Всі наклейки",flags[0]);
+    RadioButton(h,v+=16,1,0,"Наклейки",flags[0]);EditField(h+120,v,45,"з",Normal,flags[1],false,0);EditField(h+200,v,45,"по",Normal,flags[2],false,0);
+    
+    
+    HalPushButton(h,v+=20,190,66,"PrintPUZebra","Друкувати");
+  EndWindow;
+  
+  WindowBegin("Надрукуваті наклейки",GigieneLabelDialogTClass,CGother,RcType);
+    UseView(RcVc);
+    SetWRect(90,80,450,400);
+    h=50;
+    v = 20;
+  
+    HalPushButton(h,10,350,66,"ZebraFont","Завантажити шрифт");
+
+    v=v+32;
+    
+    EditField(h,v,45,"Кількість",Normal,flags[1],false,0);
+    
+    
+    HalPushButton(h,v+=20,190,66,"GigieneTextZebraPrint","Друкувати");
+  EndWindow;
+  
+return;
+end;

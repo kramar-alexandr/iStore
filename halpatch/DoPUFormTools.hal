@@ -1,0 +1,86 @@
+external procedure GetFullCurncyRate(var string,Date,var val,var val,var val,var val,var val);
+external procedure PrintValueInclZero(string,val,Integer,record LangNrVc,record SysFormatBlock,Boolean);
+external procedure ValToText(val,Integer,string,string,var string);
+
+function val conv(string curcode,date curdate)
+begin
+val frrate,to1,to2,br1,br2;
+  GetFullCurncyRate(curcode,curdate,frrate,to1,to2,br1,br2);
+  conv=frrate/to1;
+return;
+end;
+
+global procedure printPURow(record PUVc PUr,integer rownr,record INVc INr,record SysFormatBlock SysFormatRec,record LangNrVc LangNrr,var val sumnotpdv,var val sumtotal)
+begin
+row PUVc PUrw;
+val sumnopdv,roundprice,pdv,sumnorebeate,sumrebeate,t;
+
+  matrowget(PUr,rownr,PUrw);
+  
+  if (FIELDINFORM("F_EKNCODE")) then begin
+          OUTFORMFIELD("F_EKNCODE",INr.EKNCode);
+        end;
+        
+        sumtotal = sumtotal + Round(PUrw.CostPrice*PUrw.Quant,2);
+        if (FIELDINFORM("F_APRISUAH")) then begin//-------------------------------------------          
+          t = blankval;
+          If(nonblank(PUrw.CostPrice)) then begin
+          t = Round(PUrw.CostPrice*10/12,2);
+            PrintValueInclZero("F_APRISUAH",t,M45Val,LangNrr,SysFormatRec,false);
+          end;          
+        end;
+        
+        
+        roundprice = Round(PUrw.CostPrice*10/12,2);
+        if (FIELDINFORM("F_UAHPRICENONPDV")) then begin
+            t = blankval;
+            If(nonblank(PUrw.CostPrice)) then begin
+            t = roundprice;
+            PrintValueInclZero("F_UAHPRICENONPDV",t,M45Val,LangNrr,SysFormatRec,false);
+            end;
+        end;
+        
+        sumnotpdv = sumnotpdv+round(roundprice*PUrw.Quant,2);
+        if (FIELDINFORM("F_UAHSUMNONPDV")) then begin
+          t = blankval;
+          If(nonblank(PUrw.CostPrice)) then begin
+            t =   round(roundprice*PUrw.Quant,2);
+            PrintValueInclZero("F_UAHSUMNONPDV",t,M45Val,LangNrr,SysFormatRec,false);
+          end;
+        end;
+  
+return;
+end;
+
+global procedure printPUTotal(record SysFormatBlock SysFormatRec,record LangNrVc LangNrr,var val sumnotpdv,var val sumtotal)
+begin
+val t,pdv;
+string 255 tstr;
+
+  if (FIELDINFORM("F_UAHSUM4NONPDV")) then begin//-------------------------------------------
+    t = blankval;
+    t =   sumnotpdv;//*ORrw.Quant;//  Round(ORrw.Price*conv("UAH_B",ORr.OrdDate)*10/12,2);
+    PrintValueInclZero("F_UAHSUM4NONPDV",t,M45Val,LangNrr,SysFormatRec,false);
+	end;  
+  
+    pdv = sumtotal - sumnotpdv;
+	if (FIELDINFORM("F_UAHPDV")) then begin//-------------------------------------------
+    t = blankval;
+    t =   pdv;//*ORrw.Quant;//  Round(ORrw.Price*conv("UAH_B",ORr.OrdDate)*10/12,2);
+    PrintValueInclZero("F_UAHPDV",t,M45Val,LangNrr,SysFormatRec,false);
+	end;
+  
+  if (FIELDINFORM("F_UAHSUM5")) then begin//-------------------------------------------
+    t = blankval;
+    t =   sumtotal;//*ORrw.Quant;//  Round(ORrw.Price*conv("UAH_B",ORr.OrdDate)*10/12,2);
+    PrintValueInclZero("F_UAHSUM5",t,M45Val,LangNrr,SysFormatRec,false);
+	end;
+  
+  if (FIELDINFORM("F_UAHSUM5TEXT")) then begin
+     t = sumtotal;
+     ValToText(t,M4Val,"UAH","UKR",tstr);
+     OUTFORMFIELD("F_UAHSUM5TEXT",tstr);  
+  end;
+  
+return;
+end;

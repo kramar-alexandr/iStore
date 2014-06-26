@@ -1,0 +1,1279 @@
+external function Boolean FindStringInString(string,string);
+external function Boolean TestForMATVARINS(Integer);
+external procedure OpenCCPayRahaxiDClass(Integer,Integer,LongInt,val,val,string);
+external function Integer GetVATLaw();
+external procedure CalcPrice(val,val,val,var val,Integer);
+external procedure RoundRowSum(string,string,var val);
+external procedure CalcSum(val,val,val,val,var val,Integer);
+external procedure StripSpace(var string,string);
+external function Integer FindCharPosition(string,string);
+remote function Boolean GetFirstItem(var string,var record INVc);
+external function val MulRateToBase1(var string,val,val,val,val,val,val,Integer);
+external function val MulWithRateToBase1(var string,Date,val,Integer);
+remote function Boolean IVCashVc_PasteQuant(var record IVCashVc,Integer);
+remote function Boolean IVCashVc_PasteArtCode(var record IVCashVc,Integer,var string);
+external procedure SendArtStat(string,string,string,val,val,val,Date);
+external procedure CalcProc(val,val,var val);
+external procedure FindSalesExVat(string,val,Integer,Integer,var val);
+remote procedure IVCashSumup(var record IVCashVc,Boolean);
+external procedure RemoveOldCustObjects(string,var string);
+external function Integer GetProgramMode();
+remote function Boolean PasteCustInCashInv(var record IVCashVc,string,var string);
+external procedure ChangeIVCashSerialNr(Integer,var record IVCashVc);
+external procedure IVCashGetRate(Integer,var record IVCashVc);
+external procedure Base1ToBase2(var val,Date,var val);
+external procedure Base2ToBase1(var val,Date,var val);
+remote procedure CalculatePOSCashBack(var record IVCashVc);
+external procedure prt(string,string);
+
+
+
+
+
+global
+function Boolean IVCashDchrsum(record IVCashVc IVCashp,Integer rownr,Integer UseDiscount)
+BEGIN
+  Boolean res;
+  row IVCashVc IVCashrw;
+  val s,p;
+  record DefCashBlock DCr;
+  
+  BlockLoad(DCr); // Annoying...
+  MatRowGet(IVCashp,rownr,IVCashrw);
+  p = IVCashrw.Price; 
+  CalcPrice(IVCashrw.BasePrice,IVCashrw.PriceFactor,IVCashrw.vRebate,p,UseDiscount);
+  IVCashrw.Price = p;  
+  CalcSum(IVCashrw.Quant,IVCashrw.Price,IVCashrw.PriceFactor,IVCashrw.vRebate,s,UseDiscount);  
+// Was dollarstore code, should be no problem for standard either
+  if (IVCashrw.vRebate > 100) then begin
+    s = -s * (IVCashrw.vRebate-100)/100;
+  end;
+  if (GetVATLaw==13) then begin//vatFinnish    
+    RoundRowSum(IVCashp.CurncyCode,DCr.DefCashPayMode,s);//s = Round(s,10); not row rounding
+  end else begin
+    RoundRowSum(IVCashp.CurncyCode,DCr.DefCashPayMode,s);
+  end;
+  s=round(s,0);// Edit ************************** Thursday, 22 September 2011 17:18:15// Edit ************************** Thursday, 22 September 2011 17:18:16
+  res = true;// Edit ************************** Tuesday, 27 November 2012 16:33:59
+  if (s!=IVCashrw.Sum) then begin
+    IVCashrw.Sum = s;
+    res = true;
+    MatRowPut(IVCashp,rownr,IVCashrw);
+  end;
+  if (IVCashrw.DownPaidSum!=0) then begin
+    res = true;
+  end;
+  IVCashDchrsum = res; 
+  RETURN;
+END;
+
+
+global
+procedure IVCashDchsum(record IVCashVc IVCashp,Integer rownr)
+BEGIN
+  row IVCashVc IVCashrw;
+  val t,s,rowsum,tproc;
+  val qty,sum,unitprdisc;
+
+  MatRowGet(IVCashp,rownr,IVCashrw);
+  if (IVCashrw.Quant==0) then begin
+    qty = 1;
+  end else begin
+    qty = IVCashrw.Quant;
+  end;  
+  rowsum = blankval;
+  if (IVCashrw.stp==1) then begin
+    if (nonblank(IVCashrw.ArtCode)) then begin
+      t = qty*IVCashrw.BasePrice;
+      if (IVCashrw.PriceFactor!=0) then begin
+        t = t/IVCashrw.PriceFactor;
+      end;
+      if (IVCashrw.Sum==0) then begin
+        sum = qty*IVCashrw.Price;
+      end else begin
+        sum = IVCashrw.Sum;
+      end;  
+      s = MulRateToBase1(IVCashp.CurncyCode,sum,IVCashp.FrRate,IVCashp.ToRateB1,IVCashp.ToRateB2,IVCashp.BaseRate1,IVCashp.BaseRate2,DefaultCurRoundOff);
+      FindSalesExVat(IVCashrw.VATCode,s,IVCashp.InclVAT,IVCashp.NoTAXonVAT,rowsum);
+      IVCashrw.rowGP = rowsum - t;
+    end else begin
+      IVCashrw.rowGP = 0;
+      IVCashrw.BasePrice = 0;
+    end;
+    MatRowPut(IVCashp,rownr,IVCashrw);
+  end;
+  MatRowGet(IVCashp,rownr,IVCashrw);
+  CalcProc(rowsum,IVCashrw.rowGP,tproc);
+  MatRowPut(IVCashp,rownr,IVCashrw);
+  SendArtStat(IVCashrw.ArtCode,IVCashp.Location,IVCashrw.Recepy,IVCashrw.rowGP,tproc,unitprdisc,IVCashp.TransDate);
+  RETURN;
+END;
+
+function Boolean IVCashDClassArtCodeEFAfter(Integer wn,Integer rownr,integer changed)
+begin  
+  string 255 inwarning;
+  record IVCashVc IVCashr;
+  row IVCashVc IVCashrw;
+  string 255 location;
+  GetWindowRecord(wn,IVCashr);
+  location = IVCashr.Location;
+  MatRowGet(IVCashr,rownr,IVCashrw);
+  if ((changed!=0) or (blank(IVCashrw.Spec)) and (nonblank(IVCashrw.ArtCode))) then begin
+    if (IVCashVc_PasteArtCode(IVCashr,rownr,inwarning)) then begin
+      if (nonblank(inwarning)) then begin
+        MessageBox(0,inwarning);
+      end;
+      PutWindowRecord(wn,IVCashr);
+    end else begin
+      Beep;
+    end;
+  end;
+  SetWindowNameArg(wn,IVCashrw.ArtCode & ":" & location);
+  IVCashDClassArtCodeEFAfter = true;
+  return;
+end;
+ 
+function Boolean IVCashDClassQuantEFAfter(Integer wn,Integer rownr,integer changed)
+begin  
+  record IVCashVc IVCashr;
+  row IVCashVc IVCashrw;
+ 
+  GetWindowRecord(wn,IVCashr);
+  MatRowGet(IVCashr,rownr,IVCashrw);
+  if ((changed!=0) or ((IVCashrw.Quant==1) and (nonblank(IVCashrw.Recepy)))) then begin    // changed to do PasteQuant always (if IVCashrw.Quant == 1)
+    if (IVCashVc_PasteQuant(IVCashr,rownr)) then begin    
+      PutWindowRecord(wn,IVCashr);    
+    end;    
+  end;
+  IVCashDClassQuantEFAfter = true;
+  return;
+end;
+
+function Boolean IVCashDClassCashValueEFAfter(Integer wn, Integer rownr,Integer changed)
+BEGIN
+  record IVCashVc IVCashr;
+
+  if (changed!=0) then begin
+  	GetWindowRecord(wn,IVCashr);
+  	CalculatePOSCashBack(IVCashr);
+    PutWindowRecord(wn,IVCashr);
+  end;
+  IVCashDClassCashValueEFAfter = true;
+  RETURN;
+END;
+
+function Boolean IVCashDClassRecValueEFAfter(Integer wn, Integer rownr,Integer changed)
+BEGIN
+  record IVCashVc IVCashr;
+
+  if (changed!=0) then begin
+  	GetWindowRecord(wn,IVCashr);
+  	CalculatePOSCashBack(IVCashr);
+    PutWindowRecord(wn,IVCashr);
+  end;
+  IVCashDClassRecValueEFAfter = true;
+  RETURN;
+END;
+
+function Boolean IVCashDClassRecValue2EFAfter(Integer wn, Integer rownr,Integer changed)
+BEGIN
+  record IVCashVc IVCashr;
+
+  if (changed!=0) then begin
+  	GetWindowRecord(wn,IVCashr);
+  	CalculatePOSCashBack(IVCashr);
+    PutWindowRecord(wn,IVCashr);
+  end;
+  IVCashDClassRecValue2EFAfter = true;
+  RETURN;
+END;
+
+function Boolean IVCashDClassRecValue3EFAfter(Integer wn, Integer rownr,Integer changed)
+BEGIN
+  record IVCashVc IVCashr;
+
+  if (changed!=0) then begin
+  	GetWindowRecord(wn,IVCashr);
+  	CalculatePOSCashBack(IVCashr);
+    PutWindowRecord(wn,IVCashr);
+  end;
+  IVCashDClassRecValue3EFAfter = true;
+  RETURN;
+END;
+
+
+function Boolean IVCashDClassPOSCurncyCodeEFAfter(Integer wn, Integer rownr,Integer changed)
+BEGIN
+  record IVCashVc IVCashr;
+
+  if (changed!=0) then begin
+  	GetWindowRecord(wn,IVCashr);
+  	CalculatePOSCashBack(IVCashr);
+    PutWindowRecord(wn,IVCashr);
+  end;
+  IVCashDClassPOSCurncyCodeEFAfter = true;
+  RETURN;
+END;
+
+function Boolean IVCashDClassCashValueCurEFAfter(Integer wn, Integer rownr,Integer changed)
+BEGIN
+  record IVCashVc IVCashr;
+
+  if (changed!=0) then begin
+  	GetWindowRecord(wn,IVCashr);
+  	CalculatePOSCashBack(IVCashr);
+    PutWindowRecord(wn,IVCashr);
+  end;
+  IVCashDClassCashValueCurEFAfter = true;
+  RETURN;
+END;
+
+function Boolean IVCashDClassCashValueB2EFAfter(Integer wn, Integer rownr,Integer changed)
+BEGIN
+  record IVCashVc IVCashr;
+  val t;
+
+  if (changed!=0) then begin
+  	GetWindowRecord(wn,IVCashr);
+    Base2ToBase1(IVCashr.CashValueB2,IVCashr.InvDate,t); 
+    IVCashr.CashValue = t;
+    t = IVCashr.RecValue + IVCashr.RecValue2 + IVCashr.RecValue3 + IVCashr.CashValue + MulWithRateToBase1(IVCashr.POSCurncyCode,IVCashr.InvDate,IVCashr.CashValueCur,DefaultCurRoundOff);
+    t = t - IVCashr.Sum4; 
+    Base2ToBase1(t,IVCashr.InvDate,t); 
+    IVCashr.RetValueB2 = t;
+    PutWindowRecord(wn,IVCashr);
+  end;
+  IVCashDClassCashValueB2EFAfter = true;
+  RETURN;
+END;
+
+function Boolean IVCashDClassInvDateEFAfter(Integer wn, Integer rownr,Integer changed)
+BEGIN
+  record IVCashVc IVCashr;
+
+  if (changed!=0) then begin
+  	GetWindowRecord(wn,IVCashr);
+//?      if (DateWarned(&IVCashp->InvDate,"IVCashVc")) then
+//?        Error0(1045);
+  	
+    IVCashr.PayDate = AddDay(IVCashr.InvDate,IVCashr.pdays);
+    IVCashGetRate(wn,IVCashr);
+    PutWindowRecord(wn,IVCashr);
+  end;
+  IVCashDClassInvDateEFAfter = true;
+  RETURN;
+END;
+
+function Boolean IVCashDClassLangCodeEFAfter(Integer wn, Integer rownr,Integer changed)
+BEGIN
+  record IVCashVc IVCashr;
+
+  if (changed!=0) then begin
+  	GetWindowRecord(wn,IVCashr);
+    ChangeIVCashSerialNr(wn,IVCashr);
+    PutWindowRecord(wn,IVCashr);
+  end;
+  IVCashDClassLangCodeEFAfter = true;
+  RETURN;
+END;
+
+function Boolean IVCashDClassPayDealEFAfter(Integer wn,Integer rownr,Integer changed)
+BEGIN
+  record IVCashVc IVCashr;
+  val t;
+  
+  
+  if (changed!=0) then begin
+    GetWindowRecord(wn,IVCashr);
+    IVCashSumup(IVCashr,true);
+    if (nonblank(IVCashr.PayDeal)) then begin
+      t = IVCashr.RecValue + IVCashr.RecValue2 + IVCashr.RecValue3 + IVCashr.CashValue;
+      IVCashr.RecValue = IVCashr.Sum4 - t;
+      if (IVCashr.RecValue<0) then begin
+        IVCashr.RecValue = blankval;
+      end;
+      t = IVCashr.RecValue + IVCashr.RecValue2 + IVCashr.RecValue3 + IVCashr.CashValue;
+      IVCashr.RetValue = t - IVCashr.Sum4;
+    end else begin
+      IVCashr.RecValue = blankval;
+    end;
+    PutWindowRecord(wn,IVCashr);
+  end;
+  IVCashDClassPayDealEFAfter = true;
+  RETURN;
+END;
+
+function Boolean IVCashDClassPayDeal2EFAfter(Integer wn,Integer rownr,Integer changed)
+BEGIN
+  record IVCashVc IVCashr;
+  val t;
+  
+  
+  if (changed!=0) then begin
+    GetWindowRecord(wn,IVCashr);
+    IVCashSumup(IVCashr,true);
+    if (nonblank(IVCashr.PayDeal2)) then begin
+      t = IVCashr.RecValue + IVCashr.RecValue2 + IVCashr.RecValue3 + IVCashr.CashValue;
+      IVCashr.RecValue2 = IVCashr.Sum4 -t;
+      if (IVCashr.RecValue2<0) then begin
+        IVCashr.RecValue2 = blankval;
+      end;
+      t = IVCashr.RecValue + IVCashr.RecValue2 + IVCashr.RecValue3 + IVCashr.CashValue;
+      IVCashr.RetValue = t - IVCashr.Sum4;
+    end else begin
+      IVCashr.RecValue2 = blankval;
+    end;
+    PutWindowRecord(wn,IVCashr);
+  end;
+  IVCashDClassPayDeal2EFAfter = true;
+  RETURN;
+END;
+
+function Boolean IVCashDClassPayDeal3EFAfter(Integer wn,Integer rownr,Integer changed)
+BEGIN
+  record IVCashVc IVCashr;
+  val t;
+  
+  if (changed!=0) then begin
+    GetWindowRecord(wn,IVCashr);
+    IVCashSumup(IVCashr,true);
+    if (nonblank(IVCashr.PayDeal3)) then begin
+      t = IVCashr.RecValue + IVCashr.RecValue2 + IVCashr.RecValue3 + IVCashr.CashValue;
+      IVCashr.RecValue3 = IVCashr.Sum4 -t;
+      if (IVCashr.RecValue3<0) then begin
+        IVCashr.RecValue3 = blankval;
+      end;
+      t = IVCashr.RecValue + IVCashr.RecValue2 + IVCashr.RecValue3 + IVCashr.CashValue;
+      IVCashr.RetValue = t - IVCashr.Sum4;
+    end else begin
+      IVCashr.RecValue3 = blankval;
+    end;
+    PutWindowRecord(wn,IVCashr);
+  end;
+  IVCashDClassPayDeal3EFAfter = true;
+  RETURN;
+END;
+
+function Boolean IVCashDClassPriceListEFAfter(Integer wn,Integer rownr,Integer changed)
+BEGIN
+  record IVCashVc IVCashr;
+  record PLDefVc PLDefR;
+  val t;
+  
+  if (changed!=0) then begin
+    GetWindowRecord(wn,IVCashr);
+    PLDefR.Code = IVCashr.PriceList;
+    if (ReadFirstMain(PLDefR,1,true)) then begin
+      IVCashr.InclVAT = PLDefR.InclVAT;
+    end;    
+    PutWindowRecord(wn,IVCashr);
+  end;
+  IVCashDClassPriceListEFAfter = true;
+  RETURN;
+END;
+
+function
+Boolean CheckBaseCurcy(string crncycode)
+BEGIN
+  Boolean res;
+  record BaseCurBlock bascur;
+  
+  
+  res = true;
+  BlockLoad(bascur);
+  if (crncycode!=bascur.BaseCur1) then begin
+    res = false;
+  end;
+  CheckBaseCurcy = res;
+  RETURN;
+END;
+
+function Boolean IVCashDClassCustCodeEFAfter(Integer wn,Integer rownr,Integer changed)
+BEGIN
+  record IVCashVc IVCashr;
+  val t;
+  string 255 tstr,t2,warning;
+  record LocalMachineBlock lmr;
+  
+  
+  GetWindowRecord(wn,IVCashr);
+  if ((changed!=0) or (blank(IVCashr.Addr0) and (nonblank(IVCashr.CustCode)) )) then begin
+    tstr = WindEFstr(wn);
+    if ((tstr!=IVCashr.CustCode) and (nonblank(tstr))) then begin
+      t2 = IVCashr.Objects;
+      RemoveOldCustObjects(tstr,t2);
+      IVCashr.Objects = t2;
+    end;
+    BlockLoad(lmr);
+    if (PasteCustInCashInv(IVCashr,lmr.DefLocation,warning)) then begin
+      IVCashGetRate(wn,IVCashr);
+      if (GetProgramMode==typOffLine) then begin           
+        if (CheckBaseCurcy(IVCashr.CurncyCode)==false) then begin
+          IVCashr.CurncyCode = "";
+          IVCashGetRate(wn,IVCashr);
+          MessageBox(1978,"");
+        end;
+      end;            
+      ChangeIVCashSerialNr(wn,IVCashr);
+      IVCashr.SalesMan = CurrentUser;
+      if (nonblank(warning)) then begin
+        MessageBox(0,warning);
+      end;
+    end else begin
+      Beep;
+    end;
+    PutWindowRecord(wn,IVCashr);
+  end;
+  IVCashDClassCustCodeEFAfter = true;
+  RETURN;
+END;
+
+function Boolean IVCashDClassvRebateEFAfter(Integer wn,Integer rownr,Integer changed)
+BEGIN
+  record IVCashVc IVCashr;
+  record GeneralOptionBlock GenOptRec;
+
+  if (changed!=0) then begin
+    BlockLoad(GenOptRec);
+    GetWindowRecord(wn,IVCashr);
+    if (IVCashDchrsum(IVCashr,rownr,GenOptRec.UseDiscount)) then begin
+      IVCashDchsum(IVCashr,rownr);
+      IVCashSumup(IVCashr,true);
+    end;
+    PutWindowRecord(wn,IVCashr);
+  end;
+  IVCashDClassvRebateEFAfter = true;
+  RETURN;
+END;
+
+function Boolean IVCashDClassPriceFactorEFAfter(Integer wn,Integer rownr,Integer changed)
+BEGIN
+  record IVCashVc IVCashr;
+  record GeneralOptionBlock GenOptRec;
+  
+  
+  if (changed!=0) then begin
+    BlockLoad(GenOptRec);
+    GetWindowRecord(wn,IVCashr);
+    if (IVCashDchrsum(IVCashr,rownr,GenOptRec.UseDiscount)) then begin
+      IVCashDchsum(IVCashr,rownr);
+      IVCashSumup(IVCashr,true);
+    end;
+    PutWindowRecord(wn,IVCashr);
+  end;
+  IVCashDClassPriceFactorEFAfter = true;
+  RETURN;
+END;
+
+function Boolean IVCashDClassBasePriceEFAfter(Integer wn,Integer rownr,Integer changed)
+BEGIN
+  record IVCashVc IVCashr;
+  record GeneralOptionBlock GenOptRec;
+  
+  if (changed!=0) then begin
+    BlockLoad(GenOptRec);
+    GetWindowRecord(wn,IVCashr);
+    if (IVCashDchrsum(IVCashr,rownr,GenOptRec.UseDiscount)) then begin
+      IVCashDchsum(IVCashr,rownr);
+      IVCashSumup(IVCashr,true);
+    end;
+    PutWindowRecord(wn,IVCashr);
+  end;
+  IVCashDClassBasePriceEFAfter = true;
+  RETURN;
+END;
+
+function Boolean IVCashDClassPriceEFAfter(Integer wn,Integer rownr,Integer changed)
+BEGIN
+  record IVCashVc IVCashr;
+  record GeneralOptionBlock GenOptRec;
+  
+  if (changed!=0) then begin
+    BlockLoad(GenOptRec);
+    GetWindowRecord(wn,IVCashr);
+    if (IVCashDchrsum(IVCashr,rownr,GenOptRec.UseDiscount)) then begin
+      IVCashDchsum(IVCashr,rownr);
+      IVCashSumup(IVCashr,true);
+    end;
+    PutWindowRecord(wn,IVCashr);
+  end;
+  IVCashDClassPriceEFAfter = true;
+  RETURN;
+END;
+
+function Boolean IVCashDClassVATCodeEFAfter(Integer wn,Integer rownr,Integer changed)
+BEGIN
+  record IVCashVc IVCashr;
+  record GeneralOptionBlock GenOptRec;
+  
+  if (changed!=0) then begin
+    BlockLoad(GenOptRec);
+    GetWindowRecord(wn,IVCashr);
+    if (IVCashDchrsum(IVCashr,rownr,GenOptRec.UseDiscount)) then begin
+      IVCashDchsum(IVCashr,rownr);
+      IVCashSumup(IVCashr,true);
+    end;
+    PutWindowRecord(wn,IVCashr);
+  end;
+  IVCashDClassVATCodeEFAfter = true;
+  RETURN;
+END;
+
+function Boolean IVCashDClassDownPaidSumEFAfter(Integer wn,Integer rownr,Integer changed)
+BEGIN
+  record IVCashVc IVCashr;
+  record IVCashVc IVCash2r;
+  record GeneralOptionBlock GenOptRec;
+  
+  if (changed!=0) then begin
+    BlockLoad(GenOptRec);
+    GetWindowRecord(wn,IVCashr);
+    GetPrevWindowRecord(wn,IVCash2r);
+    if (IVCashDchrsum(IVCashr,rownr,GenOptRec.UseDiscount)) then begin
+      IVCashDchsum(IVCashr,rownr);
+      IVCashSumup(IVCashr,true);
+    end;
+    PutWindowRecord(wn,IVCashr);
+  end;
+  IVCashDClassDownPaidSumEFAfter = true;
+  RETURN;
+END;
+
+function Boolean IVCashDClassSumEFAfter(Integer wn,Integer rownr,Integer changed)
+BEGIN
+  record IVCashVc IVCashr;
+  row IVCashVc IVCashrw;
+  record INVc INr;
+  val t,s;
+  record GeneralOptionBlock GenOptRec;
+  
+  if (changed!=0) then begin
+    BlockLoad(GenOptRec);
+    GetWindowRecord(wn,IVCashr);
+    MatRowGet(IVCashr,rownr,IVCashrw);
+    if ((IVCashrw.Quant!=0) and (IVCashrw.Price!=0)) then begin
+      INr.Code = IVCashrw.ArtCode;
+      if (ReadFirstMain(INr,1,true)) then begin
+      end;
+      if (INr.PriceFactor!=0) then begin
+        t = IVCashrw.Price/INr.PriceFactor;
+      end else begin
+        t = IVCashrw.Price;
+      end;
+      s = IVCashrw.Sum/IVCashrw.Quant;
+      s = t - s;
+      s = s*100;
+      s = s/t;
+      IVCashrw.vRebate = Round(s,3);// Edit ************************** Thursday, 21 June 2012 10:35:26
+      MatRowPut(IVCashr,rownr,IVCashrw);
+    end;
+    if (IVCashDchrsum(IVCashr,rownr,GenOptRec.UseDiscount)) then begin
+      IVCashDchsum(IVCashr,rownr);
+      IVCashSumup(IVCashr,true);
+    end;
+    PutWindowRecord(wn,IVCashr);
+  end;
+  IVCashDClassSumEFAfter = true;
+  RETURN;
+END;
+
+global
+function Boolean IVCashDClassAfterEditField(Integer wn,string fieldname,Integer fn, Integer rownr,Integer changed)
+BEGIN
+  Boolean res;
+
+  if(currentuser=="POSSRV")then begin// Edit ************************** Tuesday, 27 September 2011 11:47:10
+        res = true;
+  end else begin
+        if (ClientMode) then begin
+          StopAlert(USetStr(4));
+        end;
+      
+        switch (fieldname) begin
+          case "Sum": res = IVCashDClassSumEFAfter(wn,rownr,changed);
+          case "VATCode": res = IVCashDClassVATCodeEFAfter(wn,rownr,changed);
+          case "Price": res = IVCashDClassPriceEFAfter(wn,rownr,changed);
+          case "BasePrice": res = IVCashDClassBasePriceEFAfter(wn,rownr,changed);
+          case "PriceFactor": res = IVCashDClassPriceFactorEFAfter(wn,rownr,changed);
+          case "vRebate": res = IVCashDClassvRebateEFAfter(wn,rownr,changed);
+          case "CustCode": res = IVCashDClassCustCodeEFAfter(wn,rownr,changed);
+          case "PriceList": res = IVCashDClassPriceListEFAfter(wn,rownr,changed);
+          case "PayDeal2": res = IVCashDClassPayDeal2EFAfter(wn,rownr,changed);
+          case "PayDeal3": res = IVCashDClassPayDeal3EFAfter(wn,rownr,changed);// Edit ************************** Monday, 15 April 2013 17:22:21
+          case "PayDeal": res = IVCashDClassPayDealEFAfter(wn,rownr,changed);
+          case "LangCode": res = IVCashDClassLangCodeEFAfter(wn,rownr,changed);
+          case "InvDate": res = IVCashDClassInvDateEFAfter(wn,rownr,changed);
+          case "CashValueB2": res = IVCashDClassCashValueB2EFAfter(wn,rownr,changed);
+          case "CashValueCur": res = IVCashDClassCashValueCurEFAfter(wn,rownr,changed);
+          case "POSCurncyCode": res = IVCashDClassPOSCurncyCodeEFAfter(wn,rownr,changed);
+          case "RecValue2": res = IVCashDClassRecValue2EFAfter(wn,rownr,changed);
+          case "RecValue3": res = IVCashDClassRecValue3EFAfter(wn,rownr,changed);
+          case "RecValue": res = IVCashDClassRecValueEFAfter(wn,rownr,changed);
+          case "CashValue": res = IVCashDClassCashValueEFAfter(wn,rownr,changed);
+          case "Quant": res = IVCashDClassQuantEFAfter(wn,rownr,changed);
+          case "ArtCode": res = IVCashDClassArtCodeEFAfter(wn,rownr,changed);
+          case "DownPaidSum": res = IVCashDClassDownPaidSumEFAfter(wn,rownr,changed);
+        end;
+        
+  end;// Edit ************************** Tuesday, 27 September 2011 11:47:25
+  IVCashDClassAfterEditField = res;
+  RETURN;
+END;
+
+function Boolean IVCashDClassRecValueEFBefore(Integer wn)
+begin
+  Boolean res;
+  record IVCashVc IVCashr;
+  record RahaxiBlock Rahaxib;
+
+  BlockLoad(Rahaxib);
+  if (nonblank(Rahaxib.RahaxiServerIP)) then begin
+    GetWindowRecord(wn,IVCashr);        
+    if (blank(IVCashr.AuthorizationCode)) then begin
+      OpenCCPayRahaxiDClass(wn,1,IVCashr.SerNr,IVCashr.RetValue,IVCashr.Sum4,IVCashr.CurncyCode);
+    end else begin
+    end;
+  end;
+  IVCashDClassRecValueEFBefore = res;
+  return;
+end;
+
+function Boolean IVCashDClassRecValue2EFBefore(Integer wn)
+begin
+  Boolean res;
+  record IVCashVc IVCashr;
+  record RahaxiBlock Rahaxib;
+
+  BlockLoad(Rahaxib);
+  if (nonblank(Rahaxib.RahaxiServerIP)) then begin
+    GetWindowRecord(wn,IVCashr);        
+    if (blank(IVCashr.AuthorizationCode2)) then begin
+      OpenCCPayRahaxiDClass(wn,2,IVCashr.SerNr,IVCashr.RetValue,IVCashr.Sum4,IVCashr.CurncyCode);
+    end else begin
+    end;
+  end;
+  IVCashDClassRecValue2EFBefore = res;
+  return;
+end;
+
+function Boolean IVCashDClassRecValue3EFBefore(Integer wn)
+begin
+  Boolean res;
+  record IVCashVc IVCashr;
+  record RahaxiBlock Rahaxib;
+
+  BlockLoad(Rahaxib);
+  if (nonblank(Rahaxib.RahaxiServerIP)) then begin
+    GetWindowRecord(wn,IVCashr);        
+    if (blank(IVCashr.AuthorizationCode3)) then begin
+      OpenCCPayRahaxiDClass(wn,3,IVCashr.SerNr,IVCashr.RetValue,IVCashr.Sum4,IVCashr.CurncyCode);
+    end else begin
+    end;
+  end;
+  IVCashDClassRecValue3EFBefore = res;
+  return;
+end;
+
+
+function Boolean IVCashDClassBeforeQuantEditField(Integer wn,Integer rownr)
+BEGIN
+  Boolean res;
+  record IVCashVc IVCashr;
+  row IVCashVc IVCashrw;
+
+  GetWindowRecord(wn,IVCashr);      
+  MatRowGet(IVCashr,rownr,IVCashrw);
+  if (TestForMATVARINS(wn)) then begin end;
+  IVCashDClassBeforeQuantEditField = res;
+  return;
+end;
+
+global
+function Boolean IVCashDClassBeforeEditField(Integer wn,string fieldname,Integer fn, Integer rownr)
+begin
+  Boolean res;
+
+  switch (fieldname) begin
+    case "RecValue": res = IVCashDClassRecValueEFBefore(wn);
+    case "RecValue2": res = IVCashDClassRecValue2EFBefore(wn);
+    case "RecValue3": res = IVCashDClassRecValue3EFBefore(wn);
+    case "Quant": res = IVCashDClassBeforeQuantEditField(wn,rownr);
+  end;
+  IVCashDClassBeforeEditField = res;
+  return;
+end;
+
+global
+function Boolean IVCashDClassSwitchRow(Integer wn,Integer rownr)
+BEGIN
+  record IVCashVc IVCashr;
+  row IVCashVc IVCashrw;
+  Integer rwcnt;
+  string 255 tstr,location,recepy;
+  val t,tproc,unitprdisc;
+  val rowsum,s;
+  Boolean res;
+  
+  res = true;
+  GetWindowRecord(wn,IVCashr);
+  rwcnt = MatRowCnt(IVCashr);  
+  if ((rownr<rwcnt) and (rownr>=0)) then begin
+    MatRowGet(IVCashr,rownr,IVCashrw);
+    tstr = IVCashrw.ArtCode;
+    location = IVCashr.Location;
+    if (IVCashrw.stp==1) then begin
+      t = IVCashrw.rowGP;
+      s = MulRateToBase1(IVCashr.CurncyCode,IVCashrw.Sum,IVCashr.FrRate,IVCashr.ToRateB1,IVCashr.ToRateB2,IVCashr.BaseRate1,IVCashr.BaseRate2,DefaultCurRoundOff);
+      FindSalesExVat(IVCashrw.VATCode,s,IVCashr.InclVAT,IVCashr.NoTAXonVAT,rowsum);
+      CalcProc(rowsum,t,tproc);
+      unitprdisc = IVCashrw.Sum/IVCashrw.Quant;
+      unitprdisc = Round(unitprdisc,DefaultCurRoundOff);
+      recepy = IVCashrw.Recepy;
+//      if (blankstrp(recepy)) then GetRecepy(IVCashrw.ArtCode,recepy); This makes one extra call, I can see why but we need another solution
+    end;
+  end;
+  SendArtStat(tstr,location,recepy,t,tproc,unitprdisc,IVCashr.TransDate);
+  SetWindowNameArg(wn,tstr & ":" & location);
+  IVCashDClassSwitchRow = res;
+  RETURN;
+END;
+
+
+global
+procedure ItemStatusIVCashDsm()
+BEGIN
+  Integer wn,nwn;
+  Boolean testf;
+  record RcVc RepSpec;
+  
+  wn = CurWindow;
+  nwn = OpenWindow("ArtStatIClass",0,0,"","",RepSpec);
+  SelectWindow(wn);
+  testf = IVCashDClassSwitchRow(wn,WindowActiveRow(wn));
+  RETURN;
+END;
+
+
+global
+function Boolean POSIVDClassBeforeEditField(Integer wn,string fieldname,Integer fn, Integer rownr)
+begin
+  Boolean res;
+
+  res = IVCashDClassBeforeEditField(wn,fieldname,fn,rownr);
+  POSIVDClassBeforeEditField = res;
+  return;
+end;
+
+global
+function Boolean POSIVDClassAfterEditField(Integer wn,string fieldname,Integer fn, Integer rownr,Integer changed)
+BEGIN
+  Boolean res;
+
+  res = IVCashDClassAfterEditField(wn,fieldname,fn,rownr,changed);
+  POSIVDClassAfterEditField = res;
+  RETURN;
+END;
+
+global
+function Boolean POSIVDClassSwitchRow(Integer wn,Integer rownr)
+BEGIN
+  Boolean res;
+
+  res = IVCashDClassSwitchRow(wn,rownr);
+  POSIVDClassSwitchRow = res;
+  RETURN;
+END;
+
+procedure IVCashToolKeyPad_Numbers(string numberstr)
+BEGIN
+  Integer wn;
+  record IVCashVc IVCashr;
+  
+  wn = CurWindow;
+  GetWindowRecord(wn,IVCashr);
+  PasteString(wn,numberstr);
+  PutWindowRecord(wn,IVCashr);
+  RETURN;
+END;  
+
+
+global 
+procedure IVCashToolKeyPad00()
+BEGIN
+  IVCashToolKeyPad_Numbers("00");
+  RETURN;
+END;  
+
+global 
+procedure IVCashToolKeyPad0()
+BEGIN
+  IVCashToolKeyPad_Numbers("0");
+  RETURN;
+END;  
+
+global
+procedure IVCashToolKeyPad1()
+BEGIN
+  IVCashToolKeyPad_Numbers("1");
+  RETURN;
+END;  
+
+global
+procedure IVCashToolKeyPad2()
+BEGIN
+  IVCashToolKeyPad_Numbers("2");
+  RETURN;
+END;  
+
+global
+procedure IVCashToolKeyPad3()
+BEGIN
+  IVCashToolKeyPad_Numbers("3");
+  RETURN;
+END;  
+
+global
+procedure IVCashToolKeyPad4()
+BEGIN
+  IVCashToolKeyPad_Numbers("4");
+  RETURN;
+END;  
+
+global
+procedure IVCashToolKeyPad5()
+BEGIN
+  IVCashToolKeyPad_Numbers("5");
+  RETURN;
+END;  
+
+global
+procedure IVCashToolKeyPad6()
+BEGIN
+  IVCashToolKeyPad_Numbers("6");
+  RETURN;
+END;  
+
+global
+procedure IVCashToolKeyPad7()
+BEGIN
+  IVCashToolKeyPad_Numbers("7");
+  RETURN;
+END;  
+
+global
+procedure IVCashToolKeyPad8()
+BEGIN
+  IVCashToolKeyPad_Numbers("8");
+  RETURN;
+END;  
+
+global
+procedure IVCashToolKeyPad9()
+BEGIN
+  IVCashToolKeyPad_Numbers("9");
+  RETURN;
+END;
+
+global
+procedure IVCashToolKeyPadPoint()
+BEGIN
+  IVCashToolKeyPad_Numbers("."); //## international
+  RETURN;
+END;  
+
+global
+procedure IVCashToolKeyPadEnter()
+BEGIN
+  KeyPadEnter(CurWindow);
+  RETURN;
+END;  
+
+global
+procedure IVCashToolKeyPadDelete()
+BEGIN
+  KeyPadSelectAll(CurWindow);
+  KeyPadDelete(CurWindow);
+  RETURN;
+END;  
+
+global
+procedure IVCashToolKeyPadAdd()
+BEGIN
+  Integer wn,rownr;
+  record INVc INr;
+  record IVCashVc IVCashr;
+  row IVCashVc IVCashrw;
+  Boolean testf;
+  Integer i,rwcnt;
+  string 255 inwarning;
+  
+  wn = CurWindow;
+  if (WindowActiveField(wn)=="Quant") then begin testf = true; end;
+  if (WindowActiveField(wn)=="Price") then begin testf = true; end;
+  if (WindowActiveField(wn)=="Split") then begin testf = true; end;
+  if (ReadMarkedRecord(wn,INr)) then begin 
+  end;
+  WindowDeactivateField(wn);
+  if (testf) then begin
+    rownr = WindowActiveRow(wn);
+    if (rownr>=0) then begin
+      GetWindowRecord(wn,IVCashr);  
+      MatRowGet(IVCashr,rownr,IVCashrw);
+      if (nonblank(INr.Code)) then begin
+        if (INr.Code!=IVCashrw.ArtCode) then begin
+          testf = false;
+        end;
+      end;
+      if (testf) then begin
+        IVCashrw.Quant = IVCashrw.Quant + 1;
+        MatRowPut(IVCashr,rownr,IVCashrw);
+        IVCashVc_PasteQuant(IVCashr,rownr);
+        IVCashSumup(IVCashr,true);
+        PutWindowRecord(wn,IVCashr);  
+        goto LIVCashToolKeyPadAdd;
+      end;
+    end;
+  end;
+  if (nonblank(INr.Code)) then begin
+    GetWindowRecord(wn,IVCashr);  
+    rwcnt = MatRowCnt(IVCashr);
+    for (i=0;i<rwcnt;i=i+1) begin
+      MatRowGet(IVCashr,i,IVCashrw);
+      if (blank(IVCashrw.ArtCode)) then begin
+        rownr = i;
+        goto L55IVCashToolKeyPadAdd;
+      end;
+    end;
+    rownr = rwcnt;
+L55IVCashToolKeyPadAdd:;  
+    ClearRow(IVCashr,IVCashrw,1);
+    IVCashrw.ArtCode = INr.Code;
+    MatRowPut(IVCashr,rownr,IVCashrw);
+    if (IVCashVc_PasteArtCode(IVCashr,rownr,inwarning)) then begin end;
+    IVCashSumup(IVCashr,true);
+    PutWindowRecord(wn,IVCashr);  
+    WindowFieldGoto(wn,IVCashr,rownr,"Quant",true);
+  end;
+LIVCashToolKeyPadAdd:;  
+  RETURN;
+END;  
+
+global
+procedure IVCashToolKeyPadSub()
+BEGIN
+  Integer wn,rownr;
+  record INVc INr;
+  record IVCashVc IVCashr;
+  row IVCashVc IVCashrw;
+  Boolean testf;
+  
+  wn = CurWindow;
+  rownr = WindowActiveRow(wn);
+  GetWindowRecord(wn,IVCashr);  
+  if (WindowActiveField(wn)=="Quant") then begin testf = true; end;
+  if (WindowActiveField(wn)=="Price") then begin testf = true; end;
+  if (WindowActiveField(wn)=="Split") then begin testf = true; end;
+  if (testf) then begin
+    rownr = WindowActiveRow(wn);
+    if (rownr>=0) then begin
+      GetWindowRecord(wn,IVCashr);  
+      MatRowGet(IVCashr,rownr,IVCashrw);
+      if (ReadMarkedRecord(wn,INr)) then begin 
+        if (INr.Code!=IVCashrw.ArtCode) then begin
+          testf = false;
+        end;
+      end;
+      if (testf) then begin
+        IVCashrw.Quant = IVCashrw.Quant - 1;
+        MatRowPut(IVCashr,rownr,IVCashrw);
+        IVCashVc_PasteQuant(IVCashr,rownr);
+        PutWindowRecord(wn,IVCashr);  
+      end;
+    end;
+  end;
+  RETURN;
+END;  
+
+function Integer GetAction(string input,var string value1,var string value2,var Boolean decimalptf)
+begin
+  Integer res;
+  record POSCommandsBlock POSCb;
+  row POSCommandsBlock POSCrw;
+  Integer i,rwcnt,spacepos;
+  string 255 commandstr,tstr;
+  record SysFormatBlock SFb;
+    
+  BlockLoad(SFb);
+  BlockLoad(POSCb);
+  value1 = "";
+  value2 = "";
+  decimalptf = false;
+  rwcnt = MatRowCnt(POSCb);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(POSCb,i,POSCrw);
+    commandstr = Left(input,len(POSCrw.Text));
+    if (POSCrw.Text==commandstr) then begin
+      res = POSCrw.Action;
+      tstr = Right(input,len(input)-len(commandstr));
+      spacepos = FindCharPosition(tstr," ");
+      if (spacepos==0) then begin
+        spacepos = FindCharPosition(tstr,"=");
+      end;
+      if (spacepos==0) then begin
+        value1 = tstr;
+      end else begin
+        value1 = Left(tstr,spacepos);
+        value2 = Right(tstr,len(tstr) - spacepos - 1);
+      end;
+      decimalptf = FindStringInString(value1,SFb.decimalPt);
+      value1 = StripNonDigits(value1);
+//      value2 = StripNonDigits(value2);// this is item code , so cannto be striped
+      goto LGetAction;
+    end;
+    commandstr = Right(input,len(POSCrw.Text));
+    if (POSCrw.Text==commandstr) then begin
+      res = POSCrw.Action;
+      tstr = Left(input,len(input)-len(commandstr));      
+      spacepos = FindCharPosition(tstr," ");
+      if (spacepos==0) then begin
+        spacepos = FindCharPosition(tstr,"=");
+      end;
+      if (spacepos==0) then begin
+        value1 = tstr;
+      end else begin
+        value1 = Right(tstr,len(tstr) - spacepos - 1);
+        value2 = Left(tstr,spacepos);
+      end;
+      value1 = StripNonDigits(value1);
+      value2 = StripNonDigits(value2);
+      goto LGetAction;
+    end;
+  end;
+LGetAction:; 
+  if (res==0) then begin
+    value1 = input;
+  end; 
+  GetAction = res;
+  return;
+end;
+
+global
+updating function Boolean POSPIVCashDClassOnEnterKey(Integer wn,string fieldname,Integer fn,Integer rownr)
+begin
+  Boolean res;
+  string 255 input,tstr,value1,value2;
+  record IVCashVc IVCashr;
+  row IVCashVc IVCashrw;
+  record INVc INr;
+  Integer rwcnt;
+  val v1;
+  Boolean save_record,new_record,decimalptf;
+  
+  
+  input = GetWindowString(wn,"ivcashcommand");
+  PutWindowString(wn,"ivcashcommand","");
+  DeselectWindow(wn,false);
+  GetWindowRecord(wn,IVCashr);
+  
+  // If purchase is done create new record
+  if (IVCashr.OKFlag!=0) then begin
+    WindowDoCancel(wn);
+    WindowDoNew(wn,0);
+    GetWindowRecord(wn,IVCashr);
+  end;
+  if (blank(input)) then begin
+    goto LPOSPIVCashDClassOnEnterKey;
+  end;
+  rwcnt = MatRowCnt(IVCashr);
+  switch (GetAction(input,value1,value2,decimalptf)) begin
+    case 1:
+      if (GetFirstItem(value2,INr)) then begin
+        IVCashrw.ArtCode = INr.Code;
+        IVCashrw.Quant = StringToVal(value1,M4Val);   
+        if (decimalptf) then begin
+          IVCashrw.Quant = IVCashrw.Quant/100;
+        end;
+        if (rwcnt==0) then begin
+          MatRowInsert(IVCashr,rwcnt,IVCashrw);
+        end else begin
+          MatRowPut(IVCashr,rwcnt,IVCashrw);
+        end;
+        if (IVCashVc_PasteArtCode(IVCashr,rwcnt,tstr)) then begin
+/*lookhere*/        
+//        DisplayIVCashItem(IVCashr,rwcnt);
+        end;
+      end else begin
+        StopAlert(USetStr(1233));
+        goto LPOSPIVCashDClassOnEnterKey;
+      end;
+    case 2:
+      if (blank(value1)) then begin
+        IVCashr.CashValue = IVCashr.Sum4 - IVCashr.RecValue;
+        save_record = true;    
+      end else begin
+        v1 = StringToVal(value1,M4Val);
+        if (decimalptf) then begin
+          v1 = v1/100;
+        end;
+        if (v1==0) then begin
+          IVCashr.CashValue = 0;
+          IVCashSumup(IVCashr,true);              
+        end else begin
+          IVCashr.CashValue = IVCashr.CashValue + v1;
+          save_record = true;      
+        end;
+      end;
+    case 4:
+      IVCashSumup(IVCashr,true);              
+      IVCashr.OKFlag = 1;
+      save_record = true;      
+      new_record = true;
+    case 6:
+      if (blank(value1)) then begin
+        IVCashr.RecValue = IVCashr.Sum4 - IVCashr.CashValue;
+        save_record = true;    
+      end else begin
+        v1 = StringToVal(value1,M4Val);
+        if (decimalptf) then begin
+          v1 = v1/100;
+        end;
+        if (v1==0) then begin
+          IVCashr.RecValue = 0;
+          IVCashSumup(IVCashr,true);              
+        end else begin
+          IVCashr.RecValue = IVCashr.RecValue + v1;
+          save_record = true;      
+        end;
+      end;
+    case 9:
+      if (rwcnt>0) then begin
+        MatRowGet(IVCashr,rwcnt-1,IVCashrw);
+        IVCashrw.vRebate = StringToVal(value1,M4UVal);
+        if (decimalptf) then begin
+          IVCashrw.vRebate = IVCashrw.vRebate/100;
+        end;
+        MatRowPut(IVCashr,rwcnt-1,IVCashrw);                
+        if (IVCashDchrsum(IVCashr,rwcnt-1,0)) then begin 
+          IVCashDchsum(IVCashr,rwcnt-1);
+          IVCashSumup(IVCashr,true);      
+        end;
+/*lookhere*/        
+//      DisplayIVCashItem(IVCashr,rwcnt2);
+      end;
+    case 18:
+      rwcnt = StringToInt(value1) - 1;
+      if (rwcnt<MatRowCnt(IVCashr)) then begin
+        MatRowDelete(IVCashr,rwcnt);
+      end;
+    otherwise
+      StripSpace(tstr,value1);
+      if (GetFirstItem(tstr,INr)) then begin
+        rwcnt = MatRowCnt(IVCashr);
+        IVCashrw.ArtCode = INr.Code;
+        IVCashrw.Quant = 1;
+        MatRowPut(IVCashr,rwcnt,IVCashrw);
+        if (IVCashVc_PasteArtCode(IVCashr,rwcnt,tstr)) then begin 
+/*lookhere*/        
+//          DisplayIVCashItem(IVCashr,rwcnt);
+        end;        
+      end else begin
+        StopAlert(USetStr(1233));
+        goto LPOSPIVCashDClassOnEnterKey;
+      end;
+  end;
+  PutWindowRecord(wn,IVCashr);
+  if (save_record) then begin
+    if (WindowDoOK(wn,0)==false) then begin 
+      IVCashr.OKFlag = 0;
+      PutWindowRecord(wn,IVCashr);
+      new_record = false;
+    end;  
+  end;
+  if (new_record) then begin
+    WindowDoNew(wn,0);
+  end;
+  DeselectWindow(wn,false);
+  WindowFieldGoto(wn,IVCashr,-1,"ivcashcommand",false);
+LPOSPIVCashDClassOnEnterKey:;  
+  POSPIVCashDClassOnEnterKey = res;
+  return;
+end;
+
+global
+function Boolean POSPIVCashDClassActiveEditField(Integer wn,string fieldname,Integer fn,Integer wnst,Integer rownr,Integer changed)
+begin
+  Boolean res;
+  
+  switch (fieldname) begin
+    case "ivcashcommand": res = true;
+    otherwise res = UserCanAction("AllowPOSOfflineChanging",false);
+  end;
+  POSPIVCashDClassActiveEditField = res;
+  return;
+end;
+
+global
+function Boolean POSPIVCashDClassUpdateTest(Integer wn)
+begin
+  Boolean res;
+  record IVCashVc IVCashr;
+  
+  if(currentuser=="POSSRV")then begin
+    POSPIVCashDClassUpdateTest = true;
+  end else begin
+    GetWindowRecord(wn,IVCashr);
+    res = IVCashr.OKFlag==0;
+    POSPIVCashDClassUpdateTest = res;
+  end;
+  return;
+end;
+
+// Edit Start ---------------------------------------------- Edit Start
+	//Tuesday, 27 September 2011 12:31:00
+	global
+function Boolean IVCashDClassOKFlagButtonAction(Integer wn,Integer value)
+BEGIN
+  Boolean res;
+  record IVCashVc IVCashr;
+  Integer normalmode,updatemode;
+  
+  res = true;
+  normalmode = 0;//Rs_normal
+  updatemode = 2;//Rs_update
+  if (WindowState(wn)==normalmode) then begin
+    GetWindowRecord(wn,IVCashr);
+    if (IVCashr.OKFlag!=0) then begin
+      res = false;
+    end;
+  end;  
+  if (WindowState(wn)==updatemode) then begin
+    GetPrevWindowRecord(wn,IVCashr);
+    if (IVCashr.OKFlag!=0) then begin
+      res = false;
+    end;
+  end;  
+  
+  if(currentuser=="POSSRV")then begin
+    res = true;
+  end;
+  IVCashDClassOKFlagButtonAction = res;
+  RETURN;
+END;
+	// Edit End ---------------------------------------------- Edit End
+/*global
+updating function Boolean IVCashDClassOnClose(Integer wn,Integer wn2)
+begin
+	
+	prt("advancepaper",1);	
+  IVCashDClassOnClose = false;
+  return;
+end;*/
+
+global
+updating function Boolean IVCashDClassOnOpenWindow(Integer wn,Integer wn2)
+begin
+	
+	prt("CStroke",1);	
+  IVCashDClassOnOpenWindow = false;
+  return;
+end;

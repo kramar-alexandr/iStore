@@ -1,0 +1,183 @@
+remote updating function Integer RecordAction_raPasteSVOInOrder(var record ORVc,var record SVOVc);
+remote updating function Integer RecordAction_raPasteSVOInPP(var record PPVc,var record SVOVc);
+remote updating function Integer RecordAction_raPasteSVOInExp(var record ExpVc,var record SVOVc);
+remote updating function Integer RecordAction_raPasteSVOInIP(var record IPVc,var record SVOVc);
+remote updating function Integer RecordAction_raPasteSVOInStockMov(var record StockMovVc,var record SVOVc);
+
+global
+updating procedure ORFromSVODsm()
+BEGIN
+  record ORVc ORr;
+  Record SVOVc SVOr;
+  record IVVc IVr;
+  Integer wn,r,nwn;
+  Integer errcode;
+  Integer normalstate;
+
+  normalstate = 0;//Rs_normal
+  wn = CurWindow;
+  DeselectWindow(wn,false);
+  if (WindowState(wn)==normalstate) then begin
+    GetWindowRecord(wn,SVOr);
+        r = RecordAction_raPasteSVOInOrder(ORr,SVOr);
+        if (r==1) then begin
+            nwn = OpenWindow("ORDClass",1,0,"","",ORr);
+        end else begin
+          if (r!=-1) then begin
+            MessageBox(r,"");
+          end else begin
+            Beep;
+          end;
+        end;
+  end else begin
+    Beep;
+  end;
+  RETURN;
+END;
+
+global
+updating procedure MyPPFromSVODsm()
+BEGIN
+  Record SVOVc SVOr;
+  record PPVc PPr;
+  Integer wn,r,nwn;
+  Integer errcode;
+  Integer normalstate;
+
+  normalstate = 0;//Rs_normal
+  wn = CurWindow;
+  DeselectWindow(wn,false);
+  if (WindowState(wn)==normalstate) then begin
+    GetWindowRecord(wn,SVOr);
+        r = RecordAction_raPasteSVOInPP(PPr,SVOr);
+        if (r==1) then begin
+            nwn = OpenWindow("PPDClass",1,0,"","",PPr);
+        end else begin
+          if (r!=-1) then begin
+            MessageBox(r,"");
+          end else begin
+            Beep;
+          end;
+        end;
+  end else begin
+    Beep;
+  end;
+  RETURN;
+END;
+
+global
+updating procedure MyExpFromSVODsm()
+BEGIN
+  record ExpVc Expr;
+  Record SVOVc SVOr;
+  Integer wn,r,nwn;
+  Integer errcode;
+  Integer normalstate;
+
+  normalstate = 0;//Rs_normal
+  wn = CurWindow;
+  DeselectWindow(wn,false);
+  if (WindowState(wn)==normalstate) then begin
+    GetWindowRecord(wn,SVOr);
+        r = RecordAction_raPasteSVOInExp(Expr,SVOr);
+        if (r==1) then begin
+            nwn = OpenWindow("ExpDClass",1,0,"","",Expr);
+        end else begin
+          if (r!=-1) then begin
+            MessageBox(r,"");
+          end else begin
+            Beep;
+          end;
+        end;
+  end else begin
+    Beep;
+  end;
+  RETURN;
+END;
+
+global
+updating procedure MyIPFromSVODsm()
+BEGIN
+  record IPVc IPr;
+  Record SVOVc SVOr;
+  Integer wn,r,nwn;
+  Integer errcode;
+  Integer normalstate;
+
+  normalstate = 0;//Rs_normal
+  wn = CurWindow;
+  DeselectWindow(wn,false);
+  if (WindowState(wn)==normalstate) then begin
+    GetWindowRecord(wn,SVOr);
+        r = RecordAction_raPasteSVOInIP(IPr,SVOr);
+        if (r==1) then begin
+            nwn = OpenWindow("IPDClass",1,0,"","",IPr);
+        end else begin
+          if (r!=-1) then begin
+            MessageBox(r,"");
+          end else begin
+            Beep;
+          end;
+        end;
+  end else begin
+    Beep;
+  end;
+  RETURN;
+END;
+
+global
+updating procedure MyStockMovFromSVODsm()
+BEGIN
+  record StockMovVc SMr;
+  Record SVOVc SVOr;
+  Integer wn,r,nwn;
+  Integer errcode;
+  Integer normalstate;
+
+  normalstate = 0;//Rs_normal
+  wn = CurWindow;
+  DeselectWindow(wn,false);
+  if (WindowState(wn)==normalstate) then begin
+    GetWindowRecord(wn,SVOr);
+        r = RecordAction_raPasteSVOInStockMov(SMr,SVOr);
+        if (r==1) then begin
+            nwn = OpenWindow("StockMovDClass",1,0,"","",SMr);
+        end else begin
+          if (r!=-1) then begin
+            MessageBox(r,"");
+          end else begin
+            Beep;
+          end;
+        end;
+  end else begin
+    Beep;
+  end;
+  RETURN;
+END;
+
+/*global 
+function Boolean SVODClassAddr0EFAfter(integer wn, integer changed)
+begin
+  record SVOVc SVOr;
+  
+  GetWindowRecord(wn,SVOr);
+  if(changed>0)then begin
+    SVOr.Vlastnik=SVOr.Addr0;
+    PutWindowRecord(wn,SVOr);
+  end;
+
+return;
+end;
+
+global
+function Boolean SVODClassAfterEditField(Integer wn,string fieldname,Integer fn, Integer rownr,Integer changed)
+BEGIN
+  Boolean res;
+
+res = inner.SVODClassAfterEditField(wn,fieldname,fn,rownr,changed);
+  switch (fieldname) begin
+    case "Addr0": res = SVODClassAddr0EFAfter(wn,changed);
+  end;
+  SVODClassAfterEditField = res;
+  RETURN;
+END;*/

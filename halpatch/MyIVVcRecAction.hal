@@ -1,0 +1,998 @@
+external function Boolean IVTestCredMan(record IVVc,var Integer);
+external updating function Boolean BA_IVMinMarkupWarning(record IVVc,var Integer);
+external function string 50 NextLegalSerNr(LongInt,Date,string,string,string);
+external procedure GetARAcc(string,var string);
+external function Integer IVVcRecordCheckRows(record IVVc,record IVVc,record CUVc,record ORVc,record ModuleBlock,record MainStockBlock,record AccBlock,Boolean,Boolean,LongInt,var val);
+external function Boolean CanOKStockRecord();
+external function Boolean DisallowPriceLowerCost_IVVc(record IVVc);
+external function Boolean ValidEInvoiceData(record IVVc,record CUVc,var Integer,var string);
+external function Integer CheckCLInAmount(LongInt,val,val,string);
+external updating procedure AddTTrans_IVVc(record TRVc,record IVVc);
+external function Integer InString2(string,string);
+external function Integer CheckRates(string,val,val,val,val,val,var string);
+external function string 255 FindNextLegalSerNr(LongInt,Date,string);
+external procedure GetSerRange(string,LongInt,var LongInt,var LongInt);
+external function val MulRateToBase1(var string,val,val,val,val,val,val,Integer);
+external function Boolean RequireOpenSession(string);
+external Procedure GetPayType(String,Var Integer);
+external procedure IVSumup(var record IVVc,Boolean);
+external updating function LongInt PUFromCreditNote(var record IVVc,Boolean);
+external function Integer IsUnOKAllowed_IVVc(record IVVc);
+external function Boolean CheckPDExists(string);
+external function Boolean GetPMgentrans(string);
+external function Integer PMCheckType(string,var string,var string);
+external function LongInt GetCurUserLastNr(string);
+external function Boolean CLInforIVRecordExists(LongInt,string,var LongInt);
+external updating function Boolean SaveSim(record SMVc);
+external function string 255 CheckTrans(var record TRVc,Integer,Boolean);
+external updating procedure SaveTrans(record TRVc);
+external function Integer MakeTransFromIV(var record TRVc,var record SMVc,record IVVc,Boolean,Boolean);
+external function Boolean GetCustAndBal(var record CUVc,var val,var val,Integer,Integer,Integer,Integer,Integer,Integer);
+external function Boolean SerNrTestIVVc(LongInt,Date,var Boolean);
+external function Integer CheckObjs(string,string,var string);
+external function Integer GetProgramMode();
+external function Boolean RecordSupportExists(string,string,LongInt);
+external function Boolean Date2Test(string,Date,string,Integer);
+external function Integer GetPayDealType(string,var LongInt);
+external function Integer CheckVATNrMask(string,string,Integer,var string);
+external function Boolean CurncyCodeRegistered(string);
+external function Boolean IsControlAccount(string,Boolean,Boolean);
+external function Integer CashSerNumberTest(string,val,string,LongInt,var Boolean);
+external function Boolean ExistStockTrans(string ,Date,var Integer,string,LongInt,Integer);
+external procedure IVUpdateFIFO(record IVVc,Boolean);
+external function Integer GetCreditedInvoiceType(record IVVc);
+external function Boolean IsSessionOpen(string,string,Date,Time);
+
+function Boolean CheckIfNextLegalSerNr(LongInt curivnr,string OfficialSerNr,Date invdate,record CUVc CUr)
+begin
+  Boolean res;
+  Boolean testf;
+  record LegalInvNrBlock LINrb;
+  row LegalInvNrBlock LINrbrw;
+  Integer i,rwcnt;
+  string 255 tstr;
+  record OffSerNrIVVc OffSNIVr;
+  LongInt offnr;
+
+  OffSNIVr.IVNr = curivnr;
+  if (ReadFirstKey("MainKey",OffSNIVr,1,true)) then begin
+    if (OffSNIVr.OfficialSerNr==OfficialSerNr) then begin
+      res = true;
+      goto LCheckIfNextLegalSerNr;
+    end;
+  end;
+  res = false;
+  BlockLoad(LINrb);
+  rwcnt = MatRowCnt(LINrb);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(LINrb,i,LINrbrw);
+    testf = true;
+    if (invdate<LINrbrw.PurchDate) then begin testf = false; end;
+    if (nonblank(LINrbrw.CClass)) then begin
+      if (nonblank(CUr.Classification)) then begin
+        if (SetInSet(LINrbrw.CClass,CUr.Classification)==false) then begin testf = false; end;
+      end;
+    end;
+    if (testf) then begin
+/*    
+      tstr = NextLegalSerNr(curivnr,invdate,LINrbrw.Serie,LINrbrw.TSerStart,LINrbrw.TSerEnd);
+      if (Left(OfficialSerNr,len(LINrbrw.Serie))==LINrbrw.Serie) then begin
+        if (tstr==OfficialSerNr) then begin
+          res = true;
+          goto LCheckIfNextLegalSerNr;
+        end;
+      end;
+*/      
+      if (Left(OfficialSerNr,len(LINrbrw.Serie))==LINrbrw.Serie) then begin
+        offnr = StringToLongInt(Right(OfficialSerNr,len(OfficialSerNr)-len(LINrbrw.Serie)));
+        if (offnr>=StringToLongInt(LINrbrw.TSerStart)) and (offnr<=StringToLongInt(LINrbrw.TSerEnd)) then begin
+          OffSNIVr.IVNr = OfficialSerNr;
+          if (ReadFirstKey("MainKey",OffSNIVr,1,true)==false) then begin
+            res = true;
+            goto LCheckIfNextLegalSerNr;
+          end;
+        end;
+      end;
+    end;
+  end;
+LCheckIfNextLegalSerNr:;  
+  CheckIfNextLegalSerNr = res;
+  return;
+end;
+
+global
+updating function LongInt IVVcRecordCheck(record IVVc IVp,record IVVc IV2p,LongInt stat,LongInt long4)
+BEGIN
+  LongInt res;
+  row IVVc IVrw;
+  row IVVc IV2rw;
+  record IVVc locIVr;
+  record CUVc CUr;
+  record AccVc Accr;
+  record TRVc TRr;
+  row TRVc TRrw;
+  record CreditLimitBlock CreditLimitRec;
+  record SRBlock SRRec;
+  record AccBlock ARAccb;
+  record MainStockBlock MSb;
+  record IVOfficialSerBlock IOSTr;
+  record MainCLBlock MainCLRec;
+  record ORVc ORr;
+  Boolean testf,test2f,FiscalPrf,nousersernr;
+  Boolean transf,gentrans,check,unokf,controlaccf;
+  Boolean lightFlag;
+  Integer errcode,j,cnt;
+  Integer i,rwcnt,cashres,creditedinvtype;
+  Integer insertmode,updatemode;
+  LongInt oldnr,newnr,sernr;
+  val bal,limit,prev,quant,prevsn;
+  val prepaysum,t;
+  string 255 tstr,location,errstr;
+  Integer ProgramType;
+  LongInt dummyl;  
+  record TRVc gTRp;
+  record SMVc gSMp;
+  LongInt clin,l;
+  Integer curcomp;
+  val cash;
+  record CreditCardVc CreditCardr;
+  LongInt serstart,serend;
+  record LegalInvNrBlock LINrb;
+  row LegalInvNrBlock LINrbrw;
+  record PDVc PDr;
+  record ModuleBlock Ob;
+  record ARVc ARr;
+  Boolean norminv,credinv;
+
+  
+  res = 0;
+  curcomp = CurrentCompany;    
+  insertmode = 1;//Rs_insert
+  updatemode = 2;//Rs_update
+  if (IVp.OKFlag==0) then begin
+    if (stat==updatemode) then begin
+      if (IV2p.OKFlag==1) then begin unokf = true; end;
+    end;
+  end;
+  if (unokf) then begin
+    errcode = IsUnOKAllowed_IVVc(IVp);
+    if (errcode!=0) then begin
+      RecordCheckError(errcode,"",-1,"TransDate");      
+      res = -1; 
+    end;    
+    goto L99;
+  end;
+  ProgramType = GetProgramMode;
+  if (ProgramType==4 or ProgramType==9) then begin//typFirstOffice or typFirstOfficeSmall
+    lightFlag = true;
+  end;  
+  if (long4>0) then begin
+    check = true;
+  end else begin
+    check = false;
+  end;
+  if (stat==updatemode) then begin
+    if (IVp.SerNr<=0) and (IV2p.OKFlag==0) then begin
+      IVp.SerNr = IV2p.SerNr;
+    end;
+  end;    
+  gentrans = true;
+  if ((IV2p.OKFlag==1) and (stat==updatemode)) then begin goto L999; end;//?  
+  BlockLoad(ARAccb);
+  BlockLoad(MSb);
+  BlockLoad(SRRec);
+  BlockLoad(CreditLimitRec);
+  BlockLoad(MainCLRec);
+  BlockLoad(Ob);
+  if ((stat==insertmode) or ((stat==updatemode) and (IV2p.OKFlag==0))) then begin
+    IVSumup(IVp,true); // Don't think this is needed at all.
+  end;
+  if (CheckPDExists(IVp.PayDeal)==false) then begin
+    RecordCheckError(1256,"",-1,"PayDeal");      
+    res = -1;
+    goto L99;        
+  end; 
+  if (MainCLRec.CashCollection!=0) then begin
+    if (CLInforIVRecordExists(IVp.SerNr,"IVVc",clin)) then begin
+      errcode = CheckCLInAmount(clin,IVp.Sum4,IVp.BaseSum4,IVp.CurncyCode);
+      if (errcode!=0) then begin
+        RecordCheckError(errcode,clin,-1,"Sum4");      
+        res = -1;
+        goto L99;        
+      end;
+    end;  
+    if (IVp.InvType==2) then begin
+      if (MainCLRec.PMControl!=0) then begin
+        if (CheckPDExists(IVp.PayDeal)) then begin
+          RecordCheckError(1277,"",-1,"PayDeal");      
+          res = -1;
+          goto L99;        
+        end; 
+        if (PMCheckType(IVp.PayDeal,tstr,tstr)==5) then begin
+          if (GetPMgentrans(IVp.PayDeal)) then begin
+            RecordCheckError(1277,"",-1,"PayDeal");      
+            res = -1;
+            goto L99;        
+          end;
+        end;
+      end;
+    end;
+/*        
+    if (IVp.InvType==3) then begin
+      if (GetCreditedInvoiceType(IVp)==2) then begin
+        MessageBox(2076,"");
+      end;
+    end;    
+*/    
+  end;  
+  if (IVp.OrderNr>0) then begin
+    ORr.SerNr = IVp.OrderNr;
+    ReadFIrstMain(ORr,1,true);
+  end;
+  if (IVp.InvType==6) then begin
+    PDr.Code = IVp.PayDeal;
+    if (ReadFirstMain(PDr,1,true)) then begin
+      if (PDr.PDType==2) then begin
+        RecordCheckError(1958,"",-1,"PayDeal");      
+        res = -1;
+        goto L99;        
+      end;  
+    end;
+    if (IVp.OrderNr>0) then begin
+//        if (((ORr.DownPaySent-ORr.DownPayRedcd) + IVp.Sum4 - IV2p.Sum4)>ORr.Sum4) then begin
+      if (ORr.Sum4-((ORr.DownPaySent-ORr.DownPayRedcd) - IV2p.Sum4)<0) then begin
+        RecordCheckError(20406,ORr.Sum4-((ORr.DownPaySent-ORr.DownPayRedcd) - IV2p.Sum4),-1,"Sum4");  
+        res = -1;
+        goto L99;
+      end;
+    end;
+  end;
+  oldnr = IVp.SerNr;
+  GetPayType(IVp.PayDeal,i);		
+  if (i==3) then begin			
+    if blank(IVp.CreditCard) then begin
+      RecordCheckError(1058,IVp.CreditCard,-1,"CreditCard");  
+      res = -1;
+      goto L99;
+    end else begin
+      CreditCardr.CreditCardNr= IVp.CreditCard;
+      if not ReadFirstMain(CreditCardr,1,true) then begin
+        RecordCheckError(1058,IVp.CreditCard,-1,"CreditCard");  
+        res = -1;
+        goto L99;
+      end;
+    end;
+  end;
+  rwcnt = MatRowCnt(IVp);
+  if ((IVp.OKFlag==1) and (rwcnt==0)) then begin
+    RecordCheckError(1030,"",0,"ArtCode");      
+    res = -1;
+    goto L99;
+  end;
+  CUr.Code = IVp.CustCode;
+  if (ReadFirstMain(CUr,1,true)==false) then begin
+    RecordCheckError(1120,IVp.CustCode,-1,"CustCode");      
+    res = -1; 
+    goto L99;
+  end;
+  if ((stat==insertmode) or ((stat==updatemode) and (IV2p.OKFlag==0))) then begin
+    if (IVp.OKFlag==1) then begin
+      if (BA_IVMinMarkupWarning(IVp,i)) then begin
+      end;
+      if (UserCanAction("DisallowSaleBelowGP",false)) then begin
+        RecordCheckError(22050,"",i,"Sum");      
+        res = -1;
+        goto L99;
+      end;
+    end;
+  end;
+  if (IVp.SerNr<=0) then begin
+    nousersernr = false;
+    
+    if ((IVp.InvType==3) and (SRRec.LastCredInvNr!=-1))  then begin
+      newnr = SRRec.LastCredInvNr;
+      nousersernr = true;
+      if (newnr==-1) then begin
+        newnr = GetCurUserLastNr("IVVc");
+        nousersernr = false;
+      end;
+    end else begin
+      if ((IVp.InvType==2) and (SRRec.LastCashInvNr!=-1))  then begin
+        newnr = SRRec.LastCashInvNr;
+        nousersernr = true;
+        if (newnr==-1) then begin
+          newnr = GetCurUserLastNr("IVVc");
+          nousersernr = false;
+        end;
+      end else begin
+        newnr = GetCurUserLastNr("IVVc");
+        if (newnr==-1) then begin
+          newnr = SRRec.LastInvNr;
+        end;
+      end;
+    end;
+    IVp.SerNr = NextSerNr("IVVc",IVp.TransDate,newnr,nousersernr,IVp.LangCode);
+    if (blank(IVp.OfficialSerNr)) then begin
+      IVp.OfficialSerNr = FindNextLegalSerNr(IVp.SerNr,IVp.TransDate,CUr.Classification);                  
+    end;
+  end;
+  if ((ARAccb.ChronologyforInvNo!=0) and (stat==insertmode)) then begin
+    GetSerRange("IVVc",IVp.SerNr,serstart,serend);
+    if (serend!=-1) then begin    
+      locIVr.SerNr = serend;
+    end else begin
+      locIVr.SerNr = IVp.SerNr;
+    end;
+    ReadLastKey("SerNr",locIVr,1,true);
+    if (true) then begin
+      if ((locIVr.SerNr>0) and ((locIVr.SerNr>=serstart) or (serstart==-1))) then begin
+        if ((locIVr.SerNr+1)!=IVp.SerNr) then begin
+          oldnr = locIVr.SerNr+1;
+          RecordCheckError(1034,"",-1,"SerNr");  
+          res = -1;
+          goto L99;
+        end;
+      end;    
+    end;  
+  end;
+  if (nonblank(IVp.OfficialSerNr)) then begin    
+    BlockLoad(IOSTr);
+    if (nonblank(IOSTr.From)) then begin
+      if (IVp.OfficialSerNr<IOSTr.From) then begin
+        RecordCheckError(1557,"",-1,"OfficialSerNr");      
+        res = -1;
+        goto L99;
+      end;
+    end;
+    if (nonblank(IOSTr.To)) then begin
+      if (IVp.OfficialSerNr>IOSTr.To) then begin
+        RecordCheckError(1557,"",-1,"OfficialSerNr");      
+        res = -1;
+        goto L99;
+      end;
+    end;
+    if (CheckIfNextLegalSerNr(IVp.SerNr,IVp.OfficialSerNr,IVp.TransDate,CUr)==false) then begin
+      RecordCheckError(1557,"",-1,"OfficialSerNr");      
+      res = -1;
+      goto L99;
+    end;
+  end;
+  if (IVp.ExportFlag==0) then begin
+    if (UserCanAction("DisallowDomSales",false)) then begin
+      RecordCheckError(20056,"",-1,"CustCode");   
+      res = -1; 
+      goto L99;
+    end; 
+  end;
+  if (IVp.ExportFlag!=0) then begin
+    if (UserCanAction("DisallowExpSales",false)) then begin
+      RecordCheckError(20049,"",-1,"CustCode");   
+      res = -1; 
+      goto L99;
+    end; 
+  end;
+  BlockLoad(LINrb);  
+  if (nonblank(IVp.OfficialSerNr)) and (MatRowCnt(LINrb)>0) then begin    
+    locIVr.OfficialSerNr = IVp.OfficialSerNr;
+    if (ReadFirstKey("OfficialSerNr",locIVr,1,true)) then begin
+      testf = false;
+      if (IVp.InvType!=3) then begin
+        if (locIVr.SerNr!=IVp.SerNr) then begin testf = true; end;
+      end;
+      if (testf) then begin
+        RecordCheckError(1115," flag 11 " & IVp.OfficialSerNr,-1,"OfficialSerNr");      
+        res = -1;
+        goto L99;
+      end;
+    end;
+    errcode = 0;
+    testf = false;
+    rwcnt = MatRowCnt(LINrb);
+    for (i=0;i<rwcnt;i=i+1) begin
+      MatRowGet(LINrb,i,LINrbrw);
+      test2f = true;
+      if (Left(IVp.OfficialSerNr,len(LINrbrw.Serie))!=LINrbrw.Serie) then begin test2f = false; end;
+      if (test2f) then begin
+        if (nonblank(LINrbrw.CClass)) then begin
+          if (nonblank(CUr.Classification)) then begin
+            if (SetInSet(LINrbrw.CClass,CUr.Classification)==false) then begin             
+              test2f = false; 
+              errcode = 1557;
+            end;
+          end;
+        end;
+      end;
+      if (nonblankdate(LINrbrw.EndDate)) then begin
+        if (IVp.InvDate>LINrbrw.EndDate) then begin 
+          test2f = false; 
+          errcode = 1557;
+        end;
+      end;
+      if (test2f) then begin
+        l = StringToLongInt(Right(IVp.OfficialSerNr,len(IVp.OfficialSerNr) - len(LINrbrw.Serie)));
+        if (l>=StringToLongInt(LINrbrw.TSerStart)) and (l<=StringToLongInt(LINrbrw.TSerEnd)) then begin
+          i = rwcnt;
+          testf = true;
+        end;
+      end;
+    end;
+    if (testf==false) then begin
+      RecordCheckError(errcode," " & IVp.OfficialSerNr,-1,"OfficialSerNr");      
+      res = -1;
+      goto L99;
+    end;
+  end;
+  if (nonblank(IVp.OfficialSerNr)) then begin
+    if (InString2(IVp.OfficialSerNr,",")>0) then begin
+      if (InString2(IVp.OfficialSerNr,":")>0) then begin
+        RecordCheckError(1059," " & IVp.OfficialSerNr,-1,"OfficialSerNr");      
+        res = -1;
+        goto L99;
+      end;
+    end;
+  end;
+  
+  if ((stat==insertmode) or (IVp.SerNr!=IV2p.SerNr)) then begin
+    locIVr.SerNr = IVp.SerNr;
+    if (ReadFirstMain(locIVr,1,true)) then begin
+      RecordCheckError(1115," flag 1 ",-1,"SerNr");      
+      res = -1;
+      goto L99;
+    end;
+    if (RecordSupportExists("ARVc","IVVc",IVp.SerNr)) then begin
+      RecordCheckError(1115," flag 2 ",-1,"SerNr");      
+      res = -1;
+      goto L99;
+    end;
+  end;
+  cashres = CashSerNumberTest(IVp.PayDeal,IVp.Sum4,"IVVc",IVp.SerNr,gentrans);
+  if (cashres==99) then begin 
+    res = -1; 
+    goto L99; 
+  end;
+  if (cashres==12) then begin
+    goto L12;
+  end;  
+  if (SerNrTestIVVc(IVp.SerNr,IVp.TransDate,gentrans)==false) then begin
+    RecordCheckError(1034,"",-1,"SerNr");      
+    res = -1; 
+    goto L99;
+  end;
+L12:;
+  if (Date2Test("IVVc",IVp.TransDate,"TransDate",-1)==false) then begin
+    res = -1;
+    goto L99;
+  end;
+  if (Date2Test("IVVc",IVp.InvDate,"InvDate",-1)==false) then begin
+    res = -1;
+    goto L99;
+  end;
+  if (blank(IVp.CustCode)) then begin
+    RecordCheckError(1125,"",-1,"CustCode");      
+    res = -1; 
+    goto L99;
+  end;
+  if (CUr.CUType==0) then begin
+    RecordCheckError(1120,IVp.CustCode,-1,"CustCode");      
+    res = -1; 
+    goto L99;
+  end;
+  errcode = CheckRates(IVp.CurncyCode,IVp.FrRate,IVp.ToRateB1,IVp.ToRateB2,IVp.BaseRate1,IVp.BaseRate2,tstr);
+  if (errcode!=0) then begin
+    RecordCheckError(errcode,"",-1,tstr);      
+    res = -1; 
+    goto L99;
+  end;    
+  if ((IVp.InvType!=5) and (IVp.InvType!=6)) then begin
+    if (blank(IVp.PayDeal)) then begin
+      RecordCheckError(1256,"",-1,"PayDeal");      
+      res = -1; 
+      goto L99;
+    end else begin
+      i = GetPayDealType(IVp.PayDeal,dummyl);
+      if ((i!=4) and (i!=1) and (i!=5) and (i!=6)) then begin
+        if (IVp.InvType!=i) then begin
+          RecordCheckError(1214,"",-1,"PayDeal");      
+          res = -1; 
+          goto L99;
+        end;
+      end;  
+    end;
+  end else begin
+  end;  
+  if (nonblank(CUr.CurncyCode)) then begin
+    if (CUr.CurncyCode!=IVp.CurncyCode) then begin
+      RecordCheckError(1217,"",-1,"CurncyCode");      
+      res = -1; 
+      goto L99;
+    end;
+  end;      
+  if (CUr.OnHoldFlag!=0) then begin
+    transf = false;
+    if (stat==insertmode) then begin
+      if (IVp.OKFlag!=0) then begin
+        transf = true;
+      end;
+    end;    
+    if (stat==updatemode) then begin
+      if ((IVp.OKFlag!=0) and (IV2p.OKFlag==0)) then begin
+        transf = true;
+      end;
+    end;    
+    if (transf) then begin    
+      RecordCheckError(1300,IVp.CustCode,-1,"CustCode");      
+      res = -1; 
+      goto L99;
+    end;  
+  end;
+  if (CUr.blockedFlag==1) then begin
+    RecordCheckError(1265,IVp.CustCode,-1,"CustCode");      
+    res = -1; 
+    goto L99;
+  end;
+  errcode = CheckVATNrMask(IVp.VATNr,CUr.CountryCode,CUr.CustType,tstr);
+  if (errcode!=0) then begin
+    RecordCheckError(errcode,tstr,-1,"VATNr");      
+    res = -1; 
+    goto L99;
+  end;
+  if (blank(IVp.CurncyCode)) then begin
+    if ((IVp.FrRate!=blankval) or
+        (IVp.ToRateB1!=blankval) or
+        (IVp.ToRateB2!=blankval) or
+        (IVp.BaseRate1!=blankval) or
+        (IVp.BaseRate2!=blankval)) then begin
+      RecordCheckError(1582,"",-1,"BaseRate1");      
+      res = -1; 
+      goto L99;
+    end;
+  end;
+  if (CurncyCodeRegistered(IVp.CurncyCode)==false) then begin
+    RecordCheckError(1582,"",-1,"CurncyCode");      
+    res = -1; 
+    goto L99;
+  end;
+  if (nonblank(IVp.ARAcc)) then begin
+    Accr.AccNumber = IVp.ARAcc;
+    if (ReadFirstMain(Accr,1,true)==false) then begin
+      RecordCheckError(1007,IVp.ARAcc,-1,"ARAcc");      
+      res = -1; 
+      goto L99;
+    end;    
+  end;
+  controlaccf = true;
+  if (IVp.InvType==2) then begin
+    controlaccf = false;
+  end;
+  if (IVp.InvType==3) then begin
+    creditedinvtype = GetCreditedInvoiceType(IVp);
+    if (creditedinvtype==2) then begin
+      controlaccf = false;
+    end;
+  end;
+  if (controlaccf) then begin
+    if (IsControlAccount(IVp.ARAcc,true,true)==false) then begin
+      RecordCheckError(1082,"",-1,"ARAcc");      
+      res = -1; 
+      goto L99;
+    end;
+  end;
+    tstr = IVp.ARAcc;
+    if (blank(tstr)) then begin
+      GetARAcc(IVp.CustCode,tstr);
+    end;
+    location = IVp.Objects;
+    if (ARAccb.ARUseObj==0) then begin
+//      location = "";//what the ? 
+    end;
+    errcode = CheckObjs(tstr,location,errstr);
+    if (errcode!=0) then begin
+      if ((errcode==1083) and (ARAccb.ARUseObj==0)) then begin
+        errcode = 2275;
+      end;
+      RecordCheckError(errcode,errstr,-1,"Objects");      
+      res = -1; 
+      goto L99;
+    end;
+
+  if (nonblank(IVp.OfficialSerNr)) then begin
+    locIVr.OfficialSerNr = IVp.OfficialSerNr;
+    if (ReadFirstKey("OfficialSerNr",locIVr,1,true)) then begin
+      if (locIVr.SerNr!=IVp.SerNr) then begin
+        MessageBox(1547," " & locIVr.SerNr);
+      end;
+    end;
+  end;  
+  if (check) then begin
+    IVp.TransTime = CurrentTime;//cannot be on save nor on update
+    if (RequireOpenSession(IVp.MachineName)) then begin
+      IVp.TransDate = CurrentDate;//cannot be on save nor on update
+      if (IsSessionOpen(IVp.MachineName,IVp.DrawerCode,IVp.TransDate,IVp.TransTime)==false) then begin
+        RecordCheckError(2195,"",-1,"SerNr");      
+        res = -1;
+        goto L99;
+      end;
+    end;
+  end;
+  if (IVTestCredMan(IVp,errcode)==false) then begin
+    MessageBox(errcode,"");
+  end;    
+  if (ValidEInvoiceData(IVp,CUr,errcode,tstr)==false) then begin
+    RecordCheckError(errcode,"",-1,tstr);      
+    res = -1; 
+    goto L99;
+  end;
+  IVp.CredInv = -1;
+  if (rwcnt>0) then begin
+  switch (IVp.InvType) begin
+    case 3:
+      MatRowGet(IVp,0,IVrw);
+      if (IVrw.OrdRow!=-1) then begin
+        IVp.CredInv = IVrw.OrdRow;
+        locIVr.SerNr = IVp.CredInv;
+        if (ReadFirstMain(locIVr,1,true)==false) then begin
+          RecordCheckError(1119,"",0,"OrdRow");      
+          res = -1; 
+          goto L99;
+        end;
+        if ((locIVr.InvType==3)) then begin//(locIVr.InvType==2) or
+          RecordCheckError(1222,"",0,"OrdRow");      
+          res = -1; 
+          goto L99;
+        end;
+        if (IVp.CustCode!=locIVr.CustCode) then begin
+          RecordCheckError(1218,"",0,"OrdRow");      
+          res = -1; 
+          goto L99;
+        end;
+        if (locIVr.Invalid!=0) then begin
+          RecordCheckError(1282,"",0,"OrdRow");      
+          res = -1; 
+          goto L99;
+        end;
+        if (locIVr.OKFlag==0) then begin
+          RecordCheckError(2072,"",0,"OrdRow");      
+          res = -1; 
+          goto L99;
+        end;
+        if (IVp.CurncyCode!=locIVr.CurncyCode) then begin
+          RecordCheckError(1217,"",0,"OrdRow");      
+          res = -1;
+          goto L99;
+        end;
+        if (IVp.TransDate<locIVr.TransDate) then begin
+          RecordCheckError(20852,"",0,"OrdRow");
+          res = -1;
+          goto L99;
+        end;
+        if (ARAccb.NoOverPayIV!=0) then begin
+          ARr.InvoiceNr = IVp.CredInv;
+          if (ReadFirstMain(ARr,1,true)==true) then begin
+            if ((ARr.RVal)<(IVp.Sum4)) then begin
+              tstr = " " & IVp.Sum4 & USetStr(20061);
+              tstr = tstr & " " & ARr.RVal;
+              RecordCheckError(20060,tstr,-1,"Sum4");
+              res = -1;
+              goto L99;
+            end;
+          end else begin
+            if (IVp.CredInv>0) then begin
+              if (IVp.Sum4>0) then begin
+                tstr = " " & IVp.Sum4 & USetStr(20061);
+                tstr = tstr & " 0";
+                RecordCheckError(20060,tstr,-1,"Sum4");
+                res = -1;
+                goto L99;
+              end;
+            end;
+          end;
+        end;
+      end else begin
+        if (ARAccb.CredInvWithNo!=0) then begin
+          if (IVp.OKFlag!=0) then begin
+            RecordCheckError(1119,"",0,"OrdRow");      
+            res = -1; 
+            goto L99;
+          end;
+        end;
+      end;
+  end;
+  end;
+  res = IVVcRecordCheckRows(IVp,IV2p,CUr,ORr,Ob,MSb,ARAccb,check,lightFlag,stat,cash);
+  if (res!=0) then begin
+     res = -1; 
+    goto L99;
+  end;
+  if (CreditLimitRec.IVSave==1) then begin//or CreditLimitRec.IVPaste==1
+    if ((IVp.OrderNr==-1) and (IVp.InvType!=2) and (IVp.InvType!=3) and (IVp.InvType!=4)) then begin
+    if (cash!=IVp.Sum4) then begin
+      CUr.Code = IVp.CustCode;
+      if (GetCustAndBal(CUr,limit,bal,CreditLimitRec.Base,CreditLimitRec.OwnCheques,CreditLimitRec.ThirdCheques,CreditLimitRec.IOUCheques,CreditLimitRec.ThirdIOUCheques,CreditLimitRec.ORSaveWarn)) then begin
+        if (limit>0) then begin      
+          switch (CreditLimitRec.Base) begin
+            case 0: bal = bal + IVp.BaseSum4;
+            case 1: 
+              if (IVp.InvType==2) then begin//cash only
+                bal = bal + IVp.BaseSum4;
+              end;
+            case 2: bal = bal + IVp.BaseSum4;
+          end;
+          if (bal>limit) then begin
+            if (CreditLimitRec.IVSave==1) then begin    
+              RecordCheckError(1164,"",-1,"CustCode");      
+              res = -1;
+              goto L99;
+            end;
+//            if (CreditLimitRec.IVPaste==1) then begin    
+//               Error0(1164);
+//            end;
+          end;
+        end;
+      end;
+    end;
+    end;
+  end;
+
+  RecordNew(TRr);
+  transf = false;
+  if ((IVp.OKFlag==1) or (IVp.OKFlag==6)) then begin
+    if (stat==insertmode) then begin transf = true; end;
+    if (stat==updatemode) then begin
+      if (IV2p.OKFlag==0) then begin transf = true; end;
+    end;  
+  end;
+  if (transf) then begin
+    if ((IVp.InvType==2) and (TouchScreenInterface)) then begin//is POS client
+      if (cash<IVp.Sum4) then begin
+        RecordCheckError(1210,"",MatRowCnt(IVp),"Sum");      
+        res = -1; 
+        goto L99;
+      end;
+    end;
+  end;
+  if (IVp.InvType==5) then begin
+    transf = false;
+    check = false;
+  end;
+/*  
+  if (IVp.InvType==3) then begin
+    if (IVp.UpdStockFlag!=0) then begin
+      if (IVp.OrderNr>0) then begin
+//        MessageBox(20103,""); //people wanted error
+        RecordCheckError(20103,"",-1,"OrderNr");      
+        res = -1; 
+        goto L99;
+      end;
+    end;
+  end;
+*/  
+  if (transf) then begin
+    norminv = UserCanAction("InvOK",true);
+    credinv = UserCanAction("CredInvOK",true);
+    if (IVp.InvType==3) then begin
+      if (credinv==false)  then begin
+        RecordCheckError(1274,StringFromStringSet(3,"CredInvOK"),-1,"SerNr");      
+        res = -1;
+        goto L99;
+      end;
+      if (credinv==true) and (norminv==false) then begin
+        RecordCheckError(1274,StringFromStringSet(3,"InvOK"),-1,"SerNr");      
+        res = -1;
+        goto L99;
+      end; 
+    end else begin
+      if (norminv==false) then begin
+        RecordCheckError(1274,StringFromStringSet(3,"InvOK"),-1,"SerNr");      
+        res = -1;
+        goto L99;
+      end;   
+    end;
+  end;
+  
+  if (check==true) then begin
+    if (IVp.UpdStockFlag!=0) then begin
+      IVUpdateFIFO(IVp,true);
+      if (DisallowPriceLowerCost_IVVc(IVp)) then begin
+        RecordCheckError(20767,"",i,"Price");      
+        res = -1;
+        goto L99;
+      end;
+    end;
+  end;  
+  if ((IVp.InvType==3) and transf and (IVp.UpdStockFlag==0)) then begin
+    res = PUFromCreditNote(IVp,false);
+    SetRecordCheckVc("IVVc");
+    if (res!=0) then begin
+      RecordCheckError(1274,"",-1,"SerNr");      
+      res = -1;
+      goto L99;
+    end;
+  end;
+  if ((transf) and (IVp.UpdStockFlag!=0)) then begin
+    sernr = -1;
+    if (stat==updatemode) then begin
+      sernr = IV2p.SerNr;
+    end;  
+    if (MSb.Chronology!=0) then begin
+//locationperrow
+      if (ExistStockTrans(IVp.Location,IVp.TransDate, errcode, "IVVc",sernr,MSb.Chronology)) then begin
+        RecordCheckError(errcode,"",-1,"TransDate");      
+        res = -1;
+        goto L99;
+      end;
+    end;
+    if (CanOKStockRecord==false) then begin
+      RecordCheckError(1766,"",-1,"SerNr");      
+      res = -1; 
+      goto L99;
+    end;
+  end;
+  if (gentrans==false) then begin transf = false; end;
+  if (transf) then begin
+    errcode = MakeTransFromIV(gTRp,gSMp,IVp,false,false);
+    //*****************************************************************************************************
+    rwcnt = matrowcnt(gTRp);
+    for (i=0;i<rwcnt;i=i+1)
+      begin
+      matrowget(gTRp,i,TRrw);
+      
+      if ((TRrw.CredVal!=0) and (blank(TRrw.CurCredVal)) and (blank(TRrw.Curncy)) ) then
+      begin
+      TRrw.Curncy=IVp.CurncyCode;
+      if (IVp.CurncyCode!="USD") then 
+      begin
+      TRrw.CurCredVal = IVp.Sum3; 
+      end;
+      MatRowPut(gTRp,i,TRrw);
+      goto MyLabel;
+      end;
+      
+      end;
+    MyLabel:;
+    //*****************************************************************************************************
+
+    if (errcode==0) then begin
+      if (MatRowCnt(gSMp)>0) then begin
+        if (gSMp.SerNr<=0) then begin
+          errcode = 2168;
+        end;
+      end;
+    end;
+    if (errcode>0) then begin
+      RecordCheckError(errcode,"",-1,"SerNr");      
+      res = -1;
+      goto L99;
+    end;
+    if ((gTRp.Number>0) and (gTRp.IntYc==IVYc)) then begin
+      tstr = CheckTrans(gTRp,2,true);
+      if (nonblank(tstr)) then begin
+        RecordCheckError(1085,tstr,-1,"SerNr");      
+        res = -1;
+        goto L99;
+      end;
+      SaveTrans(gTRp);
+      AddTTrans_IVVc(gTRp,IVp);
+    end;
+    if (MatRowCnt(gSMp)>0) then begin
+       gSMp.FileName = "IVVc";
+       gSMp.TransNr = IVp.SerNr;
+      if (SaveSim(gSMp)) then begin end;
+      CreateRecordLink(IVp,curcomp,gSMp,curcomp);  
+    end;    
+  end;  
+  if (IVp.SerNr==-1) then begin
+    RecordCheckError(1131,"",-1,"SerNr");      
+    res = -1;
+    goto L99;
+  end;
+L99:;
+  if (res!=0) then begin IVp.SerNr = oldnr; end;
+L999:;
+  IVVcRecordCheck = res;
+  RETURN;
+END;
+
+global
+function Boolean CLInforIVExists(LongInt ivnr,string filename,var LongInt clinser)
+BEGIN
+  Boolean res;
+  record CLInIVVc CLInIVr;
+  
+  CLInIVr.SerNr = ivnr;
+  CLInIVr.FileName = filename;
+  res = ReadFirstKey("FileName",CLInIVr,2,true);
+  clinser = CLInIVr.CLInNr;
+  CLInforIVExists = res;
+  RETURN;
+END;
+
+procedure IVLastTransDate(LongInt ivnr,var date tdp)
+BEGIN
+  record IPrsVc mainr;
+  Date blankd;
+  
+  tdp = blankd;
+  mainr.IVNr = ivnr;
+  if (ReadLastKey("IVKey",mainr,1,true)) then begin
+    tdp = mainr.TransDate;
+  end;  
+  RETURN;
+END;
+
+global
+function LongInt IVVcRecordRemoveTest(var record IVVc IVr,record IVVc IV2r,LongInt long3,LongInt long4)
+BEGIN
+  LongInt res;
+  record IVVc lIVr;
+  record ARVc ARr;
+  record DBLockBlock DBLockRec;
+  record MainCLBlock MainCLRec;
+  Date lasttrdate;
+  Boolean found;
+  LongInt clin;
+  
+  res = 1;
+  BlockLoad(DBLockRec);
+  BlockLoad(MainCLRec);
+  if (IVr.OKFlag==0) then begin
+    if (IVr.OrderNr!=-1) then begin      
+      if (IVr.Sum4>0) then begin // Has to be allowed to delete Invoice connected to Downpayment, which is negative....
+        if (long3>0) then begin
+          MessageBox(1560,"");
+        end;  
+        res = 0;
+        goto LIVVcRecordRemoveTest;
+      end;  
+    end;
+  end;
+  if (IVr.OKFlag!=0) then begin
+    if (IVr.TransDate>DBLockRec.DeleteBeforeDate) then begin
+      if (long3>0) then begin
+        MessageBox(1560,"");
+      end;
+      res = 0;
+      goto LIVVcRecordRemoveTest;
+    end;
+    if ((IVr.InvType==3) and (IVr.CredInv!=-1)) then begin
+      lIVr.SerNr = IVr.CredInv;
+      found = ReadFirstMain(lIVr,1,true);
+      if (found) then begin
+        if (long3>0) then begin
+          MessageBox(1560,"");
+        end;
+        res = 0;
+        goto LIVVcRecordRemoveTest;
+      end;
+    end else begin
+      ARr.InvoiceNr = IVr.SerNr;
+      if (ReadFirstMain(ARr,1,true)) then begin
+        if (long3>0) then begin
+          MessageBox(1560,"");
+        end;
+        res = 0;
+        goto LIVVcRecordRemoveTest;
+      end;
+    end;
+    IVLastTransDate(IVr.SerNr,lasttrdate);
+    if (lasttrdate>DBLockRec.DeleteBeforeDate) then begin
+      if (long3>0) then begin
+        MessageBox(1560,"");
+      end;
+      res = 0;
+      goto LIVVcRecordRemoveTest;
+    end;
+  end;
+  if (MainCLRec.CashCollection!=0) then begin
+    if (CLInforIVExists(IVr.SerNr,"IVVc",clin)) then begin
+      if (long3>0) then begin
+        MessageBox(2070,clin);
+      end;
+      res = 0;
+      goto LIVVcRecordRemoveTest;      
+    end;
+  end;
+LIVVcRecordRemoveTest:;
+  IVVcRecordRemoveTest = res;  
+  RETURN;
+end;
+

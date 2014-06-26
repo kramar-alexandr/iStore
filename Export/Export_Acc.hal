@@ -1,0 +1,95 @@
+global
+function MyExportAccEClassBeforeEditField()
+begin
+  Record RcVc RepSpec;
+  Integer wn;
+  
+  wn =  FindWindow("MyExportAccEClass");
+  GetWindowRecord(wn,RepSpec);
+  if (not RepSpec.flags[19]) then begin
+  RepSpec.f1 = ";";
+  RepSpec.flags[1] = 1;	
+  RepSpec.flags[19]=1;
+  PutWindowRecord(wn,RepSpec);
+  end;
+return;
+end;
+
+global
+procedure MyExportAccEn(record RcVc RepSpec)
+  begin
+  record AccVc Accr;
+  Boolean TrHs;
+  string 2 separator;
+  string 255 tempstr;
+  Integer coun;
+  SetExportCodePage("UTF-8");
+  if (RepSpec.flags[0]==1) then begin
+  separator = RepSpec.f1;
+  end
+  else begin separator = "";
+  end;
+  
+  TrHs = true;
+  
+  if (RepSpec.flags[1]==1) then begin
+   ExportString("AccNumber(Account)"&separator);
+   ExportString("Comment(Name)"&separator);
+   ExportString("AccType(AccountType (int 0-4))"&separator);
+   ExportString("NVD(Debit)"&separator);
+   ExportString("NVC(Credit)"&separator);
+   ExportString("AutCode(Autotrans)"&separator);
+   ExportString("blockedFlag(Closed)"&separator);
+   ExportString("VATCode(Vat Code)"&separator);
+   ExportString("ControlType(0)"&separator);
+   ExportString("Curncy(Currency)"&separator);
+   ExportString("ConsAccNumber(Consolidation A/C)"&separator);
+   ExportString("Conspr(Reduce Minorities)"&separator);
+   ExportString("Objects(<TAB>)"&separator);
+   ExportString("SRUCode(SRU Code)"&separator);
+   ExportString("ExclFrRep(0)"&separator);
+   ExportString("PeriodCode(Accrual)"&separator);
+   ExportString("GroupAcc(Group Account)"&separator);
+   ExportString("TransAutoCode(Aut. Autotrans.)"&separator);
+   ExportString("LangCode(Language)"&separator);
+   ExportString("Text(Text)"&separator);
+   NewLine;
+  end;
+ 
+ while LoopMain(Accr,1,TrHs) begin
+  coun = MatRowCnt(Accr);
+  ExportString(GetFieldValueByName(Accr,"AccNumber",-1)&separator);   
+  ExportString(GetFieldValueByName(Accr,"Comment",-1)&separator);
+  ExportString(GetFieldValueByName(Accr,"AccType",-1)&separator);
+  ExportString(GetFieldValueByName(Accr,"NVD",-1)&separator);
+  ExportString(GetFieldValueByName(Accr,"NVC",-1)&separator);
+  ExportString(GetFieldValueByName(Accr,"AutCode",-1)&separator);
+  ExportString(GetFieldValueByName(Accr,"blockedFlag",-1)&separator);
+  ExportString(GetFieldValueByName(Accr,"VATCode",-1)&separator);
+  ExportString(GetFieldValueByName(Accr,"ControlType",-1)&separator);
+  ExportString(GetFieldValueByName(Accr,"Curncy",-1)&separator);
+  ExportString(GetFieldValueByName(Accr,"ConsAccNumber",-1)&separator);
+  ExportString(GetFieldValueByName(Accr,"Conspr",-1)&separator);
+  ExportString(GetFieldValueByName(Accr,"Objects",-1)&separator);
+  ExportString(GetFieldValueByName(Accr,"SRUCode",-1)&separator);
+  ExportString(GetFieldValueByName(Accr,"ExclFrRep",-1)&separator);
+  ExportString(GetFieldValueByName(Accr,"PeriodCode",-1)&separator);
+  ExportString(GetFieldValueByName(Accr,"GroupAcc",-1)&separator);
+  ExportString(GetFieldValueByName(Accr,"TransAutCode",-1)&separator);
+  // StopAlert("yyy");
+ 
+  coun=0;
+   while (coun<MatRowCnt(Accr)) begin
+  ExportString(GetFieldValueByName(Accr,"LangCode",coun)&separator);
+  ExportString(GetFieldValueByName(Accr,"Text",coun)&separator);
+  //StopAlert("xxx");
+  coun=coun+1;
+    end;
+    
+    NewLine;
+ end;
+
+return;
+end;
+	
+	 

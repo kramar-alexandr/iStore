@@ -1,0 +1,352 @@
+procedure OpenVcFromTR(record TRVc TRp)
+BEGIN
+  Integer nwn;
+  string 255 tstr,dclass;
+  record ActVc Actr;
+  record AT2WrofVc AT2Wrofr;
+  record CheckVc Checkr;
+  record ChqDepVc ChqDepr;
+  record CLInVc CLInr;
+  record CLOutVc CLOutr;
+  record ExpVc Expr;
+  record IPVc IPr;
+  record IVVc IVr;
+  record OPVc OPr;
+  record OwnCheckVc OwnCheckr;
+  record PPVc PPr;
+  record ProdVc Prodr;
+  record PUVc PUr;
+  record POSBalanceVc POSBalancer;
+//  record RestAccVc RestAccr;
+  record RetVc Retr;
+  record RetPUVc RetPUr;
+  record SDVc SDr;
+  record SRVc SRr;
+  record SHVc SHr;
+  record StockMovVc STMovr;
+  record TSVc TSr;
+  record VATIVVc VATIVr;
+  record VATVIVc VATVIr;
+  record VIVc VIr;
+  record WSVc WSr;
+  record IntIVVc IntIVr;
+  record ProdOperationVc ProdOperationr;
+  record CredManVc CredManr;
+  record BuyBackVc BBr;
+  record IVCashVc IVCAshr;
+  
+  if (TRp.IntYc==IVYc) then begin dclass = "IVDClass"; end;
+  if (TRp.IntYc==IPYc) then begin dclass = "IPDClass"; end;
+  if (TRp.IntYc==VIYc) then begin dclass = "VIDClass"; end;
+  if (TRp.IntYc==OPYc) then begin dclass = "OPDClass"; end;
+  if (TRp.IntYc==PUYc) then begin dclass = "PUDClass"; end;
+  if (TRp.IntYc==SHYc) then begin dclass = "SHDClass"; end;
+  if (TRp.IntYc==ExpYc) then begin dclass = "ExpDClass"; end;
+  if (TRp.IntYc==PPYc) then begin dclass = "PPDClass"; end;
+  if (TRp.IntYc==STMovYc) then begin dclass = "StockMovDClass"; end;
+  if (TRp.IntYc==SentSTMovYc) then begin dclass = "StockMovDClass"; end;
+  if (TRp.IntYc==PVYc) then begin dclass = "VIDClass"; end;
+  if (TRp.IntYc==CLInYc) then begin dclass = "CLInDClass"; end;
+  if (TRp.IntYc==CLOutYc) then begin dclass = "CLOutDClass"; end;
+  if (TRp.IntYc==SDYc) then begin dclass = "SDDClass"; end;
+  if (TRp.IntYc==SRYc) then begin dclass = "SRDClass"; end;
+  if (TRp.IntYc==OPOYc) then begin dclass = "OPDClass"; end;
+  if (TRp.IntYc==OPBYc) then begin dclass = "OPDClass"; end;
+  if (TRp.IntYc==IPOYc) then begin dclass = "IPDClass"; end;
+  if (TRp.IntYc==IPBYc) then begin dclass = "IPDClass"; end;
+  if (TRp.IntYc==ProdYc) then begin dclass = "ProdDClass"; end;
+  if (TRp.IntYc==RetYc) then begin dclass = "RetDClass"; end;
+  if (TRp.IntYc==WSYc) then begin dclass = "WSDClass"; end;
+  if (TRp.IntYc==Check0Yc) then begin dclass = "CheckDClass"; end;
+  if (TRp.IntYc==CheckYc) then begin dclass = "CheckDClass"; end;
+  if (TRp.IntYc==OwnCheck0Yc) then begin dclass = "OwnCheckDClass"; end;
+  if (TRp.IntYc==OwnCheckYc) then begin dclass = "OwnCheckDClass"; end;
+  if (TRp.IntYc==AT2WrofYc) then begin dclass = "AT2WrofDClass"; end;
+//  if (TRp.IntYc==RestAccYc) then begin dclass = "RestAccDClass"; end;
+  if (TRp.IntYc==RestAccYc) then begin dclass = "POSBalanceDClass"; end;
+  if (TRp.IntYc==ChqDepYc) then begin dclass = "ChqDepDClass"; end;
+  if (TRp.IntYc==TSYc) then begin dclass = "TSDClass"; end;
+  if (TRp.IntYc==ActYc) then begin dclass = "ActDClass"; end;
+  if (TRp.IntYc==VATIVYc) then begin dclass = "VATIVDClass"; end;
+  if (TRp.IntYc==VATVIYc) then begin dclass = "VATVIDClass"; end;
+  if (TRp.IntYc==IntIVYc) then begin dclass = "IntIVDClass"; end;
+  if (TRp.IntYc==RetPUYc) then begin dclass = "RetPUDClass"; end;
+  if (TRp.IntYc==ProdOperationYc) then begin dclass = "ProdOperationDClass"; end;
+  if (TRp.IntYc==CredManYc) then begin dclass = "CredManDClass"; end;
+  if (TRp.IntYc==666) then begin dclass = "IVCashDClass"; end;
+  if (TRp.IntYc==BuyBackReconYc) then begin dclass = "BuyBackDClass"; end;
+//StopAlert(dclass);
+  if (nonblank(dclass)) then begin
+    if (TRp.IntYc==IVYc) then begin 
+      IVr.SerNr = TRp.Number;
+      if (ReadFirstMain(IVr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",IVr);
+      end;
+    end;
+    
+    if (TRp.IntYc==666) then begin 
+      IVCashr.SerNr = TRp.Number;
+      if (ReadFirstMain(IVCashr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",IVCashr);
+      end;
+    end;
+    
+    if (TRp.IntYc==IVCashYc) then begin 
+      IVr.SerNr = TRp.Number;
+      if (ReadFirstMain(IVr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",IVr);
+      end;
+    end;
+    
+    if (TRp.IntYc==IPYc) then begin 
+      IPr.SerNr = TRp.Number; 
+      if (ReadFirstMain(IPr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",IPr);
+      end;
+    end;
+    if (TRp.IntYc==VIYc) then begin 
+      VIr.SerNr = TRp.Number; 
+      if (ReadFirstMain(VIr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",VIr);
+      end;
+    end;
+    if (TRp.IntYc==OPYc) then begin 
+      OPr.SerNr = TRp.Number; 
+      if (ReadFirstMain(OPr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",OPr);
+      end;
+    end;
+    if (TRp.IntYc==PUYc) then begin 
+      PUr.SerNr = TRp.Number; 
+      if (ReadFirstMain(PUr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",PUr);
+      end;
+    end;
+    if (TRp.IntYc==SHYc) then begin 
+      SHr.SerNr = TRp.Number; 
+      if (ReadFirstMain(SHr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",SHr);
+      end;
+    end;
+    if (TRp.IntYc==ExpYc) then begin 
+      Expr.SerNr = TRp.Number; 
+      if (ReadFirstMain(Expr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",Expr);
+      end;
+    end;
+    if (TRp.IntYc==PPYc) then begin 
+      PPr.SerNr = TRp.Number; 
+      if (ReadFirstMain(PPr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",PPr);
+      end;
+    end;
+    if (TRp.IntYc==STMovYc) then begin 
+      STMovr.SerNr = TRp.Number; 
+      if (ReadFirstMain(STMovr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",STMovr);
+      end;
+    end;
+    if (TRp.IntYc==SentSTMovYc) then begin 
+      STMovr.SerNr = TRp.Number; 
+      if (ReadFirstMain(STMovr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",STMovr);
+      end;
+    end;
+    if (TRp.IntYc==PVYc) then begin 
+      VIr.SerNr = TRp.Number; 
+      if (ReadFirstMain(VIr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",VIr);
+      end;
+    end;
+    if (TRp.IntYc==CLInYc) then begin 
+      CLInr.SerNr = TRp.Number; 
+      if (ReadFirstMain(CLInr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",CLInr);
+      end;
+    end;
+    if (TRp.IntYc==CLOutYc) then begin 
+      CLOutr.SerNr = TRp.Number; 
+      if (ReadFirstMain(CLOutr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",CLOutr);
+      end;
+    end;
+    if (TRp.IntYc==SDYc) then begin 
+      SDr.SerNr = TRp.Number; 
+      if (ReadFirstMain(SDr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",SDr);
+      end;
+    end;
+    if (TRp.IntYc==SRYc) then begin 
+      SRr.SerNr = TRp.Number; 
+      if (ReadFirstMain(SRr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",SRr);
+      end;
+    end;
+    if (TRp.IntYc==OPOYc) then begin 
+      OPr.SerNr = TRp.Number; 
+      if (ReadFirstMain(OPr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",OPr);
+      end;
+    end;
+    if (TRp.IntYc==OPBYc) then begin 
+      OPr.SerNr = TRp.Number; 
+      if (ReadFirstMain(OPr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",OPr);
+      end;
+    end;
+    if (TRp.IntYc==IPOYc) then begin 
+      IPr.SerNr = TRp.Number; 
+      if (ReadFirstMain(IPr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",IPr);
+      end;
+    end;
+    if (TRp.IntYc==IPBYc) then begin 
+      IPr.SerNr = TRp.Number; 
+      if (ReadFirstMain(IPr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",IPr);
+      end;
+    end;
+    if (TRp.IntYc==ProdYc) then begin
+      Prodr.SerNr = TRp.Number; 
+      if (ReadFirstMain(Prodr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",Prodr);
+      end;
+    end;
+    if (TRp.IntYc==ProdOperationYc) then begin
+      ProdOperationr.SerNr = TRp.Number; 
+      if (ReadFirstMain(ProdOperationr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",ProdOperationr);
+      end;
+    end;
+    if (TRp.IntYc==RetYc) then begin 
+      Retr.SerNr = TRp.Number; 
+      if (ReadFirstMain(Retr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",Retr);
+      end;
+    end;
+    if (TRp.IntYc==WSYc) then begin 
+      WSr.SerNr = TRp.Number; 
+      if (ReadFirstMain(WSr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",WSr);
+      end;
+    end;
+    if (TRp.IntYc==Check0Yc) then begin 
+      Checkr.SerNr = TRp.Number; 
+      if (ReadFirstMain(Checkr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",Checkr);
+      end;
+    end;
+    if (TRp.IntYc==CheckYc) then begin 
+      OwnCheckr.SerNr = TRp.Number; 
+      if (ReadFirstMain(OwnCheckr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",OwnCheckr);
+      end;
+    end;
+    if (TRp.IntYc==Check2Yc) then begin 
+      Checkr.SerNr = TRp.Number; 
+      if (ReadFirstMain(Checkr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",Checkr);
+      end;
+    end;
+    if (TRp.IntYc==OwnCheck0Yc) then begin 
+      OwnCheckr.SerNr = TRp.Number; 
+      if (ReadFirstMain(OwnCheckr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",OwnCheckr);
+      end;
+    end;
+    if (TRp.IntYc==OwnCheckYc) then begin 
+      OwnCheckr.SerNr = TRp.Number; 
+      if (ReadFirstMain(OwnCheckr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",OwnCheckr);
+      end;
+    end;
+    if (TRp.IntYc==AT2WrofYc) then begin 
+      AT2Wrofr.SerNr = TRp.Number; 
+      if (ReadFirstMain(AT2Wrofr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",AT2Wrofr);
+      end;
+    end;
+/*
+    if (TRp.IntYc==RestAccYc) then begin 
+      RestAccr.SerNr = TRp.Number; 
+      if (ReadFirstMain(RestAccr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",RestAccr);
+      end;
+    end;
+*/
+    if (TRp.IntYc==RestAccYc) then begin 
+      POSBalancer.SerNr = TRp.Number; 
+      if (ReadFirstMain(POSBalancer,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",POSBalancer);
+      end;
+    end;
+    if (TRp.IntYc==ChqDepYc) then begin 
+      ChqDepr.SerNr = TRp.Number; 
+      if (ReadFirstMain(ChqDepr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",ChqDepr);
+      end;
+    end;
+    if (TRp.IntYc==TSYc) then begin 
+      TSr.SerNr = TRp.Number; 
+      if (ReadFirstMain(TSr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",TSr);
+      end;
+    end;
+    if (TRp.IntYc==ActYc) then begin 
+      Actr.SerNr = TRp.Number; 
+      if (ReadFirstMain(Actr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",Actr);
+      end;
+    end;
+    if (TRp.IntYc==VATIVYc) then begin 
+      VATIVr.SerNr = TRp.Number; 
+      if (ReadFirstMain(VATIVr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",VATIVr);
+      end;
+    end;
+    if (TRp.IntYc==VATVIYc) then begin 
+      VATVIr.SerNr = TRp.Number; 
+      if (ReadFirstMain(VATVIr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",VATVIr);
+      end;
+    end;
+    if (TRp.IntYc==IntIVYc) then begin 
+      IntIVr.SerNr = TRp.Number; 
+      if (ReadFirstMain(IntIVr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",IntIVr);
+      end;
+    end;
+    if (TRp.IntYc==RetPUYc) then begin 
+      RetPUr.SerNr = TRp.Number; 
+      if (ReadFirstMain(RetPUr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",RetPUr);
+      end;
+    end;
+    if (TRp.IntYc==CredManYc) then begin 
+      CredManr.SerNr = TRp.Number; 
+      if (ReadFirstMain(CredManr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",CredManr);
+      end;
+    end;
+    if (TRp.IntYc==BuyBackReconYc) then begin 
+      BBr.SerNr = TRp.Number; 
+      if (ReadFirstMain(BBr,1,true)) then begin
+        nwn = OpenWindow(dclass,1,0,"","",BBr);
+      end;
+    end;
+    
+  end;
+  RETURN;
+END;
+
+global
+procedure OpenSubsystemTRDsm()
+BEGIN
+  Integer wn;
+  record TRVc TRr;
+
+  wn = CurWindow; 
+  GetWindowRecord(wn,TRr); 
+  OpenVcFromTR(TRr);
+  RETURN;
+END;

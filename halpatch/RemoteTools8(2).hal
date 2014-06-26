@@ -1,0 +1,391 @@
+external function Boolean GetGlobalUserMainCompany(string,var string);
+external function Boolean GetFirstPurchaseItem2(string,string,var record PIVc);
+external function Boolean PasteVEInPO(var record POVc,Boolean);
+external procedure GetARAcc(string,var string);
+external function string 255 FindINObjects(string,string);
+external procedure MulVATIV(string,val,var val,var val,Integer,Integer);
+external function string 255 FindNextLegalSerNr(LongInt,Date,string);
+external function Boolean CurUserHasMailbox(var string);
+external function Boolean InterNetAddrTest(string);
+external procedure PasteIntOrdInPO(string,record IntORVc,var record POVc);
+external function Boolean PasteActTypeInAct(var record ActVc);
+external procedure IVDchsum(var record IVVc,Integer);
+external function Boolean IVDchrsum(var record IVVc,Integer);
+external function Boolean ReadFirstItem(string,var record INVc,Boolean,Boolean);
+external function Time TimeDiff(Time,Time);
+external updating function Boolean PastePOCOInVI(record POCOVc,var record VIVc);
+external procedure VISumup(record VIVc,var val);
+external function Boolean PastePOCOInPO(record POCOVc,var record POVc);
+external procedure PasteIntOrdInSD(record IntORVc,var record SDVc);
+external procedure PasteIntOrdInStockMov(record IntORVc,var record StockMovVc);
+//external updating procedure PasteIntOrdInStockMov(record IntORVc);// Edit ************************** Monday, 9 July 2012 11:50:51
+external procedure SDSumUp(var record SDVc);
+external procedure StockMovSumUp(var record StockMovVc);
+external procedure GetINCostAcc(record INVc,var string);
+external procedure FindStockValue(string,string,var record ItemStatusVc);
+external procedure POSumup(var record POVc);
+external updating function Boolean PasteWOInWS(var record WOVc,var record WSVc);
+external updating function Boolean PasteSVOInWS(var record SVOVc,var record WSVc);
+external procedure WSSumup(record WSVc);
+external procedure PastePDInInv(var record IVVc,string);
+external procedure UpdateSVO(record SVOVc,LongInt,Integer,var val);
+external updating procedure UpdateWS(LongInt,Integer,var val,var Integer,Boolean);
+external procedure Do_InvoiceRecepy(record IVVc,record INVc,Integer);
+external procedure AddBatchText(record IVVc);
+external procedure GetItemSalesAcc(string,Integer,var string);
+external procedure GetItemVATCode(string,Integer,var string,Boolean);
+external procedure CalcSum(val,val,val,val,var val,Integer);
+external function LongInt GetCurUserLastNr(string);
+external procedure SetSVOFlags(record SVOVc);
+external procedure IVSumup(var record IVVc,Boolean);
+external function longint GetUserSerNrSeries(longint);
+
+
+global
+function Boolean IVRowItemEq(record IVVc IVp,record WSIVVc WSIVp,record INVc INp,string rowobjs,var Boolean itemexistfp,var Integer rownr)
+BEGIN
+  Boolean res;
+  row IVVc IVrw;
+  Integer i,rwcnt;
+  
+  if (ReadFirstMain(INp,1,true)) then begin
+    itemexistfp = true;
+  end;      
+  rwcnt = MatRowCnt(IVp);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(IVp,i,IVrw);
+    switch (INp.SerNrf) begin
+      case 0:
+        if ((WSIVp.ArtCode==IVrw.ArtCode) and (IVrw.Price==WSIVp.Price) and (IVrw.Objects==rowobjs))  then begin
+           res = true;
+           rownr = i;
+           goto LIVRowItemEq;  
+        end;
+      case 1:      
+        if ((WSIVp.ArtCode==IVrw.ArtCode) and (IVrw.Price==WSIVp.Price) and (IVrw.Objects==rowobjs))  then begin
+           res = true;
+           rownr = i;
+           goto LIVRowItemEq;  
+        end;
+      case 2:
+        if ((WSIVp.ArtCode==IVrw.ArtCode) and (WSIVp.SerialNr==IVrw.SerialNr) and (IVrw.Objects==rowobjs)) then begin
+          rownr = i;
+          res = true;
+          goto LIVRowItemEq;  
+        end;
+      case 3:
+        if ((WSIVp.ArtCode==IVrw.ArtCode) and (IVrw.Price==WSIVp.Price) and (IVrw.Objects==rowobjs))  then begin
+           res = true;
+           rownr = i;
+           goto LIVRowItemEq;  
+        end;
+    end;
+  end;  
+LIVRowItemEq:;
+  IVRowItemEq = res;  
+  RETURN;
+END;
+
+procedure MakeInvHeader(var record IVVc IVp,record SVOVc SVOp,record AccBlock ARAccRecp)
+BEGIN
+  record CUVc CUr;
+  record INVc INr;
+  record SRBlock SRRec;
+  string 255 tstr;
+  LongInt newnr;
+
+  IVp.TransDate = CurrentDate;
+//  IVp.UpdStockFlag = ARAccRecp.InvUpdStock;//can not be, already upated from Works Sheets
+  IVp.OrderNr = -1;
+  if (nonblank(SVOp.InvoiceToCode)) then begin
+    CUr.Code = SVOp.InvoiceToCode;
+    if (ReadFirstMain(CUr,1,true)) then begin
+      IVp.CustCode = CUr.Code;
+      IVp.Addr0 = CUr.Name;
+      IVp.Addr1 = CUr.InvAddr0;
+      IVp.Addr2 = CUr.InvAddr1;
+      IVp.Addr3 = CUr.InvAddr2;
+      IVp.InvAddr3 = CUr.InvAddr3;
+      IVp.InvAddr4 = CUr.InvAddr4;
+      IVp.CustCat = CUr.CustCat;
+      IVp.OrgCust = SVOp.CustCode;
+      IVp.PayDeal = CUr.PayDeal;
+      IVp.ExportFlag = CUr.ExportFlag;
+    end else begin
+      goto L20MakeInvHeader; // if customer is not found then use the original customer 
+    end;
+  end else begin
+L20MakeInvHeader:;
+    IVp.CustVATCode = SVOp.CustVATCode;
+    IVp.CustCode = SVOp.CustCode;
+    IVp.Addr0 = SVOp.Addr0;
+    IVp.Addr1 = SVOp.Addr1;
+    IVp.Addr2 = SVOp.Addr2;
+    IVp.Addr3 = SVOp.Addr3;
+    IVp.InvAddr3 = SVOp.InvAddr3;
+    IVp.InvAddr4 = SVOp.InvAddr4;
+    CUr.Code = SVOp.CustCode;
+    if (ReadFirstMain(CUr,1,true)) then begin
+      IVp.PayDeal = CUr.PayDeal;
+      IVp.VATNr = CUr.VATNr;
+      IVp.ExportFlag = CUr.ExportFlag;
+    end;
+  end;
+  IVp.Objects = SVOp.Objects;
+  IVp.CustOrdNr = SVOp.CustOrdNr;
+  IVp.LangCode = SVOp.LangCode;
+  IVp.InclVAT = SVOp.InclVAT;
+//  IVp.NoTAXonVAT = SVOp.NoTAXonVAT;
+//  IVp.TotalwoTAX = SVOp.TotalwoTAX;
+  IVp.SVONr = SVOp.SerNr;
+  PastePDInInv(IVp,"");
+  GetARAcc(IVp.CustCode,tstr);
+  IVp.ARAcc = tstr;
+  IVp.ShipAddr0 = SVOp.ShipAddr0;
+  IVp.ShipAddr1 = SVOp.ShipAddr1;
+  IVp.ShipAddr2 = SVOp.ShipAddr2;
+  IVp.ShipAddr3 = SVOp.ShipAddr3;
+  IVp.DelAddr3 = SVOp.DelAddr3;
+  IVp.DelAddr4 = SVOp.DelAddr4;
+  IVp.ShipMode = SVOp.ShipMode;
+  IVp.ShipDeal = SVOp.ShipDeal;
+  if (blank(IVp.PayDeal)) then begin
+    IVp.PayDeal = SVOp.PayDeal;
+    PastePDInInv(IVp,"");
+  end;  
+  IVp.DiscPerc = blankval;
+  IVp.DiscSum = blankval;
+  IVp.FrGPPercent = blankval;
+  IVp.FrBase = blankval;
+  IVp.FrGP = blankval;
+  IVp.FrPrice = blankval;
+  IVp.FrObjects = "";
+  IVp.FrVATCode = "";
+  IVp.FrSalesAcc = "";
+  IVp.CurncyCode = SVOp.CurncyCode;
+  IVp.FrRate = SVOp.FrRate;
+  IVp.ToRateB1 = SVOp.ToRateB1;
+  IVp.ToRateB2 = SVOp.ToRateB2;
+  IVp.BaseRate1 = SVOp.BaseRate1;
+  IVp.BaseRate2 = SVOp.BaseRate2;
+  IVp.SalesMan = SVOp.SalesMan;
+  if (IVp.SerNr<=0) then begin
+    BlockLoad(SRRec);
+    newnr = GetCurUserLastNr("IVVc");
+    if (newnr==-1) then begin
+      newnr = SRRec.LastInvNr;
+    end;    
+    IVp.SerNr = NextSerNr("IVVc",IVp.TransDate,newnr,false,IVp.LangCode);
+    IVp.OfficialSerNr = FindNextLegalSerNr(IVp.SerNr,IVp.TransDate,CUr.Classification);
+  end;
+  RETURN;
+END;
+
+updating procedure AddRowsFromServiceOrder(record SVOVc SVOp,var record IVVc IVp)
+begin
+  row SVOVc SVOrw;
+  row IVVc IVrw;
+  integer i,rwcnt;
+  integer j;
+  string 255 artcode, spec, serialnr;
+  rwcnt = MatRowCnt(SVOp);
+  for (i=0;i<=0;i=i+1) begin
+    MatRowGet(SVOp,i,SVOrw);
+    artcode = SVOrw.ArtCode;
+    spec = SVOrw.Spec;
+    serialnr = SVOrw.SerialNr;
+  end;
+  ClearRow(IVp,IVrw,1);
+  for (j=0;j<=2;j=j+1) begin
+    if (j==0) then begin 
+      IVrw.stp = 1;
+      IVrw.Spec = USetStr(7637) & " " & artcode;
+    end;
+    if (j==1) then begin 
+      IVrw.stp = 1;
+      IVrw.Spec = USetStr(7638) & " " & spec;
+    end;
+    if (j==2) then begin 
+      IVrw.stp = 1;
+      IVrw.Spec = USetStr(7639) & " " & serialnr;
+    end;
+    MatRowPut(IVp,j,IVrw);
+        
+  end;
+  return;
+end;
+
+global
+updating function Boolean PasteSVOInInv(var record IVVc IVp,var record SVOVc SVOp,Boolean addon)
+BEGIN
+  record INVc INr;
+  record SVOVc SVOr;
+  record WSIVVc WSIVr;
+  record WSIVVc oldWSIVr;
+  record WSVc WSr;
+  row WSVc WSrw;
+  record SVOVc oldSVOr;
+  row IVVc IVrw;
+  Boolean infound,TrHs,testf;
+  Boolean res,itemexistf;
+  Integer srw,rownr;
+  record AccBlock ARAccRec;
+  record CostAccBlock CostAccRec;
+  record SVOAccBlock SVOAb;
+  val markup,t;
+  record GeneralOptionBlock GenOptr;
+  string 255 tstr;
+  Integer flushcnt;
+  val price,vatv,t1;
+  string 255 rowobjects;
+  record ObjectsAccBlock OAb; //Edit***************************Sasha2,14:59 20.06.2014
+  row ObjectsAccBlock OArw; //Edit***************************Sasha2,15:00 20.06.2014
+  integer j, mtrw; //Edit***************************Sasha2,15:00 20.06.2014
+  string 255 salesacc; //Edit***************************Sasha2,15:00 20.06.2014
+  
+  RecordCopy(oldSVOr,SVOp);
+  res = false;
+  BlockLoad(GenOptr);
+  BlockLoad(CostAccRec);
+  BlockLoad(ARAccRec);
+  BlockLoad(SVOAb);
+  MakeInvHeader(IVp,SVOp,ARAccRec);  
+  AddRowsFromServiceOrder(SVOp,IVp);
+  srw = MatRowCnt(IVp);
+  TrHs = true;
+  WSIVr.SVONr = SVOp.SerNr;
+  while (LoopKey("SVONr",WSIVr,1,TrHs)) begin  
+    testf = true;
+    if (WSIVr.CUCode!=SVOp.CustCode) then begin testf = false; end;
+    if (WSIVr.SVONr!=SVOp.SerNr) then begin TrHs = false; end;
+    if (WSIVr.InvNr!=-1) then begin testf = false; end;
+    if (TrHs==false) then begin testf = false; end;
+    if (testf) then begin
+    if ((WSIVr.Type==1) and (WSIVr.InvNr==-1)) then begin//Inoicable
+      	
+       SVOr.SerNr = WSIVr.SVONr;
+       if (ReadFirstMain(SVOr,1,true)) then begin end;
+       RecordCopy(oldWSIVr,WSIVr);
+       INr.Code = WSIVr.ArtCode;
+       itemexistf = false;
+       ClearRow(WSr,WSrw,1);
+       rowobjects = "";
+       switch (WSIVr.RecType) begin
+         case 0:
+           WSr.SerNr = WSIVr.SerNr;
+           if (ReadFirstMain(WSr,1,true)) then begin
+           
+             blockload(OAb); //Edit***************************Sasha2,15:01 20.06.2014
+		     mtrw = matrowcnt(OAb);
+		     For(j=0;j<mtrw;j=j+1)begin
+		       matrowget(OAb,j,OArw);
+		       if(setinset(OArw.Objects,WSr.Objects))then begin
+		         salesacc = OArw.SaleAccCode;// Edit ************************** Monday, 23 June 2014 09:57:01
+		         j = mtrw;                      
+		       end;
+		     end; //Edit***************************Sasha2,15:01 20.06.2014
+		    
+             MatRowGet(WSr,WSIVr.Row,WSrw);
+             if (SVOAb.WSHeaderObjectOnSVOIV!=0) then begin
+               rowobjects = WSr.Objects;
+               if (nonblank(rowobjects)) then begin
+                 rowobjects = rowobjects & ",";
+               end;
+             end;
+             rowobjects = rowobjects & WSrw.Objects;
+             if (blank(WSrw.Objects)) then begin
+               rowobjects = rowobjects & INr.Objects;
+             end;
+           end;
+       end;
+       if /*(IVRowItemEq(IVp,WSIVr,INr,rowobjects,itemexistf,rownr)==false)*/(true) then begin
+         ClearRow(IVp,IVrw,1);
+         IVrw.stp = 1;
+         IVrw.ArtCode = WSIVr.ArtCode;
+         IVrw.VATCode = IVp.CustVATCode;
+         if (blank(IVp.CustVATCode)) then begin
+           GetItemVATCode(INr.Code,IVp.ExportFlag,tstr,true);
+           IVrw.VATCode = tstr;
+         end;
+         IVrw.Objects = rowobjects;
+         IVrw.Spec = WSIVr.Comment;
+         IVrw.SerialNr = WSIVr.SerialNr;
+         IVrw.BasePrice = WSIVr.CostPrice;   
+         IVrw.vRebate = WSIVr.Discount;         
+         markup = StringToVal(WSIVr.Markup,M4Val);
+         t = markup/WSIVr.InvQty;
+/*         
+         if (SVOr.InclVAT!=0) then begin
+           MulVATIV(IVrw.VATCode,WSIVr.Price,vatv,t1,0,0);
+           price = WSIVr.Price + vatv;
+         end else begin
+           price = WSIVr.Price;
+         end;
+*/         
+         price = WSIVr.Price;
+         IVrw.Price = price + t;
+         IVrw.Quant = WSIVr.InvQty;   
+         IVrw.rowGP = WSIVr.GP;   
+         IVrw.Coefficient = WSIVr.Coefficient;   
+         CalcSum(IVrw.Quant,IVrw.Price,IVrw.PriceFactor,IVrw.vRebate,t,GenOptr.UseDiscount);
+         IVrw.Sum = t;
+         if ((IVrw.Sum==0) and (IVrw.Quant==0) and (IVrw.Price==0)) then begin
+           IVrw.Sum = blankval;
+         end;
+         IVrw.PriceFactor = blankval;
+         IVrw.FIFO = blankval;
+         IVrw.FIFORowVal = blankval;
+         if (NonBlank(salesacc)) then begin //Edit***************************Sasha2,15:07 20.06.2014
+         	IVrw.SalesAcc = salesacc;
+         end else begin
+	         GetItemSalesAcc(INr.Code,IVp.ExportFlag,tstr);
+	         IVrw.SalesAcc = tstr;
+         end; //Edit***************************Sasha2,15:07 20.06.2014
+         //GetItemSalesAcc(INr.Code,IVp.ExportFlag,tstr); //Edit***************************Sasha2,15:07 20.06.2014
+         //IVrw.SalesAcc = tstr; //Edit***************************Sasha2,15:07 20.06.2014
+         MatRowPut(IVp,srw,IVrw);
+         if (IVDchrsum(IVp,srw)) then begin
+           IVDchsum(IVp,srw);
+         end;  
+         srw = srw + 1;
+         if ((infound) and (nonblank(INr.InvRecepy))) then begin
+           Do_InvoiceRecepy(IVp,INr,srw);
+           srw = MatRowCnt(IVp);
+         end;
+         if (nonblank(IVrw.SerialNr)) then begin
+           AddBatchText(IVp);
+           srw = MatRowCnt(IVp);
+         end;
+       end else begin
+         MatRowGet(IVp,rownr,IVrw);
+         IVrw.Quant = IVrw.Quant + WSIVr.InvQty;
+         IVrw.Sum = IVrw.Quant * IVrw.Price;
+         MatRowPut(IVp,rownr,IVrw);
+       end;
+       WSIVr.InvNr = IVp.SerNr;
+       res = true;
+       if (RecordUpdate(oldWSIVr,WSIVr,false)==0) then begin end;
+       UpdateWS(WSIVr.SerNr,WSIVr.Row,WSIVr.InvQty,flushcnt,false);
+       UpdateSVO(SVOp,WSIVr.SerNr,WSIVr.Row,WSIVr.InvQty);
+       if (MatRowCnt(IVp)>=300) then begin
+          if (IVp.SerNr!=-1) then begin
+            IVSumup(IVp,true);
+            if (RecordStore(IVp,false)) then begin end;
+            SetSVOFlags(SVOp);
+            if (RecordUpdate(oldSVOr,SVOp,false)==0) then begin end;
+            RecordNew(IVp);
+            MakeInvHeader(IVp,SVOp,ARAccRec);
+            srw = 0;
+          end else begin 
+            res = false;
+            goto LPasteSVOInInv;
+          end;   
+       end;
+    end;
+    end;
+  end;
+  IVSumup(IVp,true);
+LPasteSVOInInv:;
+  PasteSVOInInv = res;
+  RETURN;
+END;

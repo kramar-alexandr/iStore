@@ -1,0 +1,147 @@
+external function Boolean MyLabelItemDClassArtCodeEFAfter(Integer,Boolean);
+
+global updating procedure UpdateLablCurncy(record RcVc RepSpec)
+begin
+record MyLabelItemVc MLIr;
+string 10 curncy,plcode;
+boolean testf;
+record PLDefVc PLDr;
+
+
+  curncy = RepSpec.f1;
+  plcode = RepSpec.f2;
+  PLDr.Code = plcode;
+  if(nonblank(plcode))then begin
+    readfirstmain(PLDr,1,true);
+  end;
+  
+  
+  MLIr.ArtCode = "";
+  if(nonblank(curncy) or nonblank(plcode))then begin
+    while(loopmain(MLIr,1,true))begin
+      testf = true;
+      if(nonblank(plcode) and MLir.PriceList!=plcode)then begin testf=false; end;
+      if(testf)then begin
+        if(nonblank(plcode))then begin
+          if(nonblank(curncy))then begin
+            MLIr.CurncyCode = curncy;
+          end else begin
+            MLIr.CurncyCode = PLDr.CurncyCode;
+          end;
+        end else begin
+          MLIr.CurncyCode = curncy;
+        end;
+        RecordStore(MLIr,true);
+      end;
+    end;
+  end;
+  
+return;
+end;
+
+global procedure RA_MyRepricingDClassArtCodeEFAfter(record MyRepricingVc MRr, integer rownr)
+begin
+  row MyRepricingVc MRrw;
+  record MyLabelItemVc MLIr;
+  record INVc INr;
+  record PLVc PLr;
+  val vat,novat,price;
+  string 10 curcode;
+  record ItemStatusVc ISr;
+  
+  
+	matrowget(MRr,rownr,MRrw);
+    
+	if(blank(MRrw.PriceList) or blank(MRrw.FormCode) or blank(MRrw.Size))then begin 
+			MLIr.ArtCode = MRrw.ArtCode;
+			if(readfirstmain(MLIr,1,true)) then begin
+				MRrw.ArtCode = MLIr.ArtCode;
+				MRrw.PriceList = MLIr.PriceList;
+				MRrw.FormCode = MLIr.DefFormCode;
+				MRrw.Size = MLIr.Size;
+			end;
+	end;
+	
+	PLr.ArtCode = MRrw.ArtCode;
+	PLr.PLCode = MRrw.PriceList;
+	INr.Code = MRrw.ArtCode;
+	Readfirstmain(INr,1,false);
+	MRrw.Spec = INr.Name;
+	
+	
+	ISr.Code = MRrw.ArtCode;
+	ISr.Location = MRr.Location;
+	if(readfirstmain(ISr,2,true))then begin
+		if(ISr.Code==MRrw.ArtCode and ISr.Location==MRr.Location)then begin
+			MRrw.Quant = ISr.Instock;
+		end;
+	end;
+	
+	MatrowPut(MRr,rownr,MRrw);
+	
+return;
+end;
+
+global updating procedure RA_CrRepricingFromSM(record StockMovVc SMr,var record MyRepricingVc MRPr)
+begin
+row	MyRepricingVc MRPrw;
+row StockMovVc SMrw,SM2rw;
+integer i,j,mtrw,bef,aft,k;	
+record LocalMachineAccBlock LMAb; 
+row LocalMachineAccBlock LMArw; 
+	
+	MRPr.TransDate = SMr.OrdTransDate;
+	MRPr.Comment = SMr.Comment;
+	MRPr.SalesMan = CurrentUser;
+	MRPr.Location = SMr.ToLocation;
+	MRPr.SerNr = NextSerNr("MyRepricingVc",MRPr.TransDate,-1,false,"");
+	
+	blockload(LMAb);
+	mtrw = matrowcnt(LMAb);
+	For(i=0;i<mtrw;i=i+1) begin
+	  matrowget(LMAb,i,LMArw);
+	  if(LMArw.DefLoc==MRPr.Location)then begin
+	  		MRPr.Cust2 = LMArw.LocalMachine;
+	  		MRPr.DefPriceCode = LMArw.Str01;
+	  		MRPr.Cust1 = LMArw.CustCode;
+	  end;	
+	end; 
+	
+	mtrw = matrowcnt(SMr);
+	k=0;
+	For(i=0;i<mtrw;i=i+1) begin
+		bef = 0;
+		aft = 0;
+	  	matrowget(SMr,i,SMrw);
+	  	For(j=0;j<mtrw;j=j+1) begin
+	  		matrowget(SMr,j,SM2rw);
+	  		if(SMrw.ArtCode==SM2rw.ArtCode)then begin
+	  			if(j<i)then begin
+	  				bef = bef + SM2rw.Quant;
+	  			end;
+	  			if(j>i)then begin
+	  				aft = aft + SM2rw.Quant;
+	  			end;
+	  		end;
+		end;
+		if(bef==0)then begin
+			MRPrw.ArtCode = SMrw.ArtCode;
+			matrowinsert(MRPr,k,MRPrw);
+			RA_MyRepricingDClassArtCodeEFAfter(MRPr,k);
+			matrowget(MRPr,k,MRPrw);
+			MRPrw.Quant = SMrw.Quant + aft;
+			matrowput(MRPr,k,MRPrw);
+			k=k+1;
+		end;
+	end; 
+	
+	recordinsert(MRPr,true);
+	
+return;
+end;
+
+
+
+
+
+

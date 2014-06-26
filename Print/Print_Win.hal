@@ -1,0 +1,98 @@
+external function string 255 GetTextForPrint(integer,string);
+remote function Boolean Getformcode(Integer,Integer,string,string,string,LongInt,LongInt,string,string,Integer,string,var string);
+
+event DefineWindows
+begin
+string 255 tstr;
+integer v,i,mtrw,h,vm,heiz;
+record OrdDefBlock ODb;
+row OrdDefBlock ODbrw;
+string 200 formcode;
+record StockMovDefBlock StockMovDefRec;
+row StockMovDefBlock StockMovDefrw;
+record InvDefBlock InvDefRec;
+row InvDefBlock InvDefrw;
+
+	SetLangMode(LangUkrainian,"UKR",0);
+
+  WindowBegin("Print Order",MyPrintTClass,CGother,RcType);
+    UseView(RcVc);
+    DynamicWindow;
+     blockload(ODb);
+    mtrw = matrowcnt(ODb);
+    heiz = 80 + 20 + 16 + mtrw*16;
+    SetWRect(90,80,400,heiz);
+    
+   
+    v=10;
+    
+    ButtonFrame(20,20,250,mtrw,"Форми документів");
+    h=20;v=20;
+    for(i=0;i<mtrw;i=i+1)begin
+      matrowget(ODb,i,ODbrw);
+      formcode = "";
+      if(Getformcode(i,ODbrw.intdocnr,ODbrw.FPCode,ODbrw.UserGroup,ODbrw.LangCode,ODbrw.SerNr,-1,ODbrw.PrintGroupCode,"",i+1,"ORVc",formcode))then begin
+        RadioButton(h,v,ODbrw.intdocnr,0,GetTextForPrint(i,"ORVc"),flags[0]);
+        v=v+16;
+      end;
+    end;
+      
+
+    HalPushButton(h,v,h+100,v+50,"PrintDoOrdForm","Печать");
+  EndWindow;
+  
+  WindowBegin("Print StockMov",MyPrintSMTClass,CGother,RcType);
+    UseView(RcVc);
+    DynamicWindow;
+     blockload(StockMovDefRec);
+    mtrw = matrowcnt(StockMovDefRec);
+    heiz = 80 + 20 + 16 + mtrw*16;
+    SetWRect(90,80,400,heiz);
+    
+   
+    v=10;
+    
+    ButtonFrame(20,20,250,mtrw,"Форми документів");
+    h=20;v=20;
+    for(i=0;i<mtrw;i=i+1)begin
+      matrowget(StockMovDefRec,i,StockMovDefrw);
+      formcode = "";
+      if(Getformcode(i,StockMovDefrw.intdocnr,StockMovDefrw.FPCode,StockMovDefrw.UserGroup,StockMovDefrw.LangCode,StockMovDefrw.SerNr,-1,StockMovDefrw.PrintGroupCode,"",i+1,"StockMovVc",formcode))then begin
+        RadioButton(h,v,StockMovDefrw.intdocnr,0,GetTextForPrint(i,"StockMovVc"),flags[0]);
+        v=v+16;
+      end;
+    end;
+      
+
+    HalPushButton(h,v,h+100,v+50,"PrintDoStockMovForm","Печать");
+  EndWindow;
+  
+  WindowBegin("Print Invoice",MyPrintIVTClass,CGother,RcType);
+    UseView(RcVc);
+    DynamicWindow;
+    blockload(InvDefRec);
+    mtrw = matrowcnt(InvDefRec);
+    heiz = 80 + 20 + 16 + mtrw*16;
+    SetWRect(90,80,400,heiz);
+    
+   
+    v=10;
+    
+    ButtonFrame(20,20,250,mtrw,"Форми документів");
+    h=20;v=20;
+    for(i=0;i<mtrw;i=i+1)begin
+      matrowget(InvDefRec,i,InvDefrw);
+      formcode = "";
+      if(Getformcode(i,InvDefrw.intdocnr,InvDefrw.FPCode,InvDefrw.UserGroup,InvDefrw.LangCode,InvDefrw.SerNr,-1,InvDefrw.PrintGroupCode,"",i+1,"IVVc",formcode))then begin
+        RadioButton(h,v,InvDefrw.intdocnr,0,GetTextForPrint(i,"IVVc"),flags[0]);
+        v=v+16;
+      end;
+    end;
+      
+
+    HalPushButton(h,v,h+100,v+50,"PrintDoIVForm","Печать");
+  EndWindow;
+  
+  
+return;
+end;

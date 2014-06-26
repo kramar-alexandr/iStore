@@ -1,0 +1,899 @@
+external procedure PrintCashFlowAcc(string, string,record RcVc,var val,var val,boolean,integer);
+external procedure PrintCashFlowAccFin(string, string,record RcVc,var val,var val,boolean,integer);
+external procedure PrintCashFlowSum(string,var val,var val);
+external procedure PrintCashFlowAccBal(string, string,record RcVc,var val,var val,boolean,integer);
+
+
+global procedure GetTechnomediaCashFlow(record RcVc RepSpec)
+begin
+String 255 Word;
+Val MonthSum,YearSum;
+
+
+array val sum;
+array val ysum;
+val x,y;
+integer i;
+
+  startreportnoheaderjob("CashFlow");
+  
+  StartFormat(15);
+  outstring(0,0,"GRAPHITEK INVEST INC.",false);
+  endFormat;
+  
+  StartFormat(15);
+  outstring(0,0,"Statement of Cash Flows " & GetYear(RepSpec.sStartDate),false);
+  endFormat;
+  
+  StartFormat(15);
+  outstring(0,0,"From " & RepSpec.sStartDate & " to " & RepSpec.sEndDate,false);
+  endFormat;
+  
+  StartFormat(15);
+  outstring(0,0,"",false);
+  outstring(2,0,"",false);
+  outstring(300,0,"Current Period",false);
+  outstring(1,0,"Current YTD",true);
+  
+  endFormat;
+  
+  StartFormat(15);
+      OutString(0,0,"Cash Flow From Operating Activities",false);
+    endFormat;
+    sum[i] = x;
+    i=10;
+    word = "Net Income (Loss) ";
+    PrintCashFlowAcc("400/00/00","850/3/01",RepSpec,x,y,false,-1);
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);
+    
+ StartFormat(15);
+  endFormat;
+  
+    
+    StartFormat(15);
+      OutString(0,0,"Adjustments for:",false);
+    endFormat;
+    
+    i=30;
+    word = "Depreciation Expense ";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+  PrintCashFlowAcc("690/00/01","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("690/01/01","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("690/02/01","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("690/03/01","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("691/00/01","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("691/01/01","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("691/02/01","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("691/03/01","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("693/00/01","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("693/01/01","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("693/02/01","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("693/03/01","",RepSpec,x,y,true,0);
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+  StartFormat(15);
+  endFormat;
+  
+    
+    i=49;
+    word = "Amortization of Intangible Assets ";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+    PrintCashFlowAcc("694/00/01","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("694/01/01","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("694/02/01","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("694/03/01","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("695/00/01","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("695/01/01","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("695/02/01","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("695/03/01","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("695/00/02","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("695/01/02","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("695/02/02","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("695/03/02","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("695/00/03","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("695/01/03","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("695/02/03","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("695/03/03","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("696/00/01","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("696/01/01","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("696/02/01","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("696/03/01","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("696/00/02","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("696/01/02","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("696/02/02","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("696/03/02","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("696/00/03","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("696/01/03","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("696/02/03","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("696/03/03","",RepSpec,x,y,true,0);
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+  StartFormat(15);
+  endFormat;
+  
+    
+    i=53;
+    word = "Gain/Loss on Asset Disposal ";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+ PrintCashFlowAcc("700/00/01","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("701/01/01","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("702/02/01","",RepSpec,x,y,true,0);
+PrintCashFlowAcc("703/03/01","",RepSpec,x,y,true,0);
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+  StartFormat(15);
+  endFormat;
+  
+    
+    
+     StartFormat(15);
+      OutString(0,0,"Changes In Current Assets ",false);
+    endFormat;
+    
+    i=59;
+    word = "Short-Term Investments ";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+PrintCashFlowAcc("130/00/01","",RepSpec,x,y,true,-1);
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+  StartFormat(15);
+  endFormat;
+  
+    
+    i=75;
+    word = "Accounts Receivable ";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+ PrintCashFlowAcc("140/00/00","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("140/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("141/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("141/01/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("141/02/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("141/03/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("142/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("143/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("144/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("145/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("146/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("147/00/01","",RepSpec,x,y,true,-1);
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+  StartFormat(15);
+  endFormat;  
+    
+    i=79;
+    word = "Notes Receivable ";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+    PrintCashFlowAcc("148/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("148/00/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("148/00/03","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("148/00/04","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("148/00/05","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("148/00/06","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("148/00/07","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("148/00/08","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("148/00/09","",RepSpec,x,y,true,-1);
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+  StartFormat(15);
+  endFormat;
+  
+    
+    i=95;
+    word = "Inventory";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+     PrintCashFlowAcc("150/00/00","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("151/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("151/00/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("151/00/03","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("152/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("152/00/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("152/00/03","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("152/00/04","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("153/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("153/00/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("154/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("154/00/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("155/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("155/00/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("155/00/03","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("156/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("158/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("159/00/01","",RepSpec,x,y,true,-1);
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+  StartFormat(15);
+  endFormat;
+  
+    
+   i=133;
+    word = "Prepaid Expenses ";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+      PrintCashFlowAcc("160/00/00","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("161/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("162/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("162/00/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("163/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("164/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("165/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("165/00/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("166/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("166/00/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("167/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("168/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("169/00/01","",RepSpec,x,y,true,-1);
+
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+  StartFormat(15);
+  endFormat;
+  
+    
+    
+    StartFormat(15);
+      OutString(0,0,"Changes In Current Liabilities ",false);
+    endFormat;
+    
+    i=160;
+    word = "Accounts Payable";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+ PrintCashFlowAcc("200/00/00","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("201/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("201/00/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("201/00/03","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("201/00/11","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("201/00/12","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("201/00/13","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("201/00/14","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("201/00/20","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("211/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("212/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("212/01/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("212/02/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("212/03/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("220/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("221/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("222/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("224/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("224/00/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("225/00/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("225/00/03","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("225/01/03","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("225/02/03","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("225/03/03","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("226/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("229/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("230/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("231/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("237/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("238/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("239/00/01","",RepSpec,x,y,true,-1);
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+  StartFormat(15);
+  endFormat;
+  
+    
+    i=165;
+    word = "Notes Payable ";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+     PrintCashFlowAcc("240/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("241/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("242/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("242/00/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("242/00/03","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("242/00/04","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("243/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("243/00/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("243/00/03","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("243/00/04","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("243/00/05","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("243/00/06","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("243/00/07","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("250/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("251/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("252/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("253/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("259/00/01","",RepSpec,x,y,true,-1);
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+  StartFormat(15);
+  endFormat;
+  
+    
+    i=169;
+    word = "Taxes Payable";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+    PrintCashFlowAcc("260/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("260/01/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("260/02/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("260/03/01","",RepSpec,x,y,true,-1);
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+  StartFormat(15);
+  endFormat;
+  
+    
+    i=173;
+    word = "Interest Payable ";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+    PrintCashFlowAcc("265/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("265/01/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("265/02/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("265/03/01","",RepSpec,x,y,true,-1);
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+  StartFormat(15);
+  endFormat;
+  
+    
+    i=177;
+    word = "Dividends Payable ";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+    PrintCashFlowAcc("270/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("271/00/01","",RepSpec,x,y,true,-1);
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+  StartFormat(15);
+  endFormat;
+  
+    
+    i=181;
+    word = "Leases Payable (Current) ";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+ PrintCashFlowAcc("252/00/01","",RepSpec,x,y,true,-1);
+ 
+ sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+  StartFormat(15);
+  endFormat;
+  
+     i=182;
+    word = "Other Current Liabilities ";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+  PrintCashFlowAcc("296/00/01","",RepSpec,x,y,true,-1);
+
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+  StartFormat(15);
+  endFormat;
+  
+    
+    i=185;
+    sum[i] = sum[181]+sum[182]+sum[177]+sum[173]+sum[169]+sum[165]+sum[160];
+    ysum[i] = ysum[181]+ysum[182]+ysum[177]+ysum[173]+ysum[169]+ysum[165]+ysum[160]; 
+    StartFormat(15);
+      OutString(0,0,"Total Current Liabilities ",false);
+      OutString(0,11,"",true);
+      outval(290,0,sum[i],M4Val,false);
+      outval(1,0,ysum[i],M4Val,true);
+    endFormat;
+    Black_Divider(0,1);
+    
+    StartFormat(15);
+    endFormat;
+    
+    i=187;
+    sum[i] = sum[185]+sum[133]+sum[95]+sum[79]+sum[75]+sum[58]+sum[53]+sum[49]+sum[30]+sum[10];
+    ysum[i] = ysum[185]+ysum[133]+ysum[95]+ysum[79]+ysum[75]+ysum[58]+ysum[53]+ysum[49]+ysum[30]+ysum[10]; 
+    StartFormat(15);
+      OutString(0,0,"Total Cash Flow From Operating Activities ",false);
+      OutString(0,11,"",true);
+      outval(290,0,sum[i],M4Val,false);
+      outval(1,0,ysum[i],M4Val,true);
+    endFormat;
+    Black_Divider(0,1);
+    
+    StartFormat(15);
+    endFormat;
+    
+    StartFormat(15);
+      OutString(0,0,"Cash Flow From Investing Activities ",false);
+    endFormat;
+    
+    
+    i=193;
+    word = "Long-Term Investments ";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+    PrintCashFlowAcc("198/00/01","",RepSpec,x,y,true,-1);
+
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+  StartFormat(15);
+  endFormat;
+  
+    
+    i=229;
+    word = "Property, Plant and Equipment ";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+    PrintCashFlowAcc("180/00/00","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("181/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("181/01/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("181/02/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("181/03/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("182/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("183/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("183/01/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("183/02/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("183/03/01","",RepSpec,x,y,true,-1);
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+  StartFormat(15);
+  endFormat;
+  
+    
+    i=247;
+    word = "Depreciation Expense ";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+    PrintCashFlowAcc("690/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("690/01/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("690/02/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("690/03/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("691/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("691/01/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("691/02/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("691/03/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("693/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("693/01/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("693/02/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("693/03/01","",RepSpec,x,y,true,-1);
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+  StartFormat(15);
+  endFormat;
+  
+    
+    i=278;
+    word = "Accumulated Depreciation ";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+    PrintCashFlowAcc("185/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("185/01/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("185/02/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("185/03/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("186/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("187/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("187/01/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("187/02/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("187/03/01","",RepSpec,x,y,true,-1);
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+  StartFormat(15);
+  endFormat;
+  
+    
+    i=282;
+    word = "Gain/Loss on Asset Disposal ";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+    PrintCashFlowAcc("700/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("701/01/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("702/02/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("703/03/01","",RepSpec,x,y,true,-1);
+
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+  StartFormat(15);
+  endFormat;
+  
+    
+    i=319;
+    word = "Intangible Assets ";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+  PrintCashFlowAcc("190/00/00","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("190/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("190/01/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("190/02/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("190/03/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("191/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("191/01/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("191/02/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("191/03/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("191/00/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("191/00/03","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("192/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("192/01/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("192/02/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("192/03/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("192/00/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("192/01/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("192/02/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("192/03/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("192/00/03","",RepSpec,x,y,true,-1);
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+  StartFormat(15);
+  endFormat;
+  
+    
+    i=339;
+    word = "Amortization of Intangible Assets ";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+PrintCashFlowAcc("694/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("694/01/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("694/02/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("694/03/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("695/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("695/01/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("695/02/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("695/03/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("695/00/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("695/01/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("695/02/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("695/03/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("695/00/03","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("695/01/03","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("695/02/03","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("695/03/03","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("696/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("696/01/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("696/02/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("696/03/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("696/00/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("696/01/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("696/02/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("696/03/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("696/00/03","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("696/01/03","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("696/02/03","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("696/03/03","",RepSpec,x,y,true,-1);
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+  StartFormat(15);
+  endFormat;
+  
+    
+    i=370;
+    word = "Accumulated Amortization";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+ PrintCashFlowAcc("194/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("194/01/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("194/02/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("194/03/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("196/00/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("196/00/03","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("195/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("195/02/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("195/01/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("195/03/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("195/00/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("195/01/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("195/02/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("195/03/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("195/00/03","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("196/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("196/01/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("196/02/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("196/03/01","",RepSpec,x,y,true,-1);
+ 
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+  StartFormat(15);
+  endFormat;
+  
+     i=373;
+    sum[i] = sum[370]+sum[339]+sum[319]+sum[282]+sum[278]+sum[247]+sum[229]+sum[193];
+    ysum[i] = ysum[370]+ysum[339]+ysum[319]+ysum[282]+ysum[278]+ysum[247]+ysum[229]+ysum[193]; 
+    StartFormat(15);
+      OutString(0,0,"Total Cash Flow From Investing Activities ",false);
+      OutString(0,11,"",true);
+      outval(290,0,sum[i],M4Val,false);
+      outval(1,0,ysum[i],M4Val,true);
+    endFormat;
+    Black_Divider(0,1);
+    
+    StartFormat(15);
+      OutString(0,0,"Cash Flow From Financing Activities ",false);
+    endFormat;
+    
+    i=382;
+    word = "Long-Term Debt ";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+PrintCashFlowAcc("280/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("281/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("281/00/02","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("281/00/03","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("282/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("283/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("284/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("290/00/01","",RepSpec,x,y,true,-1);
+PrintCashFlowAcc("295/00/01","",RepSpec,x,y,true,-1);
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+  StartFormat(15);
+  endFormat;
+  
+    
+    i=386;
+    word = "Common Stock";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+    PrintCashFlowAcc("301/00/01","",RepSpec,x,y,true,-1);
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+  StartFormat(15);
+  endFormat;
+  
+    
+    i=391;
+    word = "Preferred Stock ";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+    PrintCashFlowAcc("302/00/01","",RepSpec,x,y,true,-1);
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+  StartFormat(15);
+  endFormat;
+  
+    
+    i=396;
+    word = "Additional Paid-in Capital - Common ";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+    PrintCashFlowAcc("311/00/01","",RepSpec,x,y,true,-1);
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+  StartFormat(15);
+  endFormat;
+  
+    
+    i=401;
+    word = "Additional Paid-in Capital - Preferred ";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+    PrintCashFlowAcc("312/00/01","",RepSpec,x,y,true,-1);
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+  StartFormat(15);
+  endFormat;
+  
+    
+    i=405;
+    word = "Retained Earnings ";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+    PrintCashFlowAccFin("350/00/01","",RepSpec,x,y,true,-1);// Edit ************************** Wednesday, 29 September 2010 10:37:46
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+   
+  StartFormat(15);
+  endFormat;
+   
+    
+    i=409;
+    word = "Common Dividends ";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+    PrintCashFlowAcc("321/00/01","",RepSpec,x,y,true,-1);
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+  
+  StartFormat(15);
+  endFormat;
+    
+    
+    i=413;
+    word = "Preferred Dividends ";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+    PrintCashFlowAcc("322/00/01","",RepSpec,x,y,true,-1);
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+  StartFormat(15);
+  endFormat;
+  
+     i=416;
+    sum[i] = sum[413]+sum[409]+sum[405]+sum[401]+sum[396]+sum[391]+sum[386]+sum[382];
+    ysum[i] = ysum[413]+ysum[409]+ysum[405]+ysum[401]+ysum[396]+ysum[391]+ysum[386]+ysum[382]; 
+    StartFormat(15);
+      OutString(0,0,"Total Cash Flow From Financing Activities ",false);
+      OutString(0,11,"",true);
+      outval(290,0,sum[i],M4Val,false);
+      outval(1,0,ysum[i],M4Val,true);
+    endFormat;
+    Black_Divider(0,1);
+ 
+  StartFormat(15);
+  endFormat;
+     
+     i=418;
+    sum[i] = sum[416]+sum[373]+sum[187];
+    ysum[i] = ysum[416]+ysum[373]+ysum[187]; 
+    StartFormat(15);
+      OutString(0,0,"Net Increase (Decrease) In Cash ",false);
+      OutString(0,11,"",true);
+      outval(290,0,sum[i],M4Val,false);
+      outval(1,0,ysum[i],M4Val,true);
+    endFormat;
+    Black_Divider(0,1);
+
+  StartFormat(15);
+  endFormat;
+  
+    
+    i=445;
+    word = "Cash Accounts Beginning Balance ";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+PrintCashFlowAccBal("100/00/00","",RepSpec,x,y,true,0);
+PrintCashFlowAccBal("101/00/01","",RepSpec,x,y,true,0);
+PrintCashFlowAccBal("102/00/01","",RepSpec,x,y,true,0);
+PrintCashFlowAccBal("103/00/01","",RepSpec,x,y,true,0);
+PrintCashFlowAccBal("103/00/02","",RepSpec,x,y,true,0);
+PrintCashFlowAccBal("104/00/01","",RepSpec,x,y,true,0);
+PrintCashFlowAccBal("105/00/01","",RepSpec,x,y,true,0);
+PrintCashFlowAccBal("106/00/01","",RepSpec,x,y,true,0);
+PrintCashFlowAccBal("110/00/01","",RepSpec,x,y,true,0);
+PrintCashFlowAccBal("112/00/01","",RepSpec,x,y,true,0);
+PrintCashFlowAccBal("113/00/01","",RepSpec,x,y,true,0);
+PrintCashFlowAccBal("120/00/01","",RepSpec,x,y,true,0);
+PrintCashFlowAccBal("121/00/01","",RepSpec,x,y,true,0);
+PrintCashFlowAccBal("122/00/01","",RepSpec,x,y,true,0);
+PrintCashFlowAccBal("123/00/01","",RepSpec,x,y,true,0);
+PrintCashFlowAccBal("125/00/01","",RepSpec,x,y,true,0);
+PrintCashFlowAccBal("126/00/01","",RepSpec,x,y,true,0);
+PrintCashFlowAccBal("127/00/01","",RepSpec,x,y,true,0);
+PrintCashFlowAccBal("128/00/01","",RepSpec,x,y,true,0);
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+     i=447;
+    sum[i] = sum[418];
+    ysum[i] = ysum[418]; 
+    StartFormat(15);
+      OutString(0,0,"Net Increase (Decrease) In Cash ",false);
+      OutString(0,11,"",true);
+      outval(290,0,sum[i],M4Val,false);
+      outval(1,0,ysum[i],M4Val,true);
+    endFormat;
+    Black_Divider(0,1);
+  
+  StartFormat(15);
+  endFormat;
+  
+      i=450;
+    sum[i] = sum[445]+sum[447];
+    ysum[i] = ysum[445]+ysum[447]; 
+    StartFormat(15);
+      OutString(0,0,"Ending Cash Balance ",false);
+      OutString(0,11,"",true);
+      outval(290,0,sum[i],M4Val,false);
+      outval(1,0,ysum[i],M4Val,true);
+    endFormat;
+    Black_Divider(0,1);
+    
+    /*
+    i=53;
+    word = "";
+    StartFormat(15);
+      OutString(0,0,word,false);
+    endFormat;
+    PrintCashFlowAcc("400/0/2","",RepSpec,x,y,true,-1);
+    sum[i] = x;
+    ysum[i] = y;
+    PrintCashFlowSum(word,x,y);  
+    
+    */
+    
+    
+    
+
+  endjob;
+
+return;
+end;

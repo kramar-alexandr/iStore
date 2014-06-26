@@ -1,0 +1,403 @@
+external function string 255 FindINObjects(string,string);
+external procedure CheckFlush(var Integer,Integer);
+external function val DivRateToBase1(string,val,val,val,val,val,val,Integer);
+external function Boolean ReadFirstItem(string,var record INVc,Boolean,Boolean);
+external procedure SDSumUp(var record SDVc);
+external function Boolean GetFirstPurchaseItem2(string,string,var record PIVc);
+external procedure CalculatePURowSum(val,val,string,var val,val,
+                                     val,val,val,val,val,
+                                     string,var val,Boolean,string,
+                                     val,val,val,val,val);
+external procedure GetINCostAcc(record INVc,var string);
+
+external procedure PUSumUp(var record PUVc);
+external procedure PUCalcCostPrice(string,val,Integer,string,string,
+                          val,val,val,val,val,
+                          val,val,val,val,val,val,
+                          string,var val,val,var val,string,Integer);
+                          
+procedure SDPasteArtCode(var record SDVc SDr,record INVc INr,Integer rwcnt)
+BEGIN
+  row SDVc SDrw;
+  string 10 costacc;
+  
+  if (true) then begin
+    ClearRow(SDr,SDrw,1);
+    SDrw.ArtCode = INr.Code;
+    if ((INr.ItemType==2) and (nonblank(INr.Recepy))) then begin
+      SDrw.Recepy = INr.Recepy;
+    end else begin
+      SDrw.Recepy = "";
+    end;  
+    SDrw.Coefficient = INr.UnitCoefficient;
+    SDrw.ArtCode = INr.Code;
+    SDrw.Spec = INr.Name;
+    SDrw.BasePrice = INr.UPrice1;
+    SDrw.Objects = FindINObjects(INr.Objects,INr.Group);
+    GetINCostAcc(INr,costacc);
+    SDrw.CostAcc = costacc;
+    MatRowPut(SDr,rwcnt,SDrw);
+  end;
+  RETURN;            
+END;
+
+procedure SDPasteQty(var record SDVc SDr,record INVc INr,Integer rwcnt,val diff)
+BEGIN
+  row SDVc SDrw;
+  
+  MatRowGet(SDr,rwcnt,SDrw);
+  SDrw.Qty = diff;
+  if ((INr.ExplodeRec!=0) and (nonblank(SDrw.Recepy))) then begin
+    MatRowGet(SDr,rwcnt,SDrw);
+    SDrw.Recepy = "";
+  end;              
+  MatRowPut(SDr,rwcnt,SDrw);
+  RETURN;            
+END;
+            
+function Boolean AddToExistingSDRow(var record SDVc SDr,record INVc INr,val diff,string serialnr)
+begin
+  Boolean res;
+  Integer i,rwcnt;
+  row SDVc SDrw;
+  
+  if (nonblank(serialnr)) then begin
+    res = false;
+    goto LAddToExistingSDRow;
+  end;
+  rwcnt = MatRowCnt(SDr);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(SDr,i,SDrw);
+    if (SDrw.ArtCode==INr.Code) then begin
+      SDPasteQty(SDr,INr,i,SDrw.Qty+diff);
+      res = true;
+      goto LAddToExistingSDRow;
+    end;
+  end;
+LAddToExistingSDRow:;  
+  AddToExistingSDRow = res;
+  return;
+end;
+            
+updating procedure POSUpdStockAddtoSD(record RcVc RepSpec,var record SDVc SDr,record INVc INr,val diff,string serialnr,string location,var Integer flushcnt)
+BEGIN
+  Integer rwcnt;
+  row SDVc SDrw;
+      //StopAlert("locsd " & location);
+//SDr.Location = location;
+  rwcnt = MatRowCnt(SDr);
+  if (rwcnt>=180) then begin
+    SDr.TransDate = RepSpec.RegDate;
+    SDr.SerNr = NextSerNr("SDVc",SDr.TransDate,-1,false,"");  
+    SDr.Location = location;
+    if (blank(SDr.Location)) then begin
+      SDr.Location = RepSpec.AccStr;
+    end;
+    SDSumUp(SDr);
+    if (SDr.SerNr>0) then begin
+      if (RecordStore(SDr,false)) then begin
+      end;
+    end;
+    CheckFlush(flushcnt,10);
+    RecordNew(SDr);
+    rwcnt = 0;
+  end;
+  if (AddToExistingSDRow(SDr,INr,diff,serialnr)==false) then begin
+    SDPasteArtCode(SDr,INr,rwcnt);
+    SDPasteQty(SDr,INr,rwcnt,diff);
+    //SDr.Location = location;
+    MatRowGet(SDr,rwcnt,SDrw);
+    SDrw.SerialNr = serialnr;
+    SDrw.Location = location;
+    MatRowPut(SDr,rwcnt,SDrw);  
+  end;
+  RETURN;
+END;
+
+procedure PUPasteArtCode(var record PUVc PUr,record INVc INr,Integer rwcnt)
+BEGIN
+  record CostAccBlock CostAccRec;
+  record PIVc PIr;
+  row PUVc PUrw;
+  val p;
+  string 10 costacc;
+  
+  ClearRow(PUr,PUrw,1);  
+  if (INr.ItemType==1) then begin
+    if (GetFirstPurchaseItem2(PUrw.ArtCode,PUr.VECode,PIr)) then begin
+      PUrw.UPrice = PIr.PurPrice;
+      p = PIr.PurPrice;
+      if (PIr.PIFactor!=0) then begin
+        p = p/PUrw.PIFactor;
+      end;
+      PUrw.PIFactor = PIr.PIFactor;
+    end else begin
+      PUrw.Spec = INr.Name;
+      PUrw.UPrice = INr.InPrice;
+      p = INr.InPrice;
+      if (INr.PriceFactor!=0) then begin
+        p = p/INr.PriceFactor;
+      end;
+      p = DivRateToBase1(PUr.CurncyCode,p,PUr.FrRate,PUr.ToRateB1,PUr.ToRateB2,PUr.BaseRate1,PUr.BaseRate2,DefaultCurRoundOff);
+      PUrw.PIFactor = INr.PriceFactor;
+    end;        
+    PUrw.Coefficient = INr.UnitCoefficient;
+    PUrw.ArtCode = INr.Code;
+    PUrw.Spec = INr.Name;
+    PUrw.Objects = FindINObjects(INr.Objects,INr.Group);
+    PUrw.UPrice = p;
+    PUrw.BasePrice = INr.UPrice1;
+    PUrw.Extra = INr.ExtraCost;    
+    GetINCostAcc(INr,costacc);
+    PUrw.CredAcc = costacc;
+    MatRowPut(PUr,rwcnt,PUrw);
+  end;
+  RETURN;
+END;
+
+procedure PUPasteQty(var record PUVc PUr,record INVc INr,Integer rwcnt,val diff)
+BEGIN
+  row PUVc PUrw;
+  val p,c;
+  record ItemHistVc IHr;
+  
+  MatRowGet(PUr,rwcnt,PUrw);
+  PUrw.Quant = -diff;
+  PUCalcCostPrice(PUrw.ArtCode,PUrw.UPrice,PUr.InclVAT,PUrw.Extra,PUr.CurncyCode,
+                  PUr.FrRate,PUr.ToRateB1,PUr.ToRateB2,PUr.BaseRate1,PUr.BaseRate2,
+                  PUrw.ShipCost,PUrw.RowCost1,PUrw.RowCost2,PUrw.RowCost3,PUrw.RowCost4,PUrw.RowCost5,
+                  PUrw.CustomsCost,p,PUrw.Quant,c,PUrw.VATCode,PUr.ExportFlag);
+  
+  PUrw.CostPrice = p;
+
+  PUrw.Sum = c;                                        
+  CalculatePURowSum(PUrw.Quant,PUrw.UPrice,PUrw.Extra,c,PUrw.ShipCost,
+                    PUrw.RowCost1,PUrw.RowCost2,PUrw.RowCost3,PUrw.RowCost4,PUrw.RowCost5,
+                    PUrw.CustomsCost,p,false,PUr.CurncyCode,
+                    PUr.FrRate,PUr.ToRateB1,PUr.ToRateB2,PUr.BaseRate1,PUr.BaseRate2);
+                                     
+  PUrw.Sum = p;
+  MatRowPut(PUr,rwcnt,PUrw);
+  RETURN;            
+END;
+
+function Boolean AddToExistingPURow(var record PUVc PUr,record INVc INr,val diff,string serialnr)
+begin
+  Boolean res;
+  Integer i,rwcnt;
+  row PUVc PUrw;
+  
+  if (nonblank(serialnr)) then begin
+    res = false;
+    goto LAddToExistingPURow;
+  end;
+  rwcnt = MatRowCnt(PUr);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(PUr,i,PUrw);
+    if (PUrw.ArtCode==INr.Code) then begin
+      PUPasteQty(PUr,INr,i,PUrw.Quant+diff);
+      res = true;
+      goto LAddToExistingPURow;
+    end;
+  end;
+LAddToExistingPURow:;  
+  AddToExistingPURow = res;
+  return;
+end;
+            
+
+updating procedure POSUpdateAddtoPU(record RcVc RepSpec,var record PUVc PUr,record INVc INr,val diff,string serialnr,string location,var Integer flushcnt)
+BEGIN
+  Integer rwcnt;
+  row PUVc PUrw;
+  record LocationVc Locr;
+  val p,c;// Edit ************************** Tuesday, 5 April 2011 15:51:34
+  record ItemHistVc IHr;// Edit ************************** Tuesday, 5 April 2011 15:51:33
+  
+  rwcnt = MatRowCnt(PUr);
+  if (rwcnt>=180) then begin
+    PUr.TransDate = RepSpec.RegDate;
+    PUr.SerNr = NextSerNr("PUVc",PUr.TransDate,-1,false,"");  
+    PUr.Location = location;
+    if (blank(PUr.Location)) then begin
+      PUr.Location = RepSpec.AccStr;
+    end;
+    PUSumUp(PUr);
+    if (PUr.SerNr>0) then begin
+      if (RecordStore(PUr,false)) then begin
+      end;
+    end;
+    CheckFlush(flushcnt,10);
+    RecordNew(PUr);
+    rwcnt = 0;
+  end;
+  if (AddToExistingPURow(PUr,INr,diff,serialnr)==false) then begin
+    PUPasteArtCode(PUr,INr,rwcnt);
+    PUPasteQty(PUr,INr,rwcnt,diff);
+    PUr.Location = location;
+    MatRowGet(PUr,rwcnt,PUrw);
+    PUrw.SerialNr = serialnr;
+    
+    
+// Edit Start ---------------------------------------------- Edit Start
+	//Tuesday, 5 April 2011 15:52:04
+	  PUrw.Quant = -diff;
+	  
+    PUCalcCostPrice(PUrw.ArtCode,PUrw.UPrice,PUr.InclVAT,PUrw.Extra,PUr.CurncyCode,
+                    PUr.FrRate,PUr.ToRateB1,PUr.ToRateB2,PUr.BaseRate1,PUr.BaseRate2,
+                    PUrw.ShipCost,PUrw.RowCost1,PUrw.RowCost2,PUrw.RowCost3,PUrw.RowCost4,PUrw.RowCost5,
+                    PUrw.CustomsCost,p,PUrw.Quant,c,PUrw.VATCode,PUr.ExportFlag);
+    
+   // PUrw.CostPrice = p;// Edit ************************** Tuesday, 5 April 2011 15:39:18
+    IHr.ArtCode = PUrw.ArtCode;
+    IHr.SerialNr = PUrw.SerialNr;
+    IHr.FileName = "PUVc";
+    if(nonblank(PUrw.SerialNr))then begin
+      if(readlastkey("ArtCodeSerialNr",IHr,3,true))then begin
+        if(IHr.ArtCode==PUrw.ArtCode)then begin
+          PUrw.UPrice = IHr.TotCostPrice;
+          PUrw.CostPrice = IHr.TotCostPrice;
+          PUrw.Sum = IHr.TotCostPrice * PUrw.Quant;
+        end;
+      end;
+      if(blank(PUrw.CostPrice))then begin
+        PUrw.CostPrice = p;
+      end;
+    end;
+
+	// Edit End ---------------------------------------------- Edit End
+	    
+    Locr.Code = location;
+    if(readfirstmain(Locr,1,true)) then begin
+      PUrw.CostAcc = Locr.StockAcc;
+      switch(location) begin
+        case "DREAM_TOWN":PUrw.CredAcc = "500/1/7";
+        case "D_DEKOR_SR":PUrw.CredAcc = "500/6/6";
+        case "KH_KRV":PUrw.CredAcc = "500/6/1";
+        case "K_KARAVAN":PUrw.CredAcc = "500/1/2";
+        case "K_TC_OLIMP":PUrw.CredAcc = "500/1/1";
+        case "O_SADI":PUrw.CredAcc = "500/3/1";
+        case "DN_KARAVAN":PUrw.CredAcc = "500/6/2";
+        case "LV_O_PASS":PUrw.CredAcc = "500/5/1";
+        case "OCEANPLAZA":PUrw.CredAcc = "500/1/8";
+        case "K_TC_GLLV":PUrw.CredAcc = "500/1/9";
+        case "STAND_3":PUrw.CredAcc = "500/1/8/1";
+      end;
+    end;
+    // Edit ************************** четверг, 1 июля 2010 г. 16:53:06
+    MatRowPut(PUr,rwcnt,PUrw);  
+  end;
+  RETURN;
+END;
+
+updating procedure IVCashOneInvoice(record RcVc RepSpec,record IVCashVc IVCashr,var record SDVc SDr,var record PUVc PUr,var Integer flushcnt)
+BEGIN
+  record INVc INr;
+  Integer i,rwcnt;
+  row IVCashVc IVCashrw;
+  
+  rwcnt = MatRowCnt(IVCashr);
+  for (i=0;i<rwcnt;i=i+1) begin
+    MatRowGet(IVCashr,i,IVCashrw);
+    if (ReadFirstItem(IVCashrw.ArtCode,INr,true,true)) then begin
+      if (INr.ItemType==1) then begin
+        if (IVCashrw.Quant<0) then begin
+          PUr.Objects = IVCashr.Objects;// Edit ************************** Wednesday, 25 May 2011 13:55:15
+          POSUpdateAddtoPU(RepSpec,PUr,INr,IVCashrw.Quant,IVCashrw.SerialNr,IVCashr.Location,flushcnt);
+        end else begin
+          SDr.Objects = IVCashr.Objects;// Edit ************************** Wednesday, 25 May 2011 13:55:15
+          POSUpdStockAddtoSD(RepSpec,SDr,INr,IVCashrw.Quant,IVCashrw.SerialNr,IVCashr.Location,flushcnt);
+        end;
+      end;
+    end;
+  end;
+  RETURN;
+END;
+
+updating procedure IVCashLoop(record RcVc RepSpec,var Integer flushcnt)
+BEGIN
+  string 255 ckey;
+  Integer keys;
+  Boolean testf;
+  record IVCashVc IVCashr;
+  LongInt friv,toiv;
+  Boolean TrHs;
+  record SDVc SDr;
+  record PUVc PUr;
+
+  RecordNew(SDr);
+  RecordNew(PUr);
+  
+  if(CurrentCompany==2)then begin//IPOINT
+    SDr.CostAcc = "";// Edit ************************** Wednesday, 1 June 2011 13:08:16
+  end;
+  IVCashr.InvDate = RepSpec.sStartDate;
+  ckey = "InvDate";
+  logtext(0,"Date " & IVCashr.InvDate);
+  keys = 1;  
+  TrHs = true;
+  while (LoopKey(ckey,IVCashr,keys,TrHs)) begin
+    testf = true;
+    if (TrHs) then begin
+      if (IVCashr.InvDate> RepSpec.sEndDate) then begin
+        TrHs = false;
+      end;
+    end;        
+    if (TrHs==false) then begin testf = false; end;
+    logtext(0,RepSpec.FirstAcc);
+    if (IVCashr.LocalMachineCode!=RepSpec.FirstAcc) then begin
+      testf = false;
+    end;
+    if (nonblank(RepSpec.AccStr)) then begin
+      if (IVCashr.Location!=RepSpec.AccStr) then begin
+        testf = false;
+      end;
+    end;
+      // Edit Start ---------------------------------------------- Edit Start
+	//Tuesday, 21 February 2012 10:51:26
+      if (IVCashr.OKFlag==0) then begin
+        testf = false;
+      end;
+	// Edit End ---------------------------------------------- Edit End
+	
+    if (testf) then begin
+      IVCashOneInvoice(RepSpec,IVCashr,SDr,PUr,flushcnt);
+    end;
+    MaintTrace(IVCashr.SerNr);
+  end;
+  logtext(0,"items in SDr " & MatRowCnt(SDr));// Edit ************************** пятница, 25 июня 2010 г. 15:22:07
+  if (MatRowCnt(SDr)>0) then begin
+    SDr.TransDate = RepSpec.RegDate;
+    SDr.SerNr = NextSerNr("SDVc",SDr.TransDate,-1,false,"");  
+    SDr.Location = RepSpec.AccStr;
+    //StopAlert("loc " & SDr.Location);
+    SDSumUp(SDr);
+    logtext(0,"try save SDr " & SDr.SerNr);// Edit ************************** пятница, 25 июня 2010 г. 15:18:04
+    if (RecordStore(SDr,false)) then begin
+    end;  
+    CheckFlush(flushcnt,10);    
+  end;
+    logtext(0,"items in SDr " & MatRowCnt(PUr));// Edit ************************** пятница, 25 июня 2010 г. 15:22:07
+  if (MatRowCnt(PUr)>0) then begin
+    PUr.TransDate = RepSpec.RegDate;
+    PUr.SerNr = NextSerNr("PUVc",PUr.TransDate,-1,false,"");  
+    PUr.Location = RepSpec.AccStr;
+    //StopAlert("loc " & PUr.Location);
+    PUSumUp(PUr);
+    logtext(0,"try save PUr " & PUr.SerNr);// Edit ************************** пятница, 25 июня 2010 г. 15:21:35
+    if (RecordStore(PUr,false)) then begin
+    end;  
+    CheckFlush(flushcnt,10);    
+  end;
+  RETURN;
+END;
+
+global
+updating procedure POSUpdStockMn(record RcVc RepSpec)
+BEGIN
+  Integer flushcnt;
+  
+  RepSpec.RegDate = CurrentDate;
+  IVCashLoop(RepSpec,flushcnt);  
+  RETURN;
+END;

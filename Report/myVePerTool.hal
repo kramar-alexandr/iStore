@@ -1,0 +1,1004 @@
+external procedure VIVc_GetPrePaidAmount(record VIVc,var val);
+external function string 255 GetSupplierOnAccountAC(string);
+external procedure GetAPAcc(string,var string);
+external function Integer GetIntYc(Date);
+external procedure TRExtYc(record TRVc,var string);
+external function Integer TypeOfCurncy(var string,var Integer);
+external procedure CurValToOtherCur(Date,string,val,string,var val,Integer);
+external function val MulWithRateToBase1(var string,Date,val,Integer);
+external procedure VendHead(record CUVc,var val,Integer);
+external procedure AddCurncyTotals(var array string,var array val,var Integer,string,val);
+external function val MulRateToBase1(var string,val,val,val,val,val,val,Integer);
+external procedure VEPer_PrintInvoice(record RcVc,record CUVc,record BaseCurBlock,LongInt,
+                             var array string,var array val,var array val,var array val,var Integer,
+                             var val,var val,var val,var val,var val);
+
+global
+procedure VendListTransCLOut(record RcVc RepSpec,record OPrsVc OPrsr,record CUVc VEp,var val balp,var val SumDebet,
+                             record BaseCurBlock bascur,Integer curcnt,var array string acur,var array val av2,var array val av3)
+BEGIN
+  record CLOutVc CLOutr;
+  row CLOutVc CLOutrw;
+  Integer tcnt,trwcnt;
+  val tmp,cuscurval;
+  val v,v2;
+  string 255 tstr,apacc;
+  record VIVc VIr;
+  
+  v = blankval;
+  v2 = blankval;
+  CLOutr.SerNr = OPrsr.TransNr;
+  if (ReadFirstMain(CLOutr,1,true)) then begin
+    if (CLOutr.Invalid!=0) then begin goto L44CLout; end;
+    trwcnt = MatRowCnt(CLOutr);
+    for (tcnt=0;tcnt<trwcnt;tcnt=tcnt+1) begin
+      MatRowGet(CLOutr,tcnt,CLOutrw);
+      if (nonblank(RepSpec.ObjStr)) then begin
+        if (SetInSet(RepSpec.ObjStr,CLOutr.Objects)==false) then begin goto L11CLOut; end;
+      end;        
+      if ((CLOutrw.Type==2) and (CLOutrw.TransNr!=-1)) then begin
+        if (nonblank(RepSpec.FirstAcc)) then begin
+          VIr.SerNr = CLOutrw.TransNr;
+          if (ReadFirstMain(VIr,1,true)) then begin
+            if (VIr.APAcc!=RepSpec.FirstAcc) then begin
+              goto L11CLOut;
+            end;
+          end;
+        end;        
+        v = blankval;
+        if (CLOutrw.Sum!=0)then begin              
+            if (CLOutrw.TransNr==OPrsr.VINr) then begin
+              if (CLOutr.TransDate==OPrsr.TransDate) then begin
+                if (CLOutr.CUCode==VEp.Code) then begin
+                  v = CLOutrw.Sum;
+                  cuscurval = MulRateToBase1(CLOutr.CurncyCode,v,CLOutr.FrRate,CLOutr.ToRateB1,CLOutr.ToRateB2,CLOutr.BaseRate1,CLOutr.BaseRate2,DefaultCurRoundOff);
+                  if (RepSpec.flags[2]==0) then begin
+                    v = cuscurval;
+                  end else begin
+                    if (CLOutr.CurncyCode==VEp.VECurncyCode) then begin
+                      cuscurval = v;
+                    end;
+                  end;
+                  balp = balp - cuscurval;
+                  SumDebet = SumDebet + cuscurval;
+                end;
+              end;
+            end;
+          if (v!=0) then begin
+            if (blank(VEp.VECurncyCode)) then begin
+              AddCurncyTotals(acur,av2,curcnt,bascur.BaseCur1,-cuscurval);
+              AddCurncyTotals(acur,av3,curcnt,bascur.BaseCur1,-cuscurval);
+//              AddCurncyTotals(acur,av2,curcnt,bascur.BaseCur1,lossv);
+//              AddCurncyTotals(acur,av3,curcnt,bascur.BaseCur1,lossv);
+            end else begin  
+              AddCurncyTotals(acur,av2,curcnt,CLOutr.CurncyCode,-v);
+              AddCurncyTotals(acur,av3,curcnt,CLOutr.CurncyCode,-v);
+            end;
+            if (RepSpec.ArtMode==1) then begin
+              tstr = USetStr(1194);         
+              StartFormat(15);
+              OutDate(0,0,OPrsr.TransDate,false);
+              OutString(90,0,tstr,false);
+              tstr = CLOutr.SerNr;
+              tstr = tstr & " (";
+              tstr = tstr & OPrsr.VINr;
+              tstr = tstr & " )";
+              OutString(140,"DblCLOutVc",tstr,false);
+              OutVal(3,0,v,M4Val,true);
+              if (RepSpec.flags[2]==1) then begin
+                OutString(7,0,CLOutr.CurncyCode,false);
+              end;  
+              OutVal(1,0,balp,M4Val,true);
+              EndFormat;
+            end;
+          end;
+        end;
+      end;
+      if ((CLOutrw.Type==4) and (CLOutrw.TransNr!=-1)) then begin
+        if (nonblank(RepSpec.FirstAcc)) then begin
+          if (GetSupplierOnAccountAC(CLOutrw.Company)!=RepSpec.FirstAcc) then begin
+            goto L11CLOut;
+          end;
+        end;
+        v = blankval;
+        if (CLOutrw.Sum!=0) then begin              
+          if (OPrsr.VINr==-1) then begin
+            if (CLOutr.TransDate==OPrsr.TransDate) then begin
+              if (CLOutrw.Company==VEp.Code) then begin
+                v = CLOutrw.Sum;
+                cuscurval = MulRateToBase1(CLOutr.CurncyCode,v,CLOutr.FrRate,CLOutr.ToRateB1,CLOutr.ToRateB2,CLOutr.BaseRate1,CLOutr.BaseRate2,DefaultCurRoundOff);
+                if (RepSpec.flags[2]==0) then begin
+                  v = cuscurval;
+                end else begin
+                  if (CLOutr.CurncyCode==VEp.VECurncyCode) then begin
+                    cuscurval = v;
+                  end;
+                end;
+                balp = balp - cuscurval;
+                SumDebet = SumDebet + cuscurval;
+              end;
+            end;
+          end;
+          if (v!=0) then begin
+            if (RepSpec.ArtMode==1) then begin
+              tstr = USetStr(2497);         
+              StartFormat(15);
+              OutDate(0,0,OPrsr.TransDate,false);
+              OutString(90,0,tstr,false);
+              tstr = CLOutr.SerNr;
+              tstr = tstr & " (";
+              tstr = tstr & CLOutrw.TransNr;
+              tstr = tstr & " )";
+              OutString(140,"DblCLOutVc",tstr,false);
+              OutVal(3,0,v,M4Val,true);
+              if (RepSpec.flags[2]==1) then begin
+                OutString(8,0,CLOutr.CurncyCode,false);
+              end;  
+              OutVal(1,0,balp,M4Val,true);
+              EndFormat;
+            end;
+          end;          
+        end;
+      end;      
+            
+L11CLOut:;               
+    end;   
+  end;
+L44CLOut:;
+  RETURN;
+END;      
+
+global
+procedure VendListTransCLIn(record RcVc RepSpec,record OPrsVc OPrsr,record CUVc VEp,var val balp,var val SumCredit,
+                            record BaseCurBlock bascur,Integer curcnt,var array string acur,var array val av2,var array val av3)
+BEGIN
+  record CLInVc CLInr;
+  row CLInVc CLInrw;
+  Integer tcnt,trwcnt;
+  val tmp,cuscurval;
+  val v,v2;
+  string 255 tstr;
+  record VIVc VIr;
+  
+  v = blankval;
+  v2 = blankval;
+  CLInr.SerNr = OPrsr.TransNr;
+  if (ReadFirstMain(CLInr,1,true)) then begin
+    if (CLInr.Invalid!=0) then begin goto LVendListTransCLIn; end;
+    trwcnt = MatRowCnt(CLInr);
+    for (tcnt=0;tcnt<trwcnt;tcnt=tcnt+1) begin
+      MatRowGet(CLInr,tcnt,CLInrw);
+      if (nonblank(RepSpec.ObjStr)) then begin
+        if (SetInSet(RepSpec.ObjStr,CLInr.Objects)==false) then begin goto L11CLIn; end;
+      end;        
+      if ((CLInrw.Type==2) and (CLInrw.TransNr!=-1)) then begin
+        v = blankval;
+        if (CLInrw.Sum!=0)then begin              
+          if (nonblank(RepSpec.FirstAcc)) then begin
+            VIr.SerNr = CLInrw.TransNr;
+            if (ReadFirstMain(VIr,1,true)) then begin
+              if (VIr.APAcc!=RepSpec.FirstAcc) then begin
+                goto L11CLIn;
+              end;
+            end;
+          end;        
+            if (CLInrw.TransNr==OPrsr.VINr) then begin
+              if (CLInr.TransDate==OPrsr.TransDate) then begin
+                if (CLInr.CUCode==VEp.Code) then begin
+                  v = CLInrw.Sum;
+                  cuscurval = MulRateToBase1(CLInr.CurncyCode,v,CLInr.FrRate,CLInr.ToRateB1,CLInr.ToRateB2,CLInr.BaseRate1,CLInr.BaseRate2,DefaultCurRoundOff);
+                  if (RepSpec.flags[2]==0) then begin
+                    v = cuscurval;
+                  end else begin
+                    if (CLInr.CurncyCode==VEp.VECurncyCode) then begin
+                      cuscurval = v;
+                    end;
+                  end;
+                  balp = balp + cuscurval;
+                  SumCredit = SumCredit + cuscurval;
+                end;
+              end;
+            end;
+          if (v!=0) then begin
+            if (blank(VEp.VECurncyCode)) then begin
+              AddCurncyTotals(acur,av2,curcnt,bascur.BaseCur1,cuscurval);
+              AddCurncyTotals(acur,av3,curcnt,bascur.BaseCur1,cuscurval);
+//              AddCurncyTotals(acur,av2,curcnt,bascur.BaseCur1,lossv);
+//              AddCurncyTotals(acur,av3,curcnt,bascur.BaseCur1,lossv);
+            end else begin  
+              AddCurncyTotals(acur,av2,curcnt,CLInr.CurncyCode,v);
+              AddCurncyTotals(acur,av3,curcnt,CLInr.CurncyCode,v);
+            end;
+          
+            if (RepSpec.ArtMode==1) then begin
+              tstr = USetStr(1193);         
+              StartFormat(15);
+              OutDate(0,0,OPrsr.TransDate,false);
+              OutString(90,0,tstr,false);
+              tstr = CLInr.SerNr;
+              tstr = tstr & " (";
+              tstr = tstr & OPrsr.VINr;
+              tstr = tstr & " )";
+              OutString(140,"DblCLInVc",tstr,false);
+              OutVal(4,0,v,M4Val,true);
+              if (RepSpec.flags[2]==1) then begin
+                OutString(8,0,CLInr.CurncyCode,false);
+              end;  
+              OutVal(1,0,balp,M4Val,true);
+              EndFormat;
+            end;
+          end;
+        end;
+      end;
+L11CLIn:;               
+    end;   
+  end;
+LVendListTransCLIn:;
+  RETURN;
+END; 
+
+global
+procedure VendListTransCLInRevPrepVE(record RcVc RepSpec,record OPrsVc OPrsr,record CUVc VEp,var val balp,var val SumDebet,
+                             record BaseCurBlock bascur,Integer curcnt,var array string acur,var array val av2,var array val av3)
+BEGIN
+  record CLInVc CLInr;
+  row CLInVc CLInrw;
+  Integer tcnt,trwcnt;
+  val tmp,cuscurval;
+  val v,v2;
+  string 255 tstr,apacc;
+  
+  v = blankval;
+  v2 = blankval;
+  CLInr.SerNr = OPrsr.TransNr;
+  if (ReadFirstMain(CLInr,1,true)) then begin
+    if (CLInr.Invalid!=0) then begin goto LVendListTransCLInRevPrepVE; end;
+    trwcnt = MatRowCnt(CLInr);
+    for (tcnt=0;tcnt<trwcnt;tcnt=tcnt+1) begin
+      MatRowGet(CLInr,tcnt,CLInrw);
+      if (nonblank(RepSpec.ObjStr)) then begin
+        if (SetInSet(RepSpec.ObjStr,CLInr.Objects)==false) then begin goto L54; end;
+      end;              
+      if ((CLInrw.Type==5) and (CLInrw.TransNr!=-1)) then begin
+        if (nonblank(RepSpec.FirstAcc)) then begin
+          if (GetSupplierOnAccountAC(CLInrw.Company)!=RepSpec.FirstAcc) then begin
+            goto L54;
+          end;
+        end;
+        v = blankval;
+        if (CLInrw.Sum!=0) then begin              
+          if (OPrsr.VINr==-1) then begin
+            if (CLInr.TransDate==OPrsr.TransDate) then begin
+              if (CLInrw.Company==VEp.Code) then begin
+                v = -CLInrw.Sum;
+                cuscurval = MulRateToBase1(CLInr.CurncyCode,v,CLInr.FrRate,CLInr.ToRateB1,CLInr.ToRateB2,CLInr.BaseRate1,CLInr.BaseRate2,DefaultCurRoundOff);
+                if (RepSpec.flags[2]==0) then begin
+                  v = cuscurval;
+                end else begin
+                  if (CLInr.CurncyCode==VEp.VECurncyCode) then begin
+                    cuscurval = v;
+                  end;
+                end;
+                balp = balp - cuscurval;
+                SumDebet = SumDebet + cuscurval;
+              end;
+            end;
+          end;
+          if (v!=0) then begin
+            if (RepSpec.ArtMode==1) then begin
+              tstr = USetStr(2497);         
+              StartFormat(15);
+              OutDate(0,0,OPrsr.TransDate,false);
+              OutString(90,0,tstr,false);
+              tstr = CLInr.SerNr;
+//              tstr = tstr & " (";
+//              tstr = tstr & OPrsr.VINr; prepaynr
+//              tstr = tstr & " )";
+              OutString(140,"DblCLInVc",tstr,false);
+              OutVal(3,0,v,M4Val,true);
+              if (RepSpec.flags[2]==1) then begin
+                OutString(8,0,CLInr.CurncyCode,false);
+              end;  
+              OutVal(1,0,balp,M4Val,true);
+              EndFormat;
+            end;
+          end;          
+        end;
+      end;      
+            
+L54:;               
+    end;   
+  end;
+LVendListTransCLInRevPrepVE:;
+  RETURN;
+END;
+
+
+procedure FindAllPrepayLosses(string invcurncy,Date transdate,val invval,LongInt VEPNr,val cuscurval,var val losses,record VIVc VIr,LongInt invnr,
+                              string bankcurncy,val bankval,val B1BankVal,LongInt opnr,
+                              record BaseCurBlock bascur)
+begin
+  record VIVc VI2r;
+  record APPayHistVc APPayHistr;
+  Boolean foundf;
+  val prepv,b1loss;
+  val curval;
+  Date ltransdate;
+  
+  ltransdate = transdate;
+  losses = BlankVal;
+  curval = invval;
+  if (VEPNr!=-1) then begin
+    if (invnr!=-1) then begin
+      APPayHistr.VEPNr = VEPNr;
+      APPayHistr.FileName = "VIVc";
+      foundf = true;
+      while (LoopMain(APPayHistr,2,foundf)) begin
+        if ((APPayHistr.VEPNr==VEPNr) and (APPayHistr.FileName=="VIVc")) then begin
+          VI2r.SerNr = APPayHistr.SerNr;
+          if (ReadFirstMain(VI2r,1,true)) then begin
+            VIVc_GetPrePaidAmount(VI2r,prepv);
+            curval = curval - prepv;
+            b1loss = MulRateToBase1(VI2r.CurncyCode,prepv,VI2r.FrRate,VI2r.ToRateB1,VI2r.ToRateB2,VI2r.BaseRate1,VI2r.BaseRate2,DefaultCurRoundOff);
+            losses = losses + b1loss;
+          end;     
+        end else begin
+          foundf = false;
+        end;
+      end;            
+    end else begin
+      APPayHistr.VEPNr = VEPNr;
+      APPayHistr.FileName = "OPVc";
+      foundf = true;
+      while (LoopMain(APPayHistr,2,foundf)) begin
+        if ((APPayHistr.VEPNr==VEPNr) and (APPayHistr.FileName=="OPVc")) then begin
+          if (opnr!=APPayHistr.SerNr) then begin
+            ltransdate = APPayHistr.TransDate;
+          end;
+          foundf = false;
+        end else begin
+          foundf = false;
+        end;
+      end;
+    end;            
+  end;
+
+  if (invnr<>-1) then begin
+    b1loss = MulRateToBase1(VIr.CurncyCode,curval,VIr.FrRate,VIr.ToRateB1,VIr.ToRateB2,VIr.BaseRate1,VIr.BaseRate2,DefaultCurRoundOff);
+  end else begin
+    if (B1BankVal==0) then begin
+      if ((bascur.BaseCur1==bankcurncy) and (bankcurncy<>invcurncy)) then begin
+//        b1loss = bankval;//must be same as one on prepayment account
+        b1loss = MulWithRateToBase1(invcurncy,ltransdate,curval,DefaultCurRoundOff);
+//Trace("ltransdate " & ltransdate," b1loss " & b1loss);        
+      end else begin
+        b1loss = MulWithRateToBase1(invcurncy,ltransdate,curval,DefaultCurRoundOff);
+      end;
+    end else begin
+      b1loss = B1BankVal;
+    end;
+  end;
+  losses = losses + b1loss;
+  if (losses==0) then begin
+    losses = BlankVal;
+  end;
+  return;
+end;
+
+function val FindAPPayHistBookVal(record OPVc OPr,row OPVc OPrw,val v)
+begin
+  val res;
+  record APPayHistVc APPayHistr;
+  
+  APPayHistr.VEPNr = OPrw.PrepayNr;
+  APPayHistr.FileName = "OPVc";
+  APPayHistr.SerNr = OPr.SerNr;
+  if (ReadFirstMain(APPayHistr,3,true)) then begin
+    res = APPayHistr.BookVal;
+  end else begin
+    res = MULWITHRATETOBASE1(OPrw.PInvCurncy,OPr.TransDate,v,DefaultCurRoundOff);  
+  end;
+  FindAPPayHistBookVal = res;
+  return;
+end;
+
+global
+procedure VEPer_PrintPayment(record RcVc RepSpec,record CUVc VEr,record OPrsVc OPrsr,record BaseCurBlock bascur,
+                             var array string acur,var array val av1,var array val av2,var array val av3,var Integer curcnt,
+                             var Boolean custout,var val balp,var val totloss,var val totgain,var val SumDebet,var val SumCredit)
+begin
+  record OPVc OPr;
+  row OPVc OPrw;
+  record VIVc VI2r;
+  record OPPVc OPPr;
+  Boolean testf,testf2;
+  Integer oprow,oprwcnt,ovst;
+  val v,v2,lossv,cuscurval;
+  string 255 tstr,t2,t3;
+
+  OPr.SerNr = OPrsr.TransNr;
+  if (ReadFirstMain(OPr,1,true)) then begin
+    testf = false;
+    if (OPr.RejectedFlag==1) then begin testf = true; end;
+    if (OPrsr.TransDate<>OPr.TransDate) then begin testf = true; end;            
+    if (OPr.DoneFlag==0) then begin
+       if (RepSpec.flags[3]==1) then begin
+          if (OPr.OrderedFlag==0) then begin testf = true; end;
+       end else begin
+          testf = true;
+       end;
+    end;            
+    if (testf==false) then begin
+      oprwcnt = MatRowCnt(OPr);
+      for (oprow = 0; oprow<oprwcnt; oprow=oprow+1) begin
+        MatRowGet(OPr,oprow,OPrw);        
+        if (OPrw.ovst<>0) then begin goto L11OP; end;
+        if ((OPrw.VISerNr==OPrsr.VINr) and (OPrw.VECode==VEr.Code)) then begin
+          if (nonblank(RepSpec.FirstAcc)) then begin
+            if (GetSupplierOnAccountAC(OPrw.VECode)!=RepSpec.FirstAcc) then begin
+              goto L11OP;
+            end;
+          end;
+          
+          if (custout==false) then begin
+            VendHead(VEr,balp,RepSpec.flags[2]);
+            custout = true;
+          end;
+          if (((OPrw.stp==1) or (OPrw.stp==5)) and (OPrw.ovst==0)) then begin  
+            v = OPrw.PInvVal;
+            lossv = 0;
+            VI2r.SerNr = OPrw.VISerNr;
+            if (RepSpec.flags[2]==0) then begin
+              if (ReadFirstMain(VI2r,1,true)) then begin                    
+                cuscurval = MULWITHRATETOBASE1(OPrw.PInvCurncy,OPr.TransDate,v,DefaultCurRoundOff);  
+              end else begin
+                if (OPrw.PrepayNr>0) then begin
+                  cuscurval = FindAPPayHistBookVal(OPr,OPrw,v);
+                end else begin
+                  cuscurval = MULWITHRATETOBASE1(OPrw.PInvCurncy,OPr.TransDate,v,DefaultCurRoundOff);  
+                  if ((bascur.BaseCur1==OPrw.BankCurncy) and (OPrw.BankCurncy<>OPrw.PInvCurncy)) then begin
+//                    cuscurval = OPrw.BankVal; //must show same as on prepayment account
+                  end;
+                end;
+              end;
+              if (OPrw.B1BankVal!=0) then begin
+                cuscurval = OPrw.B1BankVal;                            
+              end;
+              v2 = cuscurval;
+              if (OPrw.VISerNr!=-1) then begin
+                FindAllPrepayLosses(OPrw.PInvCurncy,OPr.TransDate,OPrw.PInvVal,OPrw.PrepayNr,cuscurval,lossv,VI2r,OPrw.VISerNr,OPrw.BankCurncy,OPrw.BankVal,OPrw.B1BankVal,OPr.SerNr,bascur);
+                v2 = lossv;
+              end else begin
+                FindAllPrepayLosses(OPrw.PInvCurncy,OPr.TransDate,OPrw.PInvVal,OPrw.PrepayNr,cuscurval,lossv,VI2r,OPrw.VISerNr,OPrw.BankCurncy,OPrw.BankVal,OPrw.B1BankVal,OPr.SerNr,bascur);
+                v2 = lossv;
+              end;
+
+              if (OPrw.VISerNr!=-1) then begin                   
+                lossv = cuscurval - lossv;
+                if (lossv>0) then begin
+                  totloss = totloss + lossv;
+                end else begin
+                  totgain = totgain - lossv;
+                end;
+                cuscurval = v2;
+              end else begin
+                lossv = cuscurval - lossv;
+                if (lossv<0) then begin
+                  totloss = totloss - lossv;
+                end else begin
+                  totgain = totgain + lossv;
+                end;
+//              StopAlert("lossv " & lossv & " cuscurval " & cuscurval & " v2 " & v2);
+                cuscurval = v2 + lossv;
+              end;
+            end else begin 
+              cuscurval = v;
+              if (ReadFirstMain(VI2r,1,true)) then begin                    
+                cuscurval = MULWITHRATETOBASE1(OPrw.PInvCurncy,OPr.TransDate,v,DefaultCurRoundOff);  
+              end else begin                    
+                if (OPrw.PrepayNr>0) then begin
+                  cuscurval = FindAPPayHistBookVal(OPr,OPrw,v);
+                end else begin
+                  cuscurval = MULWITHRATETOBASE1(OPrw.PInvCurncy,OPr.TransDate,v,DefaultCurRoundOff);  
+                  if ((bascur.BaseCur1==OPrw.BankCurncy) and (OPrw.BankCurncy<>OPrw.PInvCurncy)) then begin
+                    cuscurval = OPrw.BankVal; //must show same as on prepayment account
+                  end;
+                end;
+              end;
+              if (nonblank(VEr.VECurncyCode)) then begin
+                cuscurval = v;
+//                        lossv = v;
+              end else begin
+                v2 = cuscurval;
+                FindAllPrepayLosses(OPrw.PInvCurncy,OPr.TransDate,OPrw.PInvVal,OPrw.PrepayNr,cuscurval,lossv,VI2r,OPrw.VISerNr,OPrw.BankCurncy,OPrw.BankVal,OPrw.B1BankVal,OPr.SerNr,bascur);
+                if (OPrw.VISerNr!=-1) then begin
+                  v2 = lossv;
+                  lossv = cuscurval - lossv;
+                  if (lossv>0) then begin
+                    totloss = totloss + lossv;
+                  end else begin
+                    totgain = totgain - lossv;
+                  end;
+                  cuscurval = v2;
+                end else begin
+                  if (OPrw.PrepayNr!=-1) then begin
+                    lossv = cuscurval - lossv;
+                    if (lossv<0) then begin
+                      totloss = totloss - lossv;
+                    end else begin
+                      totgain = totgain + lossv;
+                    end;
+                  end else begin
+                    lossv = BlankVal;
+                  end;
+                end;
+//                        lossv = BlankVal;
+              end;
+            end;
+            if (OPrw.ovst==0) and (OPr.Invalid==0) then begin
+              balp = balp - cuscurval;                      
+              SumDebet = SumDebet + cuscurval;
+            end;
+            t3 = USetStr(4186);
+            testf2 = true;
+            tstr = OPr.SerNr;
+            if (OPrw.VISerNr<>-1) then begin
+              t2 = OPrw.VISerNr;
+              tstr = tstr & ", (";
+              tstr = tstr & t2;
+              tstr = tstr & ")";
+            end else begin
+              t2 = USetStr(4193);
+              if (nonblank(t2)) then begin
+//*                        t3 = t3 & t2;
+                t3 = t2;
+              end;  
+              if (OPrw.PrepayNr>-1) then begin
+                t2 = OPrw.PrepayNr;
+                tstr = tstr & ", (";
+                tstr = tstr & t2;
+                tstr = tstr & ")";
+                OPPr.SerNr = OPrw.PrepayNr;
+              end;
+            end;
+
+
+            if ((RepSpec.flags[3]==1) and (OPr.OrderedFlag==1) and (OPr.DoneFlag!=1)) then begin
+              t3 = USetStr(1416);
+            end;
+            if (testf2==true) then begin
+
+//*                      if (lossv>0) then begin
+//*                        SumCredit = SumCredit + lossv;
+//*                      end else begin
+//*                        SumDebet = SumDebet - lossv;
+//*                      end; 
+              // Edit Start ---------------------------------------------- Edit Start
+	//Thursday, 18 October 2012 13:21:59
+	if(RepSpec.Media==2 or RepSpec.Media==20)then begin // Edit ************************** Thursday, 18 October 2012 13:02:36
+                StartFormat(15);
+                OutDateOvst(0,0,OPr.TransDate,false,OPr.Invalid);
+                OutStringOvst(90,0,t3,false,OPr.Invalid);
+                OutStringOvst(140,"DblVePerOP",tstr,false,OPr.Invalid);
+                ovst = OPrw.ovst;
+                if (ovst==0) then begin
+                  ovst = OPr.Invalid;
+                end;
+          
+                if (RepSpec.flags[2]==1) then begin
+                 // OutValovst(3,0,v,M4Val,true,ovst);// Edit ************************** Monday, 13 December 2010 13:07:56
+                 OutValovst(3,0,OPrw.BankVal,M4Val,true,ovst);
+                 OutStringOvst(140,0,"",false,OPr.Invalid);
+                 OutValOvst(1,0,balp,M4Val,true,OPr.Invalid);
+                  OutStringOvst(7,0,OPrw.BankCurncy,false,OPr.Invalid);// Edit ************************** Monday, 13 December 2010 13:06:26
+                 // OutStringOvst(7,0,OPrw.PInvCurncy,false,OPr.Invalid);    // Edit ************************** Monday, 13 December 2010 13:05:09              
+                end else begin
+                  OutValovst(3,0,cuscurval,M4Val,true,ovst);
+                  OutStringOvst(140,0,"",false,OPr.Invalid);
+                  OutValOvst(1,0,balp,M4Val,true,OPr.Invalid);
+                   OutVal(420,0,lossv,M4Val,true);
+                end;
+                
+                
+                EndFormat;
+              end else begin
+                StartFormat(15);
+                OutDateOvst(0,0,OPr.TransDate,false,OPr.Invalid);
+                OutStringOvst(90,0,t3,false,OPr.Invalid);
+                OutStringOvst(140,"DblVePerOP",tstr,false,OPr.Invalid);
+                ovst = OPrw.ovst;
+                if (ovst==0) then begin
+                  ovst = OPr.Invalid;
+                end;
+                if (RepSpec.flags[2]==1) then begin
+                 // OutValovst(3,0,v,M4Val,true,ovst);// Edit ************************** Monday, 13 December 2010 13:07:56
+                 OutValovst(3,0,OPrw.BankVal,M4Val,true,ovst);
+                  OutStringOvst(7,0,OPrw.BankCurncy,false,OPr.Invalid);// Edit ************************** Monday, 13 December 2010 13:06:26
+                 // OutStringOvst(7,0,OPrw.PInvCurncy,false,OPr.Invalid);    // Edit ************************** Monday, 13 December 2010 13:05:09              
+                end else begin
+                  OutValovst(3,0,cuscurval,M4Val,true,ovst);
+                   OutVal(420,0,lossv,M4Val,true);
+                end;
+                OutValOvst(1,0,balp,M4Val,true,OPr.Invalid);
+                EndFormat;
+              end;
+	// Edit End ---------------------------------------------- Edit End
+	
+              if (OPr.Invalid==0) then begin
+              if ((RepSpec.flags[2]==0) or (RepSpec.flags[2]==1)) then begin
+                if (blank(VEr.VECurncyCode)) then begin
+                  AddCurncyTotals(acur,av2,curcnt,bascur.BaseCur1,-cuscurval);
+                  AddCurncyTotals(acur,av3,curcnt,bascur.BaseCur1,-cuscurval);
+//                  AddCurncyTotals(acur,av2,curcnt,bascur.BaseCur1,lossv);
+//                  AddCurncyTotals(acur,av3,curcnt,bascur.BaseCur1,lossv);
+                end else begin  
+                  AddCurncyTotals(acur,av2,curcnt,OPrw.PInvCurncy,-v);
+                  AddCurncyTotals(acur,av3,curcnt,OPrw.PInvCurncy,-v);
+                end;
+              end;
+              end;
+            end;
+          end;
+        end;
+L11OP:;
+      end;
+    end;
+  end;
+  RETURN;        
+END;
+
+global
+procedure VEPer_PrintTransaction(record RcVc RepSpec,record CUVc VEr,record OPrsVc OPrsr,val StartBal,
+                             var array string acur,var array val av1,var array val av2,var array val av3,var Integer curcnt,
+                             var Boolean custout,var val balp,var val totloss,var val totgain,var val SumDebet,var val SumCredit)
+BEGIN
+  record TRVc TRr;
+  row TRVc TRrw;
+  record VIVc VI2r;
+  Integer t,trwcnt;
+  Boolean L11f;
+  val v,cuscurval,lossv;
+  Integer typeofcur,oldstyle;
+  string 255 tstr,t2,t3;
+  
+  TRr.Number = OPrsr.TransNr;
+  TRr.IntYc = GetIntYc(OPrsr.TransDate);
+  if (ReadFirstMain(TRr,2,true)) then begin
+    trwcnt = MatRowCnt(TRr);
+    for (t=0;t<trwcnt;t=t+1) begin
+       MatRowGet(TRr,t,TRrw);
+       if ((TRrw.Typ==2) and (TRrw.SerNr<>-1)) then begin
+          if (TRrw.DebVal<>0) then begin
+             L11f = false;
+             if (OPrsr.TransDate<>TRr.TransDate) then begin L11f = true; end;
+             if (L11f==false) then begin
+               if ((TRrw.SerNr==OPrsr.VINr) and (TRrw.CompCode==VEr.Code)) then begin
+                 if (custout==false) then begin
+                    VendHead(VEr,balp,RepSpec.flags[2]);
+                    custout = true;
+                 end;
+                 v = TRrw.DebVal;
+                 cuscurval = TRrw.DebVal;
+                 if (RepSpec.flags[0]==0) then begin
+                   VI2r.SerNr = TRrw.SerNr;
+                   if (ReadFirstMain(VI2r,1,true)) then begin
+                      if (TRrw.CurDebVal>0) then begin
+                        lossv = MULRATETOBASE1(VI2r.CurncyCode,TRrw.CurDebVal,VI2r.FrRate,VI2r.ToRateB1,VI2r.ToRateB2,VI2r.BaseRate1,VI2r.BaseRate2,DefaultCurRoundOff); 
+                      end else begin
+                        lossv = v;
+                      end;
+                      lossv = cuscurval - lossv;
+                      if (lossv>0) then begin
+                        totloss = totloss + lossv;
+                      end else begin
+                        totgain = totgain - lossv;
+                      end;                         
+                   end;                       
+                 end;  
+                 if (TRrw.CurDebVal<>0) then begin
+                   v = TRrw.CurDebVal;
+                   cuscurval = TRrw.DebVal;
+//                         cuscurval = MULRATETOBASE1(TRrw.Curncy,TRrw.DebVal,TRrw.FrRate,TRrw.ToRateB1,TRrw.ToRateB2,TRrw.BaseRate1,TRrw.BaseRate2,DefaultCurRoundOff);
+                   if (RepSpec.flags[2]==0) then begin
+                     v = cuscurval;
+                   end else begin
+                     if (TRrw.Curncy==VEr.VECurncyCode) then begin
+                       cuscurval = v;
+                     end else begin
+                       v = cuscurval;
+                     end;  
+                   end;
+                 end else begin
+                   typeofcur = TypeOfCurncy(TRrw.Curncy,oldstyle);   
+                   if (RepSpec.flags[2]==1) then begin
+                     if (typeofcur==2) then begin
+                       v = TRrw.DebVal2;
+                       if (TRrw.Curncy==VEr.VECurncyCode) then begin
+                         cuscurval = TRrw.DebVal2;
+                       end;  
+                     end;
+                   end;
+                 end;
+                 balp = balp - cuscurval;
+                 SumDebet = SumDebet + cuscurval;
+                 t3 = USetStr(4186);
+                 TRExtYc(TRr,tstr);
+                 t2 = TRrw.SerNr;
+                 tstr = tstr & ", (";
+                 tstr = tstr & t2;
+                 tstr = tstr & ")";
+                 StartFormat(15);
+                 OutDate(0,0,TRr.TransDate,false);
+                 OutString(90,0,t3,false);
+                 OutString(140,"DblTrans",tstr,false);
+                 OutVal(3,0,v,M4Val,true);
+                 if (RepSpec.Media==mtFile) then begin
+                   OutString(4,0,"",true);
+                 end;
+                 if (RepSpec.flags[2]==1) then begin
+                   OutString(7,0,TRrw.Curncy,false);
+                 end;  
+                 if ((RepSpec.flags[2]==0) and (lossv!=0)) then begin
+                   OutVal(4,0,lossv,M4Val,true);
+                 end;                         
+                 OutVal(1,0,balp,M4Val,true);
+                 EndFormat;
+//                       AddCurncyTotals(acur,av1,curcnt,TRrw.Curncy,StartBal);
+                 AddCurncyTotals(acur,av2,curcnt,TRrw.Curncy,-cuscurval);
+                 AddCurncyTotals(acur,av3,curcnt,TRrw.Curncy,-cuscurval);
+               end;  
+             end;
+          end;  
+          if (TRrw.CredVal<>0) then begin
+             L11f = false;
+             if (OPrsr.TransDate<>TRr.TransDate) then begin L11f = true; end;
+             if (L11f==false) then begin
+               if ((TRrw.SerNr==OPrsr.VINr) and (TRrw.CompCode==VEr.Code)) then begin
+                 if (custout==false) then begin
+                    VendHead(VEr,balp,RepSpec.flags[2]);
+                    custout = true;
+                 end;
+                 v = TRrw.CredVal;
+                 cuscurval = TRrw.CredVal;
+                 if (TRrw.CurCredVal<>0) then begin
+                   v = TRrw.CurCredVal;
+                     VI2r.SerNr = TRrw.SerNr;
+                     if (ReadFirstMain(VI2r,1,true)) then begin
+                       cuscurval = MULRATETOBASE1(TRrw.Curncy,v,VI2r.FrRate,VI2r.ToRateB1,VI2r.ToRateB2,VI2r.BaseRate1,VI2r.BaseRate2,DefaultCurRoundOff); 
+                     end else begin
+                       cuscurval = MULRATETOBASE1(TRrw.Curncy,v,TRrw.FrRate,TRrw.ToRateB1,TRrw.ToRateB2,TRrw.BaseRate1,TRrw.BaseRate2,DefaultCurRoundOff); 
+                     end;
+                   if (RepSpec.flags[2]==0) then begin
+                     v = cuscurval;
+                   end else begin
+                     if (TRrw.Curncy==VEr.VECurncyCode) then begin
+                       cuscurval = v;
+                     end else begin
+                       v = cuscurval;
+                     end;  
+                   end;
+                 end else begin
+                   typeofcur = TypeOfCurncy(TRrw.Curncy,oldstyle);   
+                   if (RepSpec.flags[2]==1) then begin
+                     if (typeofcur==2) then begin
+                       v = TRrw.CredVal2;
+                       if (TRrw.Curncy==VEr.VECurncyCode) then begin
+                         cuscurval = TRrw.CredVal2;
+                       end;  
+                     end;
+                   end;
+                 end;
+                 balp = cuscurval + balp;
+                 SumCredit = cuscurval + SumCredit;
+                 t3 = USetStr(4185);
+                 TRExtYc(TRr,tstr);
+                 if (TRrw.SerNr<>-1) then begin
+                   t2 = TRrw.SerNr;
+                   tstr = tstr & ", (";
+                   tstr = tstr & t2;
+                   tstr = tstr & ")";
+                 end else begin
+                   t2 = USetStr(4186);
+                   if (nonblank(t2)) then begin
+                     t3 = t3 & t2;
+                   end;    
+                 end;
+                 StartFormat(15);
+                 OutDate(0,0,TRr.TransDate,false);
+                 OutString(90,0,t3,false);
+                 OutString(140,"DblTrans",tstr,false);
+                 OutString(3,0,"",true);
+                 OutVal(4,0,v,M4Val,true);
+                 if (RepSpec.flags[2]==1) then begin
+                   OutString(8,0,TRrw.Curncy,false);                       
+                 end;  
+                 OutVal(1,0,balp,M4Val,true);
+                 EndFormat;
+                 AddCurncyTotals(acur,av1,curcnt,TRrw.Curncy,StartBal);
+                 AddCurncyTotals(acur,av2,curcnt,TRrw.Curncy,-v);
+                 AddCurncyTotals(acur,av3,curcnt,TRrw.Curncy,-v);
+               end;  
+             end;  //L11f
+          end;
+        end;
+       if ((TRrw.Typ==2) and (TRrw.SerNr==-1) and (OPrsr.VINr==-1)) then begin
+          if (TRrw.DebVal<>0) then begin
+             L11f = false;
+             if (OPrsr.TransDate<>TRr.TransDate) then begin L11f = true; end;
+             if (L11f==false) then begin
+               if (TRrw.CompCode==VEr.Code) then begin
+                 if (custout==false) then begin
+                    VendHead(VEr,balp,RepSpec.flags[2]);
+                    custout = true;
+                 end;
+                 v = TRrw.DebVal;
+                 cuscurval = TRrw.DebVal;
+                 if (RepSpec.flags[0]==0) then begin
+                    if (TRrw.CurDebVal>0) then begin
+                      lossv = MULRATETOBASE1(TRrw.Curncy,TRrw.CurDebVal,TRrw.FrRate,TRrw.ToRateB1,TRrw.ToRateB2,TRrw.BaseRate1,TRrw.BaseRate2,DefaultCurRoundOff); 
+                    end else begin
+                      lossv = v;
+                    end;
+                    lossv = cuscurval - lossv;
+                    if (lossv>0) then begin
+                      totloss = totloss + lossv;
+                    end else begin
+                      totgain = totgain - lossv;
+                    end;                         
+                 end;  
+                 if (TRrw.CurDebVal<>0) then begin
+                   v = TRrw.CurDebVal;
+                   if (RepSpec.flags[2]==0) then begin
+                     v = cuscurval;
+                   end else begin
+                     if (TRrw.Curncy==VEr.VECurncyCode) then begin
+                       cuscurval = v;
+                     end else begin
+                       v = cuscurval;
+                     end;  
+                   end;
+                 end else begin
+                   typeofcur = TypeOfCurncy(TRrw.Curncy,oldstyle);   
+                   if (RepSpec.flags[2]==1) then begin
+                     if (typeofcur==2) then begin
+                       v = TRrw.DebVal2;
+                       if (TRrw.Curncy==VEr.VECurncyCode) then begin
+                         cuscurval = TRrw.DebVal2;
+                       end;  
+                     end;
+                   end;
+                 end;
+                 balp = balp - cuscurval;
+                 SumDebet = SumDebet + cuscurval;
+                 t3 = USetStr(4193);
+                 TRExtYc(TRr,tstr);
+                 StartFormat(15);
+                 OutDate(0,0,TRr.TransDate,false);
+                 OutString(90,0,t3,false);
+                 OutString(140,"DblTrans",tstr,false);
+                 OutVal(3,0,v,M4Val,true);
+                 if (RepSpec.Media==mtFile) then begin
+                   OutString(4,0,"",true);
+                 end;
+                 if (RepSpec.flags[2]==1) then begin
+                   OutString(7,0,TRrw.Curncy,false);
+                 end else begin
+                   OutVal(420,0,lossv,M4Val,true);
+                 end;                
+                 OutVal(1,0,balp,M4Val,true);
+                 EndFormat;
+                 AddCurncyTotals(acur,av1,curcnt,TRrw.Curncy,StartBal);
+                 AddCurncyTotals(acur,av2,curcnt,TRrw.Curncy,-v);
+                 AddCurncyTotals(acur,av3,curcnt,TRrw.Curncy,-v);
+               end;  
+             end;
+          end;  
+          if (TRrw.CredVal<>0) then begin
+             L11f = false;
+             if (OPrsr.TransDate<>TRr.TransDate) then begin L11f = true; end;
+             if (L11f==false) then begin
+               if (TRrw.CompCode==VEr.Code) then begin
+                 if (custout==false) then begin
+                    VendHead(VEr,balp,RepSpec.flags[2]);
+                    custout = true;
+                 end;
+                 v = TRrw.CredVal;
+                 cuscurval = TRrw.CredVal;
+                 if (TRrw.CurCredVal<>0) then begin
+                   v = TRrw.CurCredVal;
+                   cuscurval = MULRATETOBASE1(TRrw.Curncy,v,TRrw.FrRate,TRrw.ToRateB1,TRrw.ToRateB2,TRrw.BaseRate1,TRrw.BaseRate2,DefaultCurRoundOff); 
+                   if (RepSpec.flags[2]==0) then begin
+                     v = cuscurval;
+                   end else begin
+                     if (TRrw.Curncy==VEr.VECurncyCode) then begin
+                       cuscurval = v;
+                     end else begin
+                       v = cuscurval;
+                     end;  
+                   end;
+                 end else begin
+                   typeofcur = TypeOfCurncy(TRrw.Curncy,oldstyle);   
+                   if (RepSpec.flags[2]==1) then begin
+                     if (typeofcur==2) then begin
+                       v = TRrw.CredVal2;
+                       if (TRrw.Curncy==VEr.VECurncyCode) then begin
+                         cuscurval = TRrw.CredVal2;
+                       end;  
+                     end;
+                   end;
+                 end;
+                 balp = cuscurval + balp;
+                 SumCredit = cuscurval + SumCredit;
+                 t3 = USetStr(4193);
+                 TRExtYc(TRr,tstr);
+                 StartFormat(15);
+                 OutDate(0,0,TRr.TransDate,false);
+                 OutString(90,0,t3,false);
+                 OutString(140,"DblTrans",tstr,false);
+                 OutString(3,0,"",true);
+                 OutVal(4,0,v,M4Val,true);
+                 if (RepSpec.flags[2]==1) then begin
+                   OutString(8,0,TRrw.Curncy,false);                       
+                 end;  
+                 OutVal(1,0,balp,M4Val,true);
+                 EndFormat;
+                 AddCurncyTotals(acur,av1,curcnt,TRrw.Curncy,StartBal);
+                 AddCurncyTotals(acur,av2,curcnt,TRrw.Curncy,-v);
+                 AddCurncyTotals(acur,av3,curcnt,TRrw.Curncy,-v);
+               end;  
+             end;  //L11f
+          end;
+       end;
+    end;
+  end;     
+  RETURN;        
+END;
+
+global
+procedure VEPer_PrintDataForInvoice(record RcVc RepSpec,record CUVc VEr,record BaseCurBlock bascur,LongInt VISerNr,
+                             val StartBal,var Boolean custout,
+                             var array string acur,var array val av1,var array val av2,var array val av3,var Integer curcnt,
+                             var val balp,var val totgain,var val totloss,var val SumDebet,var val SumCredit)
+BEGIN
+  record OPrsVc OPrsr;
+  Boolean found,testf;
+  Integer cnt;
+  
+  OPrsr.VINr = VISerNr;
+  OPrsr.TransDate = RepSpec.sStartDate;
+  OPrsr.TransType = 1;
+  found = true;  
+  while (LoopKey("VIKeyTransDate",OPrsr,3,found)) begin
+    if (found) then begin
+      if (OPrsr.VINr!=VISerNr) then begin found = false; end;
+      if (OPrsr.TransDate>RepSpec.sEndDate) then begin found = false; end;
+    end;    
+    if (found) then begin
+      testf = true;
+      if (OPrsr.VINr==OPrsr.TransNr) then begin
+        if (OPrsr.TransType<1) then begin testf = false; end;
+      end;
+      if (testf) then begin
+        cnt = cnt + 1;        
+        switch (OPrsr.TransType) begin
+          case 0:
+            VEPer_PrintInvoice(RepSpec,VEr,bascur,OPrsr.TransNr,acur,av1,av2,av3,curcnt,balp,totgain,totloss,SumDebet,SumCredit);        
+          case 1:
+            VEPer_PrintPayment(RepSpec,VEr,OPrsr,bascur,acur,av1,av2,av3,curcnt,custout,balp,totloss,totgain,SumDebet,SumCredit);          
+          case 2:
+            VEPer_PrintTransaction(RepSpec,VEr,OPrsr,StartBal,acur,av1,av2,av3,curcnt,custout,balp,totloss,totgain,SumDebet,SumCredit);
+          case 3:
+            VendListTransCLOut(RepSpec,OPrsr,VEr,balp,SumDebet,bascur,curcnt,acur,av2,av3);
+          case 4:
+            VendListTransCLIn(RepSpec,OPrsr,VEr,balp,SumCredit,bascur,curcnt,acur,av2,av3);
+          case 5:
+            VendListTransCLInRevPrepVE(RepSpec,OPrsr,VEr,balp,SumDebet,bascur,curcnt,acur,av2,av3);
+        end;
+      end;
+    end;
+  end;
+  if (cnt>0) then begin
+    Gray_Divider(0,1);
+  end;
+  RETURN;        
+END;

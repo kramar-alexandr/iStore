@@ -849,6 +849,7 @@ BEGIN
       WSRr.DateChange = currentdate;
       recordstore(WSRr,true);
     end else begin //Edit***************************Sasha2,14:34 26.06.2014 {
+      recordnew(WSRr);// Edit ************************** четверг, 26 июня 2014 г., 16:50:36
       WSRr.ArtCode = PLr.ArtCode;
       WSRr.Price = PLr.ExVatPrice;
       WSRr.DateChange = currentdate;
@@ -896,6 +897,7 @@ BEGIN
       WSRr.DateChange = currentdate;
       recordstore(WSRr,true);
     end else begin //Edit***************************Sasha2,14:35 26.06.2014 {
+      recordnew(WSRr);// Edit ************************** четверг, 26 июня 2014 г., 16:50:36
       WSRr.ArtCode = PLr.ArtCode;
       WSRr.Price = PLr.ExVatPrice;
       WSRr.DateChange = currentdate;

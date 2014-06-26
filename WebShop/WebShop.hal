@@ -38,58 +38,46 @@ record INVc INr;
 		WSRr.ArtCode = INr.Code;
 		
 		Trhs = true;
-		comma = false;
-		While(loopmain(WSRr,1,TrHs))begin
-			testf = true;
-			if(WSRr.ArtCode!=artcode)then begin TrHs=false; testf = false; end;
-			if(testf)then begin
-				if(comma)then begin
-				 WebOutString(",");
-				end;
-				WebOutString("{");
-				partno = "";
-				lenth = len(WSRr.ArtCode);
-				for(i=0;i<lenth;i=i+1)begin
-					char = "";
-					char = mid(WSRr.ArtCode,i,1);
-					if(char=="\"")then begin
-						char = "\\" & char; 
-					end;
-					partno = partno & char;
-				end;
-				WebOutString("\"article\":" & "\"" & partno & "\",");
-				price = round(WSRr.Price,0);
-				WebOutString("\"price\":" & "" & price & ",");
-				WebOutString("\"accessibility\":" & "[" & WSRr.Available & "]");
-				WebOutString("}");
-				comma = true;
-			end else begin //Edit***************************Sasha2,14:47 26.06.2014 {
-				/*if(comma)then begin
-				 WebOutString(",");
-				end;*/
-				PLr.ArtCode = artcode;
-				PLr.PLCode = WSBb.DefPriceList;
-				if(readfirstmain(PLr,2,true))then begin
-					WebOutString("{");
-					partno = "";
-					lenth = len(artcode);
-					for(i=0;i<lenth;i=i+1)begin
-						char = "";
-						char = mid(artcode,i,1);
-						if(char=="\"")then begin
-							char = "\\" & char; 
-						end;
-						partno = partno & char;
-					end;
-					WebOutString("\"article\":" & "\"" & partno & "\",");
-					price = round(PLr.ExVatPrice,0);
-					WebOutString("\"price\":" & "" & price & ",");
-					WebOutString("\"accessibility\":" );
-					WebOutString("}");
-				end;
-				//comma = true;
-			end; //Edit***************************Sasha2,14:47 26.06.2014 }
-		end;
+		if(readfirstmain(WSRr,1,TrHs))begin
+      WebOutString("{");
+      partno = "";
+      lenth = len(WSRr.ArtCode);
+      for(i=0;i<lenth;i=i+1)begin
+        char = "";
+        char = mid(WSRr.ArtCode,i,1);
+        if(char=="\"")then begin
+          char = "\\" & char; 
+        end;
+        partno = partno & char;
+      end;
+      WebOutString("\"article\":" & "\"" & partno & "\",");
+      price = round(WSRr.Price,0);
+      WebOutString("\"price\":" & "" & price & ",");
+      WebOutString("\"accessibility\":" & "[" & WSRr.Available & "]");
+      WebOutString("}");
+    end else begin //Edit***************************Sasha2,14:47 26.06.2014 {
+      PLr.ArtCode = artcode;
+      PLr.PLCode = WSBb.DefPriceList;
+      if(readfirstmain(PLr,2,true))then begin
+        WebOutString("{");
+        partno = "";
+        lenth = len(artcode);
+        for(i=0;i<lenth;i=i+1)begin
+          char = "";
+          char = mid(artcode,i,1);
+          if(char=="\"")then begin
+            char = "\\" & char; 
+          end;
+          partno = partno & char;
+        end;
+        WebOutString("\"article\":" & "\"" & partno & "\",");
+        price = round(PLr.ExVatPrice,0);
+        WebOutString("\"price\":" & "" & price & ",");
+        WebOutString("\"accessibility\":[]");
+        WebOutString("}");
+      end;
+      //comma = true;
+    end; //Edit***************************Sasha2,14:47 26.06.2014 }
 		WebOutString("]");
   end;
   ResetCompany(1);

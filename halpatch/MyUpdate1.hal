@@ -848,7 +848,12 @@ BEGIN
       WSRr.Price = PLr.ExVatPrice;
       WSRr.DateChange = currentdate;
       recordstore(WSRr,true);
-    end;
+    end else begin //Edit***************************Sasha2,14:34 26.06.2014 {
+      WSRr.ArtCode = PLr.ArtCode;
+      WSRr.Price = PLr.ExVatPrice;
+      WSRr.DateChange = currentdate;
+      recordstore(WSRr,true);
+    end; //Edit***************************Sasha2,14:35 26.06.2014 }
   end;
   
   PLVcRecordSaveAfter = res;
@@ -890,7 +895,12 @@ BEGIN
       WSRr.Price = PLr.ExVatPrice;
       WSRr.DateChange = currentdate;
       recordstore(WSRr,true);
-    end;
+    end else begin //Edit***************************Sasha2,14:35 26.06.2014 {
+      WSRr.ArtCode = PLr.ArtCode;
+      WSRr.Price = PLr.ExVatPrice;
+      WSRr.DateChange = currentdate;
+      recordstore(WSRr,true);
+    end; //Edit***************************Sasha2,14:35 26.06.2014 }
   end;
   
   PLVcRecordUpdateAfter = res;

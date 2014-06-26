@@ -14,6 +14,7 @@ area areply;
 Boolean TrHs,testf,comma;
 record WebSyncRegVc WSRr;
 record WebSyncBlock WSBb;
+record PLVc PLr; //Edit***************************Sasha2,14:39 26.06.2014
 integer lenth,i;//,price;
 longint price;
 string 50 partno;
@@ -26,6 +27,7 @@ record INVc INr;
 	
   logtext(0,"WebSyncConnect_ISTORE_ArtCode " & artcode);
   
+  blockload(WSBb); //Edit***************************Sasha2,14:38 26.06.2014
   SetCompany(1,false);
   INr.Code = artcode;
   if(nonblank(artcode) and readfirstmain(INr,1,true))then begin
@@ -61,7 +63,32 @@ record INVc INr;
 				WebOutString("\"accessibility\":" & "[" & WSRr.Available & "]");
 				WebOutString("}");
 				comma = true;
-			end;
+			end else begin //Edit***************************Sasha2,14:47 26.06.2014 {
+				/*if(comma)then begin
+				 WebOutString(",");
+				end;*/
+				PLr.ArtCode = artcode;
+				PLr.PLCode = WSBb.DefPriceList;
+				if(readfirstmain(PLr,2,true))then begin
+					WebOutString("{");
+					partno = "";
+					lenth = len(artcode);
+					for(i=0;i<lenth;i=i+1)begin
+						char = "";
+						char = mid(artcode,i,1);
+						if(char=="\"")then begin
+							char = "\\" & char; 
+						end;
+						partno = partno & char;
+					end;
+					WebOutString("\"article\":" & "\"" & partno & "\",");
+					price = round(PLr.ExVatPrice,0);
+					WebOutString("\"price\":" & "" & price & ",");
+					WebOutString("\"accessibility\":" );
+					WebOutString("}");
+				end;
+				//comma = true;
+			end; //Edit***************************Sasha2,14:47 26.06.2014 }
 		end;
 		WebOutString("]");
   end;

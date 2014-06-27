@@ -4,11 +4,15 @@ external function LongInt DateDiff(Date,Date);
 
 SetLangMode(LangUkrainian,"UKR",0);
 
+
+// Edit ********************************************************************* 27.06.2014
 global updating procedure NewMyRetailSalesRn(record RcVc RepSpec)
 begin
   Record IVCashVc IVCr;
+  record PUVc PUr;
   row IVCashVc IVCrw;
   Record IVVc IVr;
+  Record SMVc SMr;
   boolean TrHs,testf,testf1,foundf;
   val of,ivsum,smof,tot1,tot2,tot3,tot4;
   val ofu,ivsumu,smofu;
@@ -22,8 +26,9 @@ begin
   record POSCurncyBlock PCb;// Edit ************************** Wednesday, 13 April 2011 12:27:35
   record LocalMachineAccBlock LMAb;// Edit ************************** Wednesday, 19 October 2011 10:59:48
   row LocalMachineAccBlock LMArw;// Edit ************************** Wednesday, 19 October 2011 10:59:49
+  record LocalMachineBlock LMb;// Edit ************************** Wednesday, 19 October 2011 10:59:49
+  integer locmtrw,loci;// Edit ************************** Wednesday, 19 October 2011 10:59:50
   val rate;
-  val total1,total2;
   
   s1 = "01/";
   s2 = getmonth(addday(RepSpec.d2,-1));
@@ -134,9 +139,9 @@ begin
             ivsumu = IVr.Sum4*invtype;
           end;
           custcode = "";
-          
-          for(i=0;i<arrlen;i=i+1)begin
-            matrowGet(LMAb,i,LMArw);
+          locmtrw = matrowcnt(LMAb);
+          for(loci=0;loci<locmtrw;loci=loci+1)begin
+            matrowGet(LMAb,loci,LMArw);
             if(setinset(LMArw.Objects,IVr.Objects))then begin
               IVr.CustCode = LMArw.CustCode;
               custcode = LMArw.CustCode;
@@ -144,11 +149,11 @@ begin
           end;
 
           foundf = false;
-          for (i=0;i<arrlen;i=i+1) begin
-            matrowget(LMAb,i,LMArw);
+          for (j=0;j<arrlen;j=j+1) begin
+            matrowget(LMAb,j,LMArw);
             if (custcode==LMArw.CustCode) then begin
-              c[i] = c[i] + ivsum;
-              cu[i] = cu[i] + ivsumu;
+              c[j] = c[j] + ivsum;
+              cu[j] = cu[j] + ivsumu;
               foundf = true;
             end;
           end;
@@ -200,26 +205,20 @@ begin
       EndFormat;
 
       for (j=0;j<arrlen;j=j+1) begin
-        tot1 = tot1 + c[j];
-        tot2 = tot2 + cu[j];
-        tot3 = tot3 + sm[j];
-        tot4 = tot4 + smu[j];
+        of = of + c[j];
+        ofu = ofu + cu[j];
+        smof = smof + sm[j];
+        smofu = smofu + smu[j];
       end;
-      tot1 = tot1 + of;
-      tot2 = tot2 + ofu;
-      tot3 = tot3 + smof;
-      tot4 = tot4 + smofu;
-      
       StartFormat(15);
       OutString(0,0,"SubTotal",false);
-      OutString(80,0,tot1,false);
-      OutString(180,0,tot2,false);
-      OutString(270,0,tot3,false);
-      OutString(1,0,tot4,true);
+      OutString(80,0,of,false);
+      OutString(180,0,ofu,false);
+      OutString(270,0,smof,false);
+      OutString(1,0,smofu,true);
       EndFormat;
-      
-      //tot3 = smof;
-      //tot4 = smofu;
+      tot3 = smof;
+      tot4 = smofu;
 
       StartFormat(15);
       OutString(0,0,"",false);

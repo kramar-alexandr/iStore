@@ -38,7 +38,6 @@ Report("Аналiз оборотностi товарiв",ItemTurnoverRClass,ItemTurnoverRn,0,modSO);
 
 Report("Пошук замовлень на обслуговування",MySearchSVORClass,MySearchSVORn,0,modMSVO);
 Report("Retail Sales (iStore)",MyRetailSalesRClass,MyRetailSalesRn,0,modNL);
-Report("New Retail Sales (iStore)",MyRetailSalesRClass,NewMyRetailSalesRn,0,modNL);
 Report("Stock/Cash (iStore)",MyStockCashRClass,MyStockCashRn,0,modNL);
 Report("Vendor/Stock (GPhTk)",MyVendorStockRClass,MyVendorStockRn,0,modIN);
 Report("Процес по замовленню",MyPOQCRClass,MyPOQCRn,0,modPO);

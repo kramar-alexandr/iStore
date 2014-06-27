@@ -346,8 +346,8 @@ record POSCurncyBlock PCb;// Edit ************************** Wednesday, 13 April
         end;
           custcode = "";
           locmtrw = matrowcnt(LMAb);
-          for(i=0;i<locmtrw;i=i+1)begin
-            matrowGet(LMAb,i,LMArw);
+          for(loci=0;loci<locmtrw;loci=loci+1)begin
+            matrowGet(LMAb,loci,LMArw);
             if(setinset(LMArw.Objects,IVr.Objects))then begin
               IVr.CustCode = LMArw.CustCode;
               custcode = LMArw.CustCode;

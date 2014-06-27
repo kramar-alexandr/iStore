@@ -96,125 +96,69 @@ END;
 
 global updating procedure MyRetailSalesIstoreRn(record RcVc RepSpec)
 begin
-Record IVCashVc IVCr;
-record PUVc PUr;
-row IVCashVc IVCrw;
-Record IVVc IVr;
-Record SMVc SMr;
-boolean TrHs,testf,testf1;
-val c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,of,stalldt,stall_oc,stall_ol,STALL_KGL,ivsum,sm1,sm2,sm3,sm4,sm5,sm6,sm7,sm8,sm9,sm10,smof,smstalldt,smstall_oc,smstall_ol,smSTALL_KGL,tot1,tot2,tot3,tot4;
-val c1u,c2u,c3u,c4u,c5u,c6u,c7u,c8u,c9u,c10u,ofu,stalldtu,stall_ocu,stall_olu,STALL_KGLu,ivsumu,sm1u,sm2u,sm3u,sm4u,sm5u,sm6u,sm7u,sm8u,sm9u,sm10u,smofu,smostalldt,smstall_ocu,smstall_olu,smstalldtu,smSTALL_KGLu,tot1u,tot2u,tot3u,tot4u;
-date dat1,dat2;
-record CUVc CUr;
-string 100 data,custcode;
-string 5 s1,s2,s3,s4;
-integer mtrw,i,invtype;
-val frrate,to1,to2,br1,br2;
-record POSCurncyBlock PCb;// Edit ************************** Wednesday, 13 April 2011 12:27:35
+  Record IVCashVc IVCr;
+  row IVCashVc IVCrw;
+  Record IVVc IVr;
+  boolean TrHs,testf,testf1,foundf;
+  val of,ivsum,smof,tot1,tot2,tot3,tot4;
+  val ofu,ivsumu,smofu;
+  Array val c,cu,sm,smu;
+  date dat1,dat2;
+  record CUVc CUr;
+  string 100 data,custcode;
+  string 5 s1,s2,s3,s4;
+  integer mtrw,i,invtype,arrlen,j;
+  val frrate,to1,to2,br1,br2;
+  record POSCurncyBlock PCb;// Edit ************************** Wednesday, 13 April 2011 12:27:35
   record LocalMachineAccBlock LMAb;// Edit ************************** Wednesday, 19 October 2011 10:59:48
   row LocalMachineAccBlock LMArw;// Edit ************************** Wednesday, 19 October 2011 10:59:49
-  record LocalMachineBlock LMb;// Edit ************************** Wednesday, 19 October 2011 10:59:49
-  integer locmtrw,loci;// Edit ************************** Wednesday, 19 October 2011 10:59:50
   val rate;
+  val total1,total2;
   
-  //data = "01/" & getmonth(RepSpec.d2) & "/" getyear(RepSpec.d2);
   s1 = "01/";
   s2 = getmonth(addday(RepSpec.d2,-1));
   s3 = "/";
   s4 = getyear(addday(RepSpec.d2,-1));
   data = s1 & s2 & s3 & s4;
-  //messageBox(0,s1 & "_" & s2 & "_" & s3 & "_" & s4);
   dat1 = data;
   dat2 = RepSpec.d2;
   blockload(LMAb);
-  //messageBox(0,dat1 & "_" & dat2);
-  StartReportJob("RetailSales");
+  arrlen = MatRowCnt(LMAb);
 
+  StartReportJob("RetailSales");
   EndHeader;
   
   StartFormat(15);
-        OutString(0,0,"Store",false);
-        OutString(80,0,"Sum/Date(UAH)",false);
-        OutString(180,0,"Sum/Date(USD)",false);
-        OutString(270,0,"Sum/month(UAH)",false);
-        OutString(1,0,"SUM/Month(USD)",true);
-       
-      endformat;
-  sm1 = 0;
-  sm2 = 0;
-  sm3 = 0;
-  sm4 = 0;
-  sm5 = 0;
-  sm6 = 0;
-  sm7 = 0;
-  sm8 = 0;
-  sm9 = 0;
-  sm10 =0;
+  OutString(0,0,"Store",false);
+  OutString(80,0,"Sum/Date(UAH)",false);
+  OutString(180,0,"Sum/Date(USD)",false);
+  OutString(270,0,"Sum/month(UAH)",false);
+  OutString(1,0,"Sum/Month(USD)",true);
+  EndFormat;
+
+  for (j=0;j<arrlen;j=j+1) begin
+    sm[j] = 0;
+    smu[j] = 0;
+  end;
   smof = 0;
-  smstalldt = 0;
-  smstall_oc = 0;
-  smstall_ol = 0;
-  smSTALL_KGL = 0;
-  
-  sm1u = 0;
-  sm2u = 0;
-  sm3u = 0;
-  sm4u = 0;
-  sm5u = 0;
-  sm6u = 0;
-  sm7u = 0;
-  sm8u = 0;
-  sm9u = 0;
-  sm10u =0;
   smofu = 0;
-  smostalldt = 0;
-  smstall_ocu = 0;
-  smstall_olu = 0;
-  smSTALL_KGLu = 0;
+      
   TrHs = true;
   While(TrHs) begin
     if(dat1>=dat2)then begin TrHs =false; end;
     if(TrHs) then begin
-      c1=0;
-      c2=0;
-      c3=0;
-      c4=0;
-      c5=0;
-      c6=0;
-      c7=0;
-      c8=0;
-      c9=0;
-      c10=0;
+    
+      for (j=0;j<arrlen;j=j+1) begin
+        c[j] = 0;
+        cu[j] = 0;
+      end;
       of = 0;
-      stalldt = 0;
-      stall_oc = 0;
-      stall_ol = 0;
-      STALL_KGL = 0;
-      c1u=0;
-      c2u=0;
-      c3u=0;
-      c4u=0;
-      c5u=0;
-      c6u=0;
-      c7u=0;
-      c8u=0;
-      c9u=0;
-      c10u=0;
-      ofu=0;
-      stalldtu = 0;
-      stall_ocu = 0;
-      stall_olu = 0;
-      STALL_KGLu = 0;
-      
-      tot1=0;
-      tot2=0;
-      tot3=0;
-      tot4=0;
-      tot1u=0;
-      tot2u=0;
-      tot3u=0;
-      tot4u=0;
-      
+      ofu = 0;
+      tot1 = 0;
+      tot2 = 0;
+      tot3 = 0;
+      tot4 = 0;
+
       IVCr.InvDate=dat1;
       testf = true;
       while(loopkey("InvDate",IVCr,1,testf)) begin
@@ -227,9 +171,6 @@ record POSCurncyBlock PCb;// Edit ************************** Wednesday, 13 April
           mtrw = matrowcnt(IVCr);
           for(i=0;i<mtrw;i=i+1)begin
             matrowget(IVCr,i,IVCrw);
-            
-            
-            
             if(setinset("UAH_PURCHASE",IVCrw.Objects))then begin
               IVCr.CurncyCode = "UAH_P";
             end else begin
@@ -238,80 +179,21 @@ record POSCurncyBlock PCb;// Edit ************************** Wednesday, 13 April
               end else begin
                 blockLoad(PCb);// Edit ************************** Wednesday, 13 April 2011 12:25:34
                 IVCr.CurncyCode = PCb.CurncyCode;// Edit ************************** Wednesday, 13 April 2011 12:29:19
-                //IVCr.CurncyCode = "UAH";
               end;
             end;
-            
-            /*mtrw = MatRowCnt(IVr);
-            For(i=j;i<mtrw;i=i+1) begin
-				matRowGet(IVr,i,IVrw);
-				if(nonblank(IVrw.ArtCode)) then begin
-        
-            IHr.ArtCode = IVrw.ArtCode;
-            IHr.SerialNr = Serial;
-            IHr.FileName = "PUVc";
-            if(readfirstkey("ArtCodeSerialNr",IHr,3,true)) begin
-                PUr.SerNr = IHr.TransNr;
-                if(readFirstmain(PUr,1,true)) then begin*/
-            
             GetFullCurncyRate(IVCr.CurncyCode,IVCr.InvDate,frrate,to1,to2,br1,br2);
-            //messagebox(frrate," - курс");
-            switch(IVCr.LocalMachineCode) begin
-              
-              case "O1":              c1=c1+IVCrw.Sum;
-                                      c1u=c1u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              
-              case "O2":              stall_ol=stall_ol+IVCrw.Sum;
-                                      stall_olu=stall_olu+round(IVCrw.Sum/frrate,defaultcurroundoff);
-                                      
-              case "KK":              c2=c2+IVCrw.Sum;
-                                      c2u=c2u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              
-              case "OSP":             c3=c3+IVCrw.Sum;
-                                      c3u=c3u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              
-              case "DD":              c4=c4+IVCrw.Sum;
-                                      c4u=c4u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              
-              case "KHK":          c5=c5+IVCrw.Sum;
-                                      c5u=c5u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              
-              case "KDT":             c6=c6+IVCrw.Sum;
-                                      c6u=c6u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              
-              case "KDN":             c7=c7+IVCrw.Sum;
-                                      c7u=c7u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              
-              case "LOP":             c8=c8+IVCrw.Sum;
-                                      c8u=c8u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-                                      
-              case "KOP":             c9=c9+IVCrw.Sum;
-                                      c9u=c9u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              
-              case "KG":             c10=c10+IVCrw.Sum;
-                                      c10u=c10u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              
-              case "KG2":             STALL_KGL=STALL_KGL+IVCrw.Sum;
-                                      STALL_KGLu=STALL_KGLu+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              
-			  case "AN":             stall_oc=stall_oc+IVCrw.Sum;
-                                      stall_ocu=stall_ocu+round(IVCrw.Sum/frrate,defaultcurroundoff);
-                                      
-              /*case "KOP":             c11=c11+IVCrw.Sum;
-                                      c11u=c11u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-                                      
-              case "KOP":             c12=c12+IVCrw.Sum;
-                                      c12u=c12u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-                                      
-              case "KOP":             c12=c12+IVCrw.Sum;	
-                                      c12u=c12u+round(IVCrw.Sum/frrate,defaultcurroundoff);   */                                   
+
+            for (j=0;j<arrlen;j=j+1) begin
+              matrowget(LMAb,j,LMArw);
+              if (IVCr.LocalMachineCode==LMArw.LocalMachine) then begin
+                c[j]=c[j]+IVCrw.Sum;
+                cu[j]=cu[j]+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              end;
             end;
           end;
         end;
       end;
       resetLoop(IVCr);
-      
-      
       
       IVr.TransDate = dat1;
       testf=true;
@@ -321,11 +203,9 @@ record POSCurncyBlock PCb;// Edit ************************** Wednesday, 13 April
         if(IVr.TransDate!=dat1) then begin testf = false; testf1=false; end;
         if(IVr.OKFlag==0) then begin testf1=false; end;
         if(IVr.Invalid!=0) then begin testf1=false; end;
-        //if(IVr.InvType!=1) then begin testf1=false; end;
         
         rate = IVr.FrRate/IVr.ToRateB1;
         if(rate==0)then begin rate = 1; end;
-        
         switch(IVr.InvType) begin
           case 1: invtype = 1;
           case 3: invtype = -1;
@@ -333,314 +213,126 @@ record POSCurncyBlock PCb;// Edit ************************** Wednesday, 13 April
             testf1 = false;
           end;
         end;
-        
         if (testf1) then begin
-        ivsum = IVr.Sum4*invtype;// Edit ************************** Wednesday, 26 October 2011 09:54:20
-        if(IVr.CurncyCode=="USD")then begin
-          ivsum = round(ivsum*rate,defaultcurroundoff);
-        end;
-        if(IVr.CurncyCode!="USD")then begin
-          ivsumu = round(IVr.Sum4/rate*invtype,defaultcurroundoff);
-        end else begin
-          ivsumu = IVr.Sum4*invtype;
-        end;
+          ivsum = IVr.Sum4*invtype;// Edit ************************** Wednesday, 26 October 2011 09:54:20
+          if(IVr.CurncyCode=="USD")then begin
+            ivsum = round(ivsum*rate,defaultcurroundoff);
+          end;
+          if(IVr.CurncyCode!="USD")then begin
+            ivsumu = round(IVr.Sum4/rate*invtype,defaultcurroundoff);
+          end else begin
+            ivsumu = IVr.Sum4*invtype;
+          end;
           custcode = "";
-          locmtrw = matrowcnt(LMAb);
-          for(loci=0;loci<locmtrw;loci=loci+1)begin
-            matrowGet(LMAb,loci,LMArw);
+          
+          for(i=0;i<arrlen;i=i+1)begin
+            matrowGet(LMAb,i,LMArw);
             if(setinset(LMArw.Objects,IVr.Objects))then begin
               IVr.CustCode = LMArw.CustCode;
               custcode = LMArw.CustCode;
             end;
-            
           end;
-        
-          switch(custcode) begin
-            case "NONAME":c1=c1+ivsum;
-                          c1u=c1u+ivsumu;
-            case "STALL_OL":stall_ol= stall_ol + ivsum;
-            				stall_olu = stall_olu + ivsumu;            
-            case "KIEV_KARAVAN":c2=c2+ivsum;
-                                c2u=c2u+ivsumu;
-            case "OD_SADU_P":c3=c3+ivsum;
-                            c3u=c3u+ivsumu;
-            case "D_DEKOR_D":c4=c4+ivsum;
-                            c4u=c4u+ivsumu;
-            case "KH_KARAVAN":c5=c5+ivsum;
-                              c5u=c5u+ivsumu;
-            case "DREAM_TOWN":c6=c6+ivsum;
-                              c6u=c6u+ivsumu;
-            case "DN_KARAVAN":c7=c7+ivsum;
-                              c7u=c7u+ivsumu;
-            case "LV_OPERA_PASSAGE":c8=c8+ivsum;
-                              		c8u=c8u+ivsumu;
-            case "OCEAN_PLAZA":c9=c9+ivsum;
-                    			c9u=c9u+ivsumu;
-        	case "GULLIVER":c10=c10+ivsum;
-                              c10u=c10u+ivsumu;
-            case "STALL_KGL":STALL_KGL=STALL_KGL+ivsum;
-                              STALL_KGLu=STALL_KGLu+ivsumu;
-            /*case "STALL_DT":stalldt = stalldt + ivsum;
-            	stalldtu = stalldtu + ivsumu;*/
-            case "STALL_OC": stall_oc= stall_oc + ivsum;
-            				stall_ocu = stall_ocu + ivsumu;
-            
-            otherwise begin
-            	of = of + ivsum;
-            	ofu = ofu + ivsumu;
+
+          foundf = false;
+          for (i=0;i<arrlen;i=i+1) begin
+            matrowget(LMAb,i,LMArw);
+            if (custcode==LMArw.CustCode) then begin
+              c[i] = c[i] + ivsum;
+              cu[i] = cu[i] + ivsumu;
+              foundf = true;
             end;
           end;
+          if (foundf==false)then begin
+            of = of + ivsum;
+            ofu = ofu + ivsumu;
+          end;
+      
         end;
       end;
-      
-      sm1 = sm1 + c1;
-      sm2 = sm2 + c2;
-      sm3 = sm3 + c3;
-      sm4 = sm4 + c4;
-      sm5 = sm5 + c5;
-      sm6 = sm6 + c6;
-      sm7 = sm7 + c7;
-      sm8 = sm8 + c8;
-      sm9 = sm9 + c9;
-      sm10 = sm10 +c10;
+
+      for (j=0;j<arrlen;j=j+1) begin
+        sm[j] = sm[j] +c[j];
+        smu[j] = smu[j] +cu[j];
+      end;
       smof = smof + of;
-      //smstalldt = smstalldt + stalldt;
-      smstall_oc = smstall_oc + stall_oc;
-      smstall_ol = smstall_ol + stall_ol;
-      smSTALL_KGL = smSTALL_KGL + STALL_KGL;
-      
-      sm1u = sm1u + c1u;
-      sm2u = sm2u + c2u;
-      sm3u = sm3u + c3u;
-      sm4u = sm4u + c4u;
-      sm5u = sm5u + c5u;
-      sm6u = sm6u + c6u;
-      sm7u = sm7u + c7u;
-      sm8u = sm8u + c8u;
-      sm9u = sm9u + c9u;
-      sm10u = sm10u + c10u;
       smofu = smofu + ofu;
-      //smstalldtu = smstalldtu + stalldtu;
-      smstall_ocu = smstall_ocu + stall_ocu;
-      smstall_olu = smstall_olu + stall_olu;
-      smSTALL_KGLu = smSTALL_KGLu + STALL_KGLu;
       
       resetloop(IVr);
       Gray_Divider(0,1);
-       StartFormat(15);
-        OutString(11,0,dat1,false);
-      endformat;
+      StartFormat(15);
+      OutString(11,0,dat1,false);
+      EndFormat;
 
-      CUr.Code = "NONAME";
-      If(ReadfirstMain(CUr,1,true)) begin
-      StartFormat(15);
-        //OutString(0,0,CUr.Code,false);
-        OutString(0,0,"OLIMP",false);
-        OutString(80,0,c1,false);
-        OutString(180,0,c1u,false);
-        OutString(270,0,sm1,false);
-        OutString(1,0,sm1u,true);
-      endformat;
+      for (j=0;j<arrlen;j=j+1) begin
+        matrowget(LMAb,j,LMArw);
+        CUr.Code = LMArw.CustCode;
+        if (ReadfirstMain(CUr,1,true)) then begin
+          StartFormat(15);
+          if NonBlank(LMArw.Name) then begin
+            OutString(0,0,LMArw.Name,false);
+          end else begin
+            OutString(0,0,CUr.Code,false);
+          end;
+          OutString(80,0,c[j],false);
+          OutString(180,0,cu[j],false);
+          OutString(270,0,sm[j],false);
+          OutString(1,0,smu[j],true);
+          EndFormat;
+        end;
       end;
-      
-      CUr.Code = "STALL_OL";
-      If(ReadfirstMain(CUr,1,true)) begin
+
       StartFormat(15);
-        //OutString(0,0,CUr.Code,false);
-        OutString(0,0,"STALL_OL",false);
-        OutString(80,0,stall_ol,false);
-        OutString(180,0,stall_olu,false);
-        OutString(270,0,smstall_ol,false);
-        OutString(1,0,smstall_olu,true);
-      endformat;
-      end;
-      
-      CUr.Code = "KIEV_KARAVAN";
-      If(ReadfirstMain(CUr,1,true)) begin
-      StartFormat(15);
-        //OutString(0,0,CUr.Code,false);
-        OutString(0,0,"KIEV KARAVAN",false);
-        OutString(80,0,c2,false);
-        OutString(180,0,c2u,false);
-        OutString(270,0,sm2,false);
-        OutString(1,0,sm2u,true);
-      endformat;
-      end;
-      
-      CUr.Code = "OD_SADU_P";
-      If(ReadfirstMain(CUr,1,true)) begin
-      StartFormat(15);
-        //OutString(0,0,CUr.Code,false);
-        OutString(0,0,"ODESSA",false);
-        OutString(80,0,c3,false);
-        OutString(180,0,c3u,false);
-        OutString(270,0,sm3,false);
-        OutString(1,0,sm3u,true);
-      endformat;
-      end;
-      
-      CUr.Code = "D_DEKOR_D";
-      If(ReadfirstMain(CUr,1,true)) begin
-      StartFormat(15);
-        //OutString(0,0,CUr.Code,false);
-        OutString(0,0,"DONECK",false);
-        OutString(80,0,c4,false);
-        OutString(180,0,c4u,false);
-        OutString(270,0,sm4,false);
-        OutString(1,0,sm4u,true);
-      endformat;
-      end;
-      
-      CUr.Code = "KH_KARAVAN";
-      If(ReadfirstMain(CUr,1,true)) begin
-      StartFormat(15);
-        //OutString(0,0,CUr.Code,false);
-        OutString(0,0,"KHARKOV",false);
-        OutString(80,0,c5,false);
-        OutString(180,0,c5u,false);
-        OutString(270,0,sm5,false);
-        OutString(1,0,sm5u,true);
-      endformat;
-      end;
-        
-      
-      CUr.Code = "DREAM_TOWN";
-      If(ReadfirstMain(CUr,1,true)) begin
-      StartFormat(15);
-        //OutString(0,0,CUr.Code,false);
-        OutString(0,0,"DREAM TOWN",false);
-        OutString(80,0,c6,false);
-        OutString(180,0,c6u,false);
-        OutString(270,0,sm6,false);
-        OutString(1,0,sm6u,true);
-      endformat;
-      end;
-      
-      CUr.Code = "DN_KARAVAN";
-      If(ReadfirstMain(CUr,1,true)) begin
-      StartFormat(15);
-        //OutString(0,0,CUr.Code,false);
-        OutString(0,0,"DNEPROPETROVSK",false);
-        OutString(80,0,c7,false);
-        OutString(180,0,c7u,false);
-        OutString(270,0,sm7,false);
-        OutString(1,0,sm7u,true);
-      endformat;
-      end;
-      
-      CUr.Code = "LV_OPERA_PASSAGE";
-      If(ReadfirstMain(CUr,1,true)) begin
-      StartFormat(15);
-        //OutString(0,0,CUr.Code,false);
-        OutString(0,0,"LVIV",false);
-        OutString(80,0,c8,false);
-        OutString(180,0,c8u,false);
-        OutString(270,0,sm8,false);
-        OutString(1,0,sm8u,true);
-      endformat;
-      end;
-      
-      CUr.Code = "OCEAN_PLAZA";
-      If(ReadfirstMain(CUr,1,true)) begin
-      StartFormat(15);
-        //OutString(0,0,CUr.Code,false);
-        OutString(0,0,"OCEAN_PLAZA",false);
-        OutString(80,0,c9,false);
-        OutString(180,0,c9u,false);
-        OutString(270,0,sm9,false);
-        OutString(1,0,sm9u,true);
-      endformat;
-      end;
-      
-      CUr.Code = "STALL_OC";
-      If(ReadfirstMain(CUr,1,true)) begin
-      StartFormat(15);
-        //OutString(0,0,CUr.Code,false);
-        OutString(0,0,"STALL_OC",false);
-        OutString(80,0,stall_oc,false);
-        OutString(180,0,stall_ocu,false);
-        OutString(270,0,smstall_oc,false);
-        OutString(1,0,smstall_ocu,true);
-      endformat;
-      end;
-      
-      CUr.Code = "GULLIVER";
-      If(ReadfirstMain(CUr,1,true)) begin
-      StartFormat(15);
-        //OutString(0,0,CUr.Code,false);
-        OutString(0,0,"GULLIVER",false);
-        OutString(80,0,c10,false);
-        OutString(180,0,c10u,false);
-        OutString(270,0,sm10,false);
-        OutString(1,0,sm10u,true);
-      endformat;
-      end;
-      
-      CUr.Code = "STALL_KGL";
-      If(ReadfirstMain(CUr,1,true)) begin
-      StartFormat(15);
-        //OutString(0,0,CUr.Code,false);
-        OutString(0,0,"STALL_KGL",false);
-        OutString(80,0,STALL_KGL,false);
-        OutString(180,0,STALL_KGLu,false);
-        OutString(270,0,smSTALL_KGL,false);
-        OutString(1,0,smSTALL_KGLu,true);
-      endformat;
-      end;
-      
-      /*StartFormat(15);
-        //OutString(0,0,CUr.Code,false);
-        OutString(0,0,"STALL_DT",false);
-        OutString(80,0,stalldt,false);
-        OutString(180,0,stalldtu,false);
-        OutString(270,0,smstalldt,false);
-        OutString(1,0,smstalldtu,true);
-      endformat;*/
-            
-      StartFormat(15);
-        OutString(0,0,"Office",false);
-        OutString(80,0,of,false);
-        OutString(180,0,ofu,false);
-        OutString(270,0,smof,false);
-        OutString(1,0,smofu,true);
+      OutString(0,0,"Office",false);
+      OutString(80,0,of,false);
+      OutString(180,0,ofu,false);
+      OutString(270,0,smof,false);
+      OutString(1,0,smofu,true);
       endformat;
       Gray_Divider(0,1);
-     StartFormat(15);
-        OutString(0,0,"",false);
-    
-      endformat;
-      
-       StartFormat(15);
-        OutString(0,0,"SubTotal",false);
-        OutString(80,0,c1+c2+c3+c4+c5+c6+c7+c8+c9+c10+of+stall_oc+stall_ol+STALL_KGL,false);
-        OutString(180,0,c1u+c2u+c3u+c4u+c5u+c6u+c7u+c8u+c9u+c10u+ofu+stall_ocu+stall_olu+STALL_KGLu,false);
-        OutString(270,0,sm1+sm2+sm3+sm4+sm5+sm6+sm7+sm8+sm9+sm10+smof+smstall_oc+smstall_ol+smSTALL_KGL,false);
-        OutString(1,0,sm1u+sm2u+sm3u+sm4u+sm5u+sm6u+sm7u+sm8u+sm9u+sm10u+smofu+smstall_ocu+smstall_olu+smSTALL_KGLu,true);
-      endformat;
+      StartFormat(15);
+      OutString(0,0,"",false);
+      EndFormat;
 
-    tot3 = sm1+sm2+sm3+sm4+sm5+sm6+sm7+sm8+sm9+sm10+smof+smstall_oc+smstall_ol+smSTALL_KGL;
-    tot4 = sm1u+sm2u+sm3u+sm4u+sm5u+sm6u+sm7u+sm8u+sm9u+sm10u+smofu+smstall_ocu+smstall_olu+smSTALL_KGLu;
-    
-     StartFormat(15);
-        OutString(0,0,"",false);
-      endformat;
+      for (j=0;j<arrlen;j=j+1) begin
+        tot1 = tot1 + c[j];
+        tot2 = tot2 + cu[j];
+        tot3 = tot3 + sm[j];
+        tot4 = tot4 + smu[j];
+      end;
+      tot1 = tot1 + of;
+      tot2 = tot2 + ofu;
+      tot3 = tot3 + smof;
+      tot4 = tot4 + smofu;
+      
+      StartFormat(15);
+      OutString(0,0,"SubTotal",false);
+      OutString(80,0,tot1,false);
+      OutString(180,0,tot2,false);
+      OutString(270,0,tot3,false);
+      OutString(1,0,tot4,true);
+      EndFormat;
+      
+      //tot3 = smof;
+      //tot4 = smofu;
+
+      StartFormat(15);
+      OutString(0,0,"",false);
+      EndFormat;
     
     end;
     dat1 = addday(dat1,1);
   end; 
   Black_divider(0,1);
-   StartFormat(15);
-        OutString(0,0,"Total",false);
-        OutString(80,0,"",false);
-        OutString(180,0,"",false);
-        OutString(270,0,tot3,false);
-        OutString(1,0,tot4,true);
-      endformat;
-  
-  endJob;
-  
+  StartFormat(15);
+  OutString(0,0,"Total",false);
+  OutString(80,0,"",false);
+  OutString(180,0,"",false);
+  OutString(270,0,tot3,false);
+  OutString(1,0,tot4,true);
+  EndFormat;
+  EndJob;
 
-return;
+  return;
 end;
 
 

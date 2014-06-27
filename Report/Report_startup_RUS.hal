@@ -22,7 +22,6 @@ Report("История серийных номеров 2",MySerhistRClass,MySerHistRn,0,modIN);
 Report("История серийных номеров 2",MySerhistRClass,MySerHistRn,0,modMSVO);
 Report("Пошук замовлень на обслуговування",MySearchSVORClass,MySearchSVORn,0,modMSVO);
 Report("Retail Sales (iStore)",MyRetailSalesRClass,MyRetailSalesRn,0,modNL);
-Report("New Retail Sales (iStore)",MyRetailSalesRClass,NewMyRetailSalesRn,0,modNL);
 Report("Stock/Cash (iStore)",MyStockCashRClass,MyStockCashRn,0,modNL);
 Report("Vendor/Stock (GPhTk)",MyVendorStockRClass,MyVendorStockRn,0,modIN);
 

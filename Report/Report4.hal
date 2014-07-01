@@ -566,29 +566,7 @@ val rate;
         OutString(1,0,sm1u,true);
       endformat;
       end;
-      
-      /*CUr.Code = "IPOINT_SM";
-      If(ReadfirstMain(CUr,1,true)) begin
-      StartFormat(15);
-        OutString(0,0,CUr.Code,false);
-        OutString(80,0,c2,false);
-        OutString(180,0,c2u,false);
-        OutString(270,0,sm2,false);
-        OutString(1,0,sm2u,true);
-      endformat;
-      end;
-      
-      CUr.Code = "IPOINT_KH_MG";
-      If(ReadfirstMain(CUr,1,true)) begin
-      StartFormat(15);
-        OutString(0,0,CUr.Code,false);
-        OutString(80,0,c3,false);
-        OutString(180,0,c3u,false);
-        OutString(270,0,sm3,false);
-        OutString(1,0,sm3u,true);
-      endformat;
-      end;*/
-      
+            
       CUr.Code = "SAMSUNG_OLYMP";		//*********** Change for SAMSUNG_OLYMP
       If(ReadfirstMain(CUr,1,true)) begin
       StartFormat(15);
@@ -781,28 +759,26 @@ record POSCurncyBlock PCb;
           mtrw = matrowcnt(IVCr);
           for(i=0;i<mtrw;i=i+1)begin
             matrowget(IVCr,i,IVCrw);
-            
-            
-            
+                        
             if(setinset("UAH_PURCHASE2",IVCrw.Objects))then begin
               IVCr.CurncyCode = "UAH_T";
             end else begin
-				  if(setinset("UAH_APPLE",IVCrw.Objects))then begin
-					IVCr.CurncyCode = "UAH_A";
-				  end else begin
+              if(setinset("UAH_APPLE",IVCrw.Objects))then begin
+                IVCr.CurncyCode = "UAH_A";
+              end else begin
 				  	  if(setinset("UAH_JBL",IVCrw.Objects))then begin
-					  IVCr.CurncyCode = "UAH_J";
+              IVCr.CurncyCode = "UAH_J";
 				  	  end else begin
-						  if(setinset("UAH_E",IVCrw.Objects))then begin
-							IVCr.CurncyCode = "UAH_E";
-						  end else begin
-							blockLoad(PCb);// Edit ************************** Wednesday, 13 April 2011 12:25:34
-							IVCr.CurncyCode = PCb.CurncyCode;// Edit ************************** Wednesday, 13 April 2011 12:29:19
-							//IVCr.CurncyCode = "UAH";
-						end;
-					end;
-				end;
+                if(setinset("UAH_E",IVCrw.Objects))then begin
+                  IVCr.CurncyCode = "UAH_E";
+                end else begin
+                  blockLoad(PCb);// Edit ************************** Wednesday, 13 April 2011 12:25:34
+                  IVCr.CurncyCode = PCb.CurncyCode;// Edit ************************** Wednesday, 13 April 2011 12:29:19
+                  //IVCr.CurncyCode = "UAH";
+                end;
+              end;
             end;
+          end;
             GetFullCurncyRate(IVCr.CurncyCode,IVCr.InvDate,frrate,to1,to2,br1,br2);
             
             switch(IVCr.LocalMachineCode) begin
@@ -813,31 +789,9 @@ record POSCurncyBlock PCb;
               case "A1":              c2=c2+IVCrw.Sum;
                                       c2u=c2u+round(IVCrw.Sum/frrate,defaultcurroundoff);
               
-              /*case "A2":             c3=c3+IVCrw.Sum;
-                                      c3u=c3u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              
-              case "DD":              c4=c4+IVCrw.Sum;
-                                      c4u=c4u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              
-              case "KHK":          c5=c5+IVCrw.Sum;
-                                      c5u=c5u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              
-              case "KDT":             c6=c6+IVCrw.Sum;
-                                      c6u=c6u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              
-              case "KDN":             c7=c7+IVCrw.Sum;
-                                      c7u=c7u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              
-              case "LOP":             c8=c8+IVCrw.Sum;
-                                      c8u=c8u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+
                                       
-              case "KOP":             c9=c9+IVCrw.Sum;
-                                      c9u=c9u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              
-              case "KG":             c10=c10+IVCrw.Sum;
-                                      c10u=c10u+round(IVCrw.Sum/frrate,defaultcurroundoff);*/
-                                      
-			  case "A2":             stall_oc=stall_oc+IVCrw.Sum;
+			        case "A2":             stall_oc=stall_oc+IVCrw.Sum;
                                       stall_ocu=stall_ocu+round(IVCrw.Sum/frrate,defaultcurroundoff);       
                                                
             end;
@@ -895,24 +849,6 @@ record POSCurncyBlock PCb;
                           c1u=c1u+ivsumu;
             case "A_K_OP":c2=c2+ivsum;
                                 c2u=c2u+ivsumu;
-            /*case "OD_SADU_P":c3=c3+ivsum;
-                            c3u=c3u+ivsumu;
-            case "D_DEKOR_D":c4=c4+ivsum;
-                            c4u=c4u+ivsumu;
-            case "KH_KARAVAN":c5=c5+ivsum;
-                              c5u=c5u+ivsumu;
-            case "DREAM_TOWN":c6=c6+ivsum;
-                              c6u=c6u+ivsumu;
-            case "DN_KARAVAN":c7=c7+ivsum;
-                              c7u=c7u+ivsumu;
-            case "LV_OPERA_PASSAGE":c8=c8+ivsum;
-                              c8u=c8u+ivsumu;
-            case "OCEAN_PLAZA":c9=c9+ivsum;
-                              c9u=c9u+ivsumu;
-        	case "GULLIVER":c10=c10+ivsum;
-                              c10u=c10u+ivsumu;*/
-            /*case "STALL_DT":stalldt = stalldt + ivsum;
-            	stalldtu = stalldtu + ivsumu;*/
             case "A_K_ST_OP": stall_oc= stall_oc + ivsum;
             	stall_ocu = stall_ocu + ivsumu;
             
@@ -1236,29 +1172,6 @@ record POSCurncyBlock PCb;
           switch(custcode) begin
             case "S_K_OL":c1=c1+ivsum;
                           c1u=c1u+ivsumu;
-            /*case "A_K_OP":c2=c2+ivsum;
-                                c2u=c2u+ivsumu;
-            case "OD_SADU_P":c3=c3+ivsum;
-                            c3u=c3u+ivsumu;
-            case "D_DEKOR_D":c4=c4+ivsum;
-                            c4u=c4u+ivsumu;
-            case "KH_KARAVAN":c5=c5+ivsum;
-                              c5u=c5u+ivsumu;
-            case "DREAM_TOWN":c6=c6+ivsum;
-                              c6u=c6u+ivsumu;
-            case "DN_KARAVAN":c7=c7+ivsum;
-                              c7u=c7u+ivsumu;
-            case "LV_OPERA_PASSAGE":c8=c8+ivsum;
-                              c8u=c8u+ivsumu;
-            case "OCEAN_PLAZA":c9=c9+ivsum;
-                              c9u=c9u+ivsumu;
-        	case "GULLIVER":c10=c10+ivsum;
-                              c10u=c10u+ivsumu;
-            case "STALL_DT":stalldt = stalldt + ivsum;
-            	stalldtu = stalldtu + ivsumu;
-            case "A_K_ST_OP": stall_oc= stall_oc + ivsum;
-            	stall_ocu = stall_ocu + ivsumu;*/
-            
             otherwise begin
             	of = of + ivsum;
             	ofu = ofu + ivsumu;
@@ -1496,41 +1409,12 @@ record POSCurncyBlock PCb;
             end;
             GetFullCurncyRate(IVCr.CurncyCode,IVCr.InvDate,frrate,to1,to2,br1,br2);
             
-            switch(IVCr.LocalMachineCode) begin
-              
-              /*case "S1":              c1=c1+IVCrw.Sum;
-                                      c1u=c1u+round(IVCrw.Sum/frrate,defaultcurroundoff);*/
-              
+            switch(IVCr.LocalMachineCode) begin              
               case "A1":              c2=c2+IVCrw.Sum;
                                       c2u=c2u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              
-              /*case "A2":             c3=c3+IVCrw.Sum;
-                                      c3u=c3u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              
-              case "DD":              c4=c4+IVCrw.Sum;
-                                      c4u=c4u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              
-              case "KHK":          c5=c5+IVCrw.Sum;
-                                      c5u=c5u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              
-              case "KDT":             c6=c6+IVCrw.Sum;
-                                      c6u=c6u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              
-              case "KDN":             c7=c7+IVCrw.Sum;
-                                      c7u=c7u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              
-              case "LOP":             c8=c8+IVCrw.Sum;
-                                      c8u=c8u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-                                      
-              case "KOP":             c9=c9+IVCrw.Sum;
-                                      c9u=c9u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              
-              case "KG":             c10=c10+IVCrw.Sum;
-                                      c10u=c10u+round(IVCrw.Sum/frrate,defaultcurroundoff);*/
-                                      
-			  case "A2":             stall_oc=stall_oc+IVCrw.Sum;
+            
+			        case "A2":              stall_oc=stall_oc+IVCrw.Sum;
                                       stall_ocu=stall_ocu+round(IVCrw.Sum/frrate,defaultcurroundoff);       
-                                               
             end;
           end;
         end;
@@ -1582,28 +1466,8 @@ record POSCurncyBlock PCb;
           end;
         
           switch(custcode) begin
-            /*case "S_K_OL":c1=c1+ivsum;
-                          c1u=c1u+ivsumu;*/
             case "A_K_OP":c2=c2+ivsum;
                                 c2u=c2u+ivsumu;
-            /*case "OD_SADU_P":c3=c3+ivsum;
-                            c3u=c3u+ivsumu;
-            case "D_DEKOR_D":c4=c4+ivsum;
-                            c4u=c4u+ivsumu;
-            case "KH_KARAVAN":c5=c5+ivsum;
-                              c5u=c5u+ivsumu;
-            case "DREAM_TOWN":c6=c6+ivsum;
-                              c6u=c6u+ivsumu;
-            case "DN_KARAVAN":c7=c7+ivsum;
-                              c7u=c7u+ivsumu;
-            case "LV_OPERA_PASSAGE":c8=c8+ivsum;
-                              c8u=c8u+ivsumu;
-            case "OCEAN_PLAZA":c9=c9+ivsum;
-                              c9u=c9u+ivsumu;
-        	case "GULLIVER":c10=c10+ivsum;
-                              c10u=c10u+ivsumu;*/
-            /*case "STALL_DT":stalldt = stalldt + ivsum;
-            	stalldtu = stalldtu + ivsumu;*/
             case "A_K_ST_OP": stall_oc= stall_oc + ivsum;
             	stall_ocu = stall_ocu + ivsumu;
             
@@ -1738,48 +1602,8 @@ begin
 record RcVc RepSpec;
 integer compno;
   compno = CurrentCompany;
-      switch (compno) begin
-      /*case 1: CreateFile("Stock/iStoreStockFull.xls");
-              closefile;
-              logtext(0,"1");
-              millisleep(100);
-              openexportfile("Stock/iStoreStockFull.xls",true);
-              MyItemReportRn(RepSpec);
-              RunProgram("Stock/iStoreStockFull.sh", "");
-	      millisleep(100);
-	      //RunProgram("Stock/iStoreStockFullHidden.sh", "");
-      
-      /*case 2: CreateFile("Stock/CUAStockFull.xls");
-              closefile;
-              openexportfile("Stock/CUAStockFull.xls",true);
-              RepSpec.f1 = ",INV#1,INV#2,EXHIBITION,STORE,STORE_DEMO,STORE_SM,STORE_SM_D,TRWH,DEMO,INV#1/ADJ,EXHIB/ADJ,EX_OUT,SRV_OUT,";//***Edit by Victor add DEMO
-              MyItemReportRn(RepSpec);
-               millisleep(100);
-              RunProgram("Stock/CUAStockFull.sh", "");
-              
-              CreateFile("Stock/CUAStockFull2.xls");
-              closefile;
-              openexportfile("Stock/CUAStockFull2.xls",true);
-              RepSpec.f1 = ",INV#1/ADJ,INV#2/ADJ,INV#2/ADJS,EXHIBITION/ADJ,INV#1/E,SRV_OUT,INV#2/RTN,TRANSIT#2,";
-              MyItemReportRn(RepSpec);
-               millisleep(100);
-              RunProgram("Stock/CUAStockFull2.sh", "");
-              
-              /*CreateFile("Stock/SamsungStockFull.xls");
-              closefile;
-              openexportfile("Stock/SamsungStockFull.xls",true);
-              RepSpec.f1 = ",STORE_OLMP,STORE_OL_D,";
-              MyItemReportRn(RepSpec);
-              millisleep(100);
-              RunProgram("Stock/SamsungStockFull.sh", "");*/
-              
-     /* case 5: CreateFile("Stock/TXTStockFull.xls");
-              closefile;
-              openexportfile("Stock/TXTStockFull.xls",true);
-              MyItemReportRn(RepSpec);
-              RunProgram("Stock/TXTStockFull.sh", "");
-              
-*/
+      switch (compno) begin            
+
       case 6: CreateFile("Stock/RetailSalesSMG.xls");
               closefile;
               openexportfile("Stock/RetailSalesSMG.xls",true);
@@ -1797,17 +1621,6 @@ integer compno;
               millisleep(100);
               RunProgram("Stock/RetailSalesOP.sh", "");
       
-      /*case 7: CreateFile("Stock/TNMStockFull.xls");
-              closefile;
-              openexportfile("Stock/TNMStockFull.xls",true);
-              MyItemReportRn(RepSpec);
-              RunProgram("Stock/TNMStockFull.sh", "");
-      
-      case 8: CreateFile("Stock/AServiceStockFull.xls");
-              closefile;
-              openexportfile("Stock/AServiceStockFull.xls",true);
-              MyItemReportRn(RepSpec);
-              RunProgram("Stock/AServiceStockFull.sh", "");*/
   end;
   closefile;
 return;

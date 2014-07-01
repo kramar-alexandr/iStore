@@ -40,6 +40,7 @@ external function Boolean GetItemPriceDiscount3(string,val,var record INVc,strin
 external function Boolean SetUnitFactor(string,var val,val,val,val,var val,var val,var val,Boolean);
 external procedure ORMultiLineText(record ORVc,record INVc,string,Integer);
 external procedure ORVcGetCalcItemPrice(record INVc,record ORVc,Integer,var val);
+external procedure GetItemSalesAcc(string,Integer,var string); //Edit***************************Sasha2,15:51 27.06.2014
 
 global
 function Boolean ORVc_PasteArtCode(var record ORVc ORr,Integer rownr,var string inwarning,Boolean varf)
@@ -55,8 +56,11 @@ BEGIN
   val UnitFactQuant,UnitFactPrice,Quant;
   Date resp;
   Boolean dummyf;
+  record ObjectsAccBlock OAb;//Edit***************************Sasha2,13:08 27.06.2014
+  row ObjectsAccBlock OArw;//Edit***************************Sasha2,13:08 27.06.2014
+  Integer j, mtrw; //Edit***************************Sasha2,13:14 27.06.2014
 
-  chsum = false;
+  chsum = false; 
   chrqty = false;
   pritemf = true;
   MatRowGet(ORr,rownr,ORrw);
@@ -81,6 +85,15 @@ BEGIN
     ORrw.vRebate = vreb;
     ORrw.VATCode = vatcode;
     ORrw.BasePrice = baseprice;
+	blockload(OAb); //Edit***************************Sasha2,13:13 27.06.2014
+    mtrw = matrowcnt(OAb);
+    For(j=0;j<mtrw;j=j+1)begin
+      matrowget(OAb,j,OArw);
+      if(setinset(OArw.Objects,ORr.Objects))then begin
+        salesacc = OArw.SaleAccCode;
+        j = mtrw;                      
+      end;
+    end; //Edit***************************Sasha2,13:13 27.06.2014
     ORrw.SalesAcc = salesacc;
     ORrw.ArtCode = INr.Code;
     ORrw.Objects = FindINObjects(INr.Objects,INr.Group);
@@ -703,6 +716,11 @@ BEGIN
   record LocalMachineBlock LMb;// Edit ************************** Wednesday, 19 October 2011 10:59:49
   integer mtrw,i;// Edit ************************** Wednesday, 19 October 2011 10:59:50
   record ARPayVc ARPayr;
+  row ORVc ORpw; //Edit***************************Sasha2,14:41 27.06.2014
+  record ObjectsAccBlock OAb;//Edit***************************Sasha2,13:08 27.06.2014
+  row ObjectsAccBlock OArw;//Edit***************************Sasha2,13:08 27.06.2014
+  Integer j, rwcnt; //Edit***************************Sasha2,13:14 27.06.2014
+  string 255 salesacc; //Edit***************************Sasha2,14:42 27.06.2014
   
   ARPayr.CustCode = custcode;
   if (ReadFirstKey("CustCode",ARPayr,1,true)) then begin
@@ -862,7 +880,32 @@ BEGIN
       CalculateFreightWeightOR(ORp,true);
     end else begin
       ORp.FrPrice = DivRateToBase1(ORp.CurncyCode,ORp.FrBase,ORp.FrRate,ORp.ToRateB1,ORp.ToRateB2,ORp.BaseRate1,ORp.BaseRate2,DefaultCurRoundOff);
-    end;    
+    end;  
+    
+    blockload(OAb); //Edit***************************Sasha2,13:13 27.06.2014 {
+    mtrw = matrowcnt(OAb);
+    For(j=0;j<mtrw;j=j+1)begin
+      matrowget(OAb,j,OArw);
+      if(setinset(OArw.Objects,ORp.Objects))then begin
+        salesacc = OArw.SaleAccCode;
+        j = mtrw;                      
+      end;
+    end; 
+    rwcnt = matrowcnt(ORp);
+    for(i=0;i<rwcnt;i=i+1)begin
+      matrowget(ORp,i,ORpw);
+      if(NonBlank(ORpw.ArtCode))then begin
+      	if (NonBlank(salesacc)) then begin
+      		ORpw.SalesAcc = salesacc;
+      	end else begin
+			GetItemSalesAcc(ORpw.ArtCode,ORp.ExportFlag,salesacc);
+			ORpw.SalesAcc = salesacc;
+      	end;
+        
+      end;
+      MatRowPut(ORp,i,ORpw);
+    end; //Edit***************************Sasha2,13:13 27.06.2014 }
+     
     if (nonblank(CUr.WarnText1)) then begin
       warning = CUr.WarnText1;
     end;

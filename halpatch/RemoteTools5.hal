@@ -573,6 +573,9 @@ BEGIN
   record MainWHMBlock MainWHMRec;
   string 50 frin,toin;
   Date curbestbef,bd;
+  record ObjectsAccBlock OAb;//Edit***************************Sasha2,13:08 27.06.2014
+  row ObjectsAccBlock OArw;//Edit***************************Sasha2,13:08 27.06.2014
+  Integer j, mtrw; //Edit***************************Sasha2,13:14 27.06.2014
   
   frin = FirstInRange(onlyforitems,20);
   toin = LastInRange(onlyforitems,20);
@@ -714,6 +717,15 @@ L10PasteOrdInShip:;
       SHrw.ArtCode = ORrw.ArtCode;
       SHrw.Spec = ORrw.Spec;
       SHrw.Objects = ORrw.Objects;
+      blockload(OAb); //Edit***************************Sasha2,13:13 27.06.2014
+	  mtrw = matrowcnt(OAb);
+	  For(j=0;j<mtrw;j=j+1)begin
+	    matrowget(OAb,j,OArw);
+	    if(setinset(OArw.Objects,ORr.Objects))then begin
+	      SHrw.CostAcc = OArw.AccCode;
+	      j = mtrw;                      
+	    end;
+	  end; //Edit***************************Sasha2,13:13 27.06.2014
       SHrw.SerialNr = ORrw.SerialNr;
       SHrw.Recepy = ORrw.Recepy;
       SHrw.VARList = ORrw.VARList;

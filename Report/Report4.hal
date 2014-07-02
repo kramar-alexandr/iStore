@@ -190,6 +190,7 @@ begin
                 cu[j]=cu[j]+round(IVCrw.Sum/frrate,defaultcurroundoff);
               end;
             end;
+            
           end;
         end;
       end;
@@ -342,16 +343,19 @@ Record IVCashVc IVCr;
 row IVCashVc IVCrw;
 Record IVVc IVr;
 Record SMVc SMr;
-boolean TrHs,testf,testf1;
-val c1,c2,c3,c4,c5,c6,c7,of,ivsum,sm1,sm2,sm3,sm4,sm5,sm6,sm7,smof,tot1,tot2,tot3,tot4;
-val c1u,c2u,c3u,c4u,c5u,c6u,c7u,ofu,ivsumu,sm1u,sm2u,sm3u,sm4u,sm5u,sm6u,sm7u,smofu,tot1u,tot2u,tot3u,tot4u;
+boolean TrHs,testf,testf1,foundf;
+val of,ivsum,smof,tot1,tot2,tot3,tot4;
+val ofu,ivsumu,smofu;
+Array val c,cu,sm,smu;
 date dat1,dat2;
 record CUVc CUr;
-string 100 data;
+string 100 data,custcode;
 string 5 s1,s2,s3,s4;
-integer mtrw,i,invtype;
+integer mtrw,i,invtype,arrlen,j;
 val frrate,to1,to2,br1,br2;
 record POSCurncyBlock PCb;// Edit ************************** Wednesday, 13 April 2011 12:27:35
+record LocalMachineAccBlock LMAb; //Edit***************************Sasha2,13:22 02.07.2014
+row LocalMachineAccBlock LMArw; //Edit***************************Sasha2,13:22 02.07.2014
 val rate;
   
   //data = "01/" & getmonth(RepSpec.d2) & "/" getyear(RepSpec.d2);
@@ -364,6 +368,8 @@ val rate;
   dat1 = data;
   dat2 = RepSpec.d2;
   
+  blockload(LMAb);
+  arrlen = MatRowCnt(LMAb);
   //messageBox(0,dat1 & "_" & dat2);
   StartReportJob("RetailSales");
 
@@ -377,52 +383,30 @@ val rate;
         OutString(1,0,"SUM/Month(USD)",true);
        
       endformat;
-  sm1 = 0;
-  sm2 = 0;
-  sm3 = 0;
-  sm4 = 0;
-  sm5 = 0;
-  sm6 = 0;
-  sm7 = 0;
-  smof = 0;
+      
+  for (j=0;j<arrlen;j=j+1) begin
+    sm[j] = 0;
+    smu[j] = 0;
+  end;
   
-  sm1u = 0;
-  sm2u = 0;
-  sm3u = 0;
-  sm4u = 0;
-  sm5u = 0;
-  sm6u = 0;
-  sm7u = 0;
+  smof = 0;
   smofu = 0;
   TrHs = true;
   While(TrHs) begin
     if(dat1>=dat2)then begin TrHs =false; end;
     if(TrHs) then begin
-      c1=0;
-      c2=0;
-      c3=0;
-      c4=0;
-      c5=0;
-      c6=0;
-      c7=0;
-      of = 0;
-      c1u=0;
-      c2u=0;
-      c3u=0;
-      c4u=0;
-      c5u=0;
-      c6u=0;
-      c7u=0;
-      ofu=0;
+
+	  for (j=0;j<arrlen;j=j+1) begin
+        c[j] = 0;
+        cu[j] = 0;
+      end;
       
+      of = 0;
+      ofu=0;
       tot1=0;
       tot2=0;
       tot3=0;
       tot4=0;
-      tot1u=0;
-      tot2u=0;
-      tot3u=0;
-      tot4u=0;
       
       IVCr.InvDate=dat1;
       testf = true;
@@ -453,20 +437,14 @@ val rate;
             end;
             GetFullCurncyRate(IVCr.CurncyCode,IVCr.InvDate,frrate,to1,to2,br1,br2);
             
-            switch(IVCr.CustCode) begin
-              
-              case "IPOINT":          c1=c1+IVCrw.Sum;
-                                      c1u=c1u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              case "IPOINT_SM":       c2=c2+IVCrw.Sum;
-                                      c2u=c2u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              case "IPOINT_KH_MG":       c3=c3+IVCrw.Sum;
-                                      c3u=c3u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              case "SAMSUNG_OLYMP":       c4=c4+IVCrw.Sum;								// Change to SAMSUNG_OLYMP
-                                      c4u=c4u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              case "SAMSUNG_OLYMP2":       c5=c5+IVCrw.Sum;								// Change to SAMSUNG_OLYMP
-                                      c5u=c5u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              
+            for (j=0;j<arrlen;j=j+1) begin
+              matrowget(LMAb,j,LMArw);
+              if (IVCr.LocalMachineCode==LMArw.LocalMachine) then begin
+                c[j]=c[j]+IVCrw.Sum;
+                cu[j]=cu[j]+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              end;
             end;
+            
           end;
         end;
       end;
@@ -512,42 +490,41 @@ val rate;
         end else begin
           ivsumu = IVr.Sum4*invtype;
         end;
-        
-          switch(IVr.CustCode) begin
-            case "IPOINT":c1=c1+ivsum;
-                          c1u=c1u+ivsumu;
-            case "IPOINT_SM":c2=c2+ivsum;
-                          c2u=c2u+ivsumu;
-            case "IPOINT_KH_MG":c3=c3+ivsum;
-                          c3u=c3u+ivsumu;
-            case "SAMSUNG_OLYMP":c4=c4+ivsum;		//**** Change for SAMSUNG_OLYMP
-                          c4u=c4u+ivsumu;
-        	case "SAMSUNG_OLYMP2":c5=c5+ivsum;		//**** Change for SAMSUNG_OLYMP
-                          c5u=c5u+ivsumu;
-            otherwise begin
-              of = of + ivsum;
-              ofu = ofu + ivsumu;
+        /*custcode = "";
+          
+          for(i=0;i<arrlen;i=i+1)begin
+            matrowGet(LMAb,i,LMArw);
+            if(setinset(LMArw.Objects,IVr.Objects))then begin
+              IVr.CustCode = LMArw.CustCode;
+              custcode = LMArw.CustCode;
+              i = arrlen;
+            end;
+          end;*/
+
+          foundf = false;
+          for (i=0;i<arrlen;i=i+1) begin
+            matrowget(LMAb,i,LMArw);
+            if (IVr.CustCode==LMArw.CustCode) then begin
+              c[i] = c[i] + ivsum;
+              cu[i] = cu[i] + ivsumu;
+              foundf = true;
+              i = arrlen;
             end;
           end;
+          if (foundf==false)then begin
+            of = of + ivsum;
+            ofu = ofu + ivsumu;
+          end;
+          
         end;
       end;
       
-      sm1 = sm1 + c1;
-      sm2 = sm2 + c2;
-      sm3 = sm3 + c3;
-      sm4 = sm4 + c4;
-      sm5 = sm5 + c5;
-      sm6 = sm6 + c6;
-      sm7 = sm7 + c7;
-      smof = smof + of;
+  	  for (j=0;j<arrlen;j=j+1) begin
+        sm[j] = sm[j] +c[j];
+        smu[j] = smu[j] +cu[j];
+      end;
       
-      sm1u = sm1u + c1u;
-      sm2u = sm2u + c2u;
-      sm3u = sm3u + c3u;
-      sm4u = sm4u + c4u;
-      sm5u = sm5u + c5u;
-      sm6u = sm6u + c6u;
-      sm7u = sm7u + c7u;
+      smof = smof + of;
       smofu = smofu + ofu;
       
       resetloop(IVr);
@@ -556,37 +533,22 @@ val rate;
         OutString(11,0,dat1,false);
       endformat;
 
-      CUr.Code = "IPOINT";
-      If(ReadfirstMain(CUr,1,true)) begin
-      StartFormat(15);
-        OutString(0,0,CUr.Code,false);
-        OutString(80,0,c1,false);
-        OutString(180,0,c1u,false);
-        OutString(270,0,sm1,false);
-        OutString(1,0,sm1u,true);
-      endformat;
-      end;
-            
-      CUr.Code = "SAMSUNG_OLYMP";		//*********** Change for SAMSUNG_OLYMP
-      If(ReadfirstMain(CUr,1,true)) begin
-      StartFormat(15);
-        OutString(0,0,CUr.Code,false);
-        OutString(80,0,c4,false);
-        OutString(180,0,c4u,false);
-        OutString(270,0,sm4,false);
-        OutString(1,0,sm4u,true);
-      endformat;
-      end;
-      
-      CUr.Code = "SAMSUNG_OLYMP2";		//*********** Change for SAMSUNG_OLYMP
-      If(ReadfirstMain(CUr,1,true)) begin
-      StartFormat(15);
-        OutString(0,0,CUr.Code,false);
-        OutString(80,0,c5,false);
-        OutString(180,0,c5u,false);
-        OutString(270,0,sm5,false);
-        OutString(1,0,sm5u,true);
-      endformat;
+	  for (j=0;j<arrlen;j=j+1) begin
+        matrowget(LMAb,j,LMArw);
+        CUr.Code = LMArw.CustCode;
+        if (ReadfirstMain(CUr,1,true)) then begin
+          StartFormat(15);
+          if NonBlank(LMArw.Name) then begin
+            OutString(0,0,LMArw.Name,false);
+          end else begin
+            OutString(0,0,CUr.Code,false);
+          end;
+          OutString(80,0,c[j],false);
+          OutString(180,0,cu[j],false);
+          OutString(270,0,sm[j],false);
+          OutString(1,0,smu[j],true);
+          EndFormat;
+        end;
       end;
       
       StartFormat(15);
@@ -595,23 +557,30 @@ val rate;
         OutString(180,0,ofu,false);
         OutString(270,0,smof,false);
         OutString(1,0,smofu,true);
+      	endformat;
+      	Gray_Divider(0,1);
+      	StartFormat(15);
+      	OutString(0,0,"",false);
       endformat;
-      Gray_Divider(0,1);
-     StartFormat(15);
-        OutString(0,0,"",false);
-    
-      endformat;
+      
+       for (j=0;j<arrlen;j=j+1) begin
+        tot1 = tot1 + c[j];
+        tot2 = tot2 + cu[j];
+        tot3 = tot3 + sm[j];
+        tot4 = tot4 + smu[j];
+      end;
+      tot1 = tot1 + of;
+      tot2 = tot2 + ofu;
+      tot3 = tot3 + smof;
+      tot4 = tot4 + smofu;
       
        StartFormat(15);
         OutString(0,0,"SubTotal",false);
-        OutString(80,0,c1+c2+c3+c4+c5+c6+c7+of,false);
-        OutString(180,0,c1u+c2u+c3u+c4u+c5u+c6u+c7u+ofu,false);
-        OutString(270,0,sm1+sm2+sm3+sm4+sm5+sm6+sm7+smof,false);
-        OutString(1,0,sm1u+sm2u+sm3u+sm4u+sm5u+sm6u+sm7u+smofu,true);
+        OutString(80,0,tot1,false);
+        OutString(180,0,tot2,false);
+        OutString(270,0,tot3,false);
+        OutString(1,0,tot4,true);
       endformat;
-
-    tot3 = sm1+sm2+sm3+sm4+sm5+sm6+sm7+smof;
-    tot4 = sm1u+sm2u+sm3u+sm4u+sm5u+sm6u+sm7u+smofu;
     
      StartFormat(15);
         OutString(0,0,"",false);
@@ -641,14 +610,15 @@ Record IVCashVc IVCr;
 row IVCashVc IVCrw;
 Record IVVc IVr;
 Record SMVc SMr;
-boolean TrHs,testf,testf1;
-val c1,c2,c3,c4,c5,c6,c7,c8,c9,c10,of,stalldt,stall_oc,ivsum,sm1,sm2,sm3,sm4,sm5,sm6,sm7,sm8,sm9,sm10,smof,smstalldt,smstall_oc,tot1,tot2,tot3,tot4;
-val c1u,c2u,c3u,c4u,c5u,c6u,c7u,c8u,c9u,c10u,ofu,stalldtu,stall_ocu,ivsumu,sm1u,sm2u,sm3u,sm4u,sm5u,sm6u,sm7u,sm8u,sm9u,sm10u,smofu,smostalldt,smstall_ocu,smstalldtu,tot1u,tot2u,tot3u,tot4u;
+boolean TrHs,testf,testf1,foundf;
+val of,ivsum,smof,tot1,tot2,tot3,tot4;
+val ofu,ivsumu,smofu;
+Array val c,cu,sm,smu;
 date dat1,dat2;
 record CUVc CUr;
 string 100 data,custcode;
 string 5 s1,s2,s3,s4;
-integer mtrw,i,invtype;
+integer mtrw,i,invtype,j;
 val frrate,to1,to2,br1,br2;
 record POSCurncyBlock PCb;
   record LocalMachineAccBlock LMAb;
@@ -667,6 +637,7 @@ record POSCurncyBlock PCb;
   dat1 = data;
   dat2 = RepSpec.d2;
   blockload(LMAb);
+  locmtrw = matrowcnt(LMAb);
   //messageBox(0,dat1 & "_" & dat2);
   StartReportJob("RetailSales");
 
@@ -680,72 +651,32 @@ record POSCurncyBlock PCb;
         OutString(1,0,"SUM/Month(USD)",true);
        
       endformat;
-  sm1 = 0;
-  sm2 = 0;
-  sm3 = 0;
-  sm4 = 0;
-  sm5 = 0;
-  sm6 = 0;
-  sm7 = 0;
-  sm8 = 0;
-  sm9 = 0;
-  sm10 =0;
-  smof = 0;
-  smstalldt = 0;
-  smstall_oc = 0;
+      
+  for (j=0;j<locmtrw;j=j+1) begin
+    sm[j] = 0;
+    smu[j] = 0;
+  end;
   
-  sm1u = 0;
-  sm2u = 0;
-  sm3u = 0;
-  sm4u = 0;
-  sm5u = 0;
-  sm6u = 0;
-  sm7u = 0;
-  sm8u = 0;
-  sm9u = 0;
-  sm10u =0;
+  smof = 0;
   smofu = 0;
-  smostalldt = 0;
-  smstall_ocu = 0;
+  
   TrHs = true;
   While(TrHs) begin
     if(dat1>=dat2)then begin TrHs =false; end;
     if(TrHs) then begin
-      c1=0;
-      c2=0;
-      c3=0;
-      c4=0;
-      c5=0;
-      c6=0;
-      c7=0;
-      c8=0;
-      c9=0;
-      c10=0;
+ 
+ 	  for (j=0;j<locmtrw;j=j+1) begin
+        c[j] = 0;
+        cu[j] = 0;
+      end;
+      
       of = 0;
-      stalldt = 0;
-      stall_oc = 0;
-      c1u=0;
-      c2u=0;
-      c3u=0;
-      c4u=0;
-      c5u=0;
-      c6u=0;
-      c7u=0;
-      c8u=0;
-      c9u=0;
-      c10u=0;
       ofu=0;
-      stalldtu = 0;
-      stall_ocu = 0;
       
       tot1=0;
       tot2=0;
       tot3=0;
       tot4=0;
-      tot1u=0;
-      tot2u=0;
-      tot3u=0;
-      tot4u=0;
       
       IVCr.InvDate=dat1;
       testf = true;
@@ -781,20 +712,14 @@ record POSCurncyBlock PCb;
           end;
             GetFullCurncyRate(IVCr.CurncyCode,IVCr.InvDate,frrate,to1,to2,br1,br2);
             
-            switch(IVCr.LocalMachineCode) begin
-              
-              case "S1":              c1=c1+IVCrw.Sum;
-                                      c1u=c1u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              
-              case "A1":              c2=c2+IVCrw.Sum;
-                                      c2u=c2u+round(IVCrw.Sum/frrate,defaultcurroundoff);
-              
-
-                                      
-			        case "A2":             stall_oc=stall_oc+IVCrw.Sum;
-                                      stall_ocu=stall_ocu+round(IVCrw.Sum/frrate,defaultcurroundoff);       
-                                               
+            for (j=0;j<locmtrw;j=j+1) begin
+              matrowget(LMAb,j,LMArw);
+              if (IVCr.LocalMachineCode==LMArw.LocalMachine) then begin
+                c[j]=c[j]+IVCrw.Sum;
+                cu[j]=cu[j]+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              end;
             end;
+            
           end;
         end;
       end;
@@ -834,59 +759,40 @@ record POSCurncyBlock PCb;
           ivsumu = IVr.Sum4*invtype;
         end;
           custcode = "";
-          locmtrw = matrowcnt(LMAb);
+          
           for(loci=0;loci<locmtrw;loci=loci+1)begin
             matrowGet(LMAb,loci,LMArw);
             if(setinset(LMArw.Objects,IVr.Objects))then begin
               IVr.CustCode = LMArw.CustCode;
               custcode = LMArw.CustCode;
-            end;
-            
+              loci = locmtrw;
+            end;  
           end;
         
-          switch(custcode) begin
-            case "S_K_OL":c1=c1+ivsum;
-                          c1u=c1u+ivsumu;
-            case "A_K_OP":c2=c2+ivsum;
-                                c2u=c2u+ivsumu;
-            case "A_K_ST_OP": stall_oc= stall_oc + ivsum;
-            	stall_ocu = stall_ocu + ivsumu;
-            
-            otherwise begin
-            	of = of + ivsum;
-            	ofu = ofu + ivsumu;
+          foundf = false;
+          for (i=0;i<locmtrw;i=i+1) begin
+            matrowget(LMAb,i,LMArw);
+            if (custcode==LMArw.CustCode) then begin
+              c[i] = c[i] + ivsum;
+              cu[i] = cu[i] + ivsumu;
+              foundf = true;
+              i = locmtrw;
             end;
           end;
+          if (foundf==false)then begin
+            of = of + ivsum;
+            ofu = ofu + ivsumu;
+          end;           
         end;
       end;
       
-      sm1 = sm1 + c1;
-      sm2 = sm2 + c2;
-      sm3 = sm3 + c3;
-      sm4 = sm4 + c4;
-      sm5 = sm5 + c5;
-      sm6 = sm6 + c6;
-      sm7 = sm7 + c7;
-      sm8 = sm8 + c8;
-      sm9 = sm9 + c9;
-      sm10 = sm10 +c10;
-      smof = smof + of;
-      //smstalldt = smstalldt + stalldt;
-      smstall_oc = smstall_oc + stall_oc;
+      for (j=0;j<locmtrw;j=j+1) begin
+        sm[j] = sm[j] +c[j];
+        smu[j] = smu[j] +cu[j];
+      end;
       
-      sm1u = sm1u + c1u;
-      sm2u = sm2u + c2u;
-      sm3u = sm3u + c3u;
-      sm4u = sm4u + c4u;
-      sm5u = sm5u + c5u;
-      sm6u = sm6u + c6u;
-      sm7u = sm7u + c7u;
-      sm8u = sm8u + c8u;
-      sm9u = sm9u + c9u;
-      sm10u = sm10u + c10u;
+      smof = smof + of;
       smofu = smofu + ofu;
-      //smstalldtu = smstalldtu + stalldtu;
-      smstall_ocu = smstall_ocu + stall_ocu;
       
       resetloop(IVr);
       Gray_Divider(0,1);
@@ -894,43 +800,23 @@ record POSCurncyBlock PCb;
         OutString(11,0,dat1,false);
       endformat;
 
-      CUr.Code = "S_K_OL";
-      If(ReadfirstMain(CUr,1,true)) begin
-      StartFormat(15);
-        //OutString(0,0,CUr.Code,false);
-        OutString(0,0,"Samsung",false);
-        OutString(80,0,c1,false);
-        OutString(180,0,c1u,false);
-        OutString(270,0,sm1,false);
-        OutString(1,0,sm1u,true);
-      endformat;
+	  for (j=0;j<locmtrw;j=j+1) begin
+        matrowget(LMAb,j,LMArw);
+        CUr.Code = LMArw.CustCode;
+        if (ReadfirstMain(CUr,1,true)) then begin
+          StartFormat(15);
+          if NonBlank(LMArw.Name) then begin
+            OutString(0,0,LMArw.Name,false);
+          end else begin
+            OutString(0,0,CUr.Code,false);
+          end;
+          OutString(80,0,c[j],false);
+          OutString(180,0,cu[j],false);
+          OutString(270,0,sm[j],false);
+          OutString(1,0,smu[j],true);
+          EndFormat;
+        end;
       end;
-      
-      CUr.Code = "A_K_OP";
-      If(ReadfirstMain(CUr,1,true)) begin
-      StartFormat(15);
-        //OutString(0,0,CUr.Code,false);
-        OutString(0,0,"Ocean Plaza",false);
-        OutString(80,0,c2,false);
-        OutString(180,0,c2u,false);
-        OutString(270,0,sm2,false);
-        OutString(1,0,sm2u,true);
-      endformat;
-      end;
-      
-      
-      CUr.Code = "A_K_ST_OP";
-      If(ReadfirstMain(CUr,1,true)) begin
-      StartFormat(15);
-        //OutString(0,0,CUr.Code,false);
-        OutString(0,0,"STALL_OC",false);
-        OutString(80,0,stall_oc,false);
-        OutString(180,0,stall_ocu,false);
-        OutString(270,0,smstall_oc,false);
-        OutString(1,0,smstall_ocu,true);
-      endformat;
-      end;
-    
             
       StartFormat(15);
         OutString(0,0,"Office",false);
@@ -938,23 +824,30 @@ record POSCurncyBlock PCb;
         OutString(180,0,ofu,false);
         OutString(270,0,smof,false);
         OutString(1,0,smofu,true);
-      endformat;
-      Gray_Divider(0,1);
-     StartFormat(15);
+      	endformat;
+      	Gray_Divider(0,1);
+     	StartFormat(15);
         OutString(0,0,"",false);
-    
       endformat;
+      
+      for (j=0;j<locmtrw;j=j+1) begin
+        tot1 = tot1 + c[j];
+        tot2 = tot2 + cu[j];
+        tot3 = tot3 + sm[j];
+        tot4 = tot4 + smu[j];
+      end;
+      tot1 = tot1 + of;
+      tot2 = tot2 + ofu;
+      tot3 = tot3 + smof;
+      tot4 = tot4 + smofu;
       
        StartFormat(15);
         OutString(0,0,"SubTotal",false);
-        OutString(80,0,c1+c2/*+c3+c4+c5+c6+c7+c8+c9+c10+*/of+stall_oc,false);
-        OutString(180,0,c1u+c2u+/*c3u+c4u+c5u+c6u+c7u+c8u+c9u+c10u+ofu+*/stall_ocu,false);
-        OutString(270,0,sm1+sm2+/*sm3+sm4+sm5+sm6+sm7+sm8+sm9+sm10+*/smof+smstall_oc,false);
-        OutString(1,0,sm1u+sm2u+/*sm3u+sm4u+sm5u+sm6u+sm7u+sm8u+sm9u+sm10u+*/smofu+smstall_ocu,true);
+        OutString(80,0,tot1,false);
+        OutString(180,0,tot2,false);
+        OutString(270,0,tot3,false);
+        OutString(1,0,tot4,true);
       endformat;
-
-    tot3 = sm1+sm2+/*sm3+sm4+sm5+sm6+sm7+sm8+sm9+sm10+*/smof+smstall_oc;
-    tot4 = sm1u+sm2u+/*sm3u+sm4u+sm5u+sm6u+sm7u+sm8u+sm9u+sm10u+*/smofu+smstall_ocu;
     
      StartFormat(15);
         OutString(0,0,"",false);

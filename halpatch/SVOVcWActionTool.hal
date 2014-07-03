@@ -12,6 +12,8 @@ external procedure GetFullCurncyRate (var string,Date,var val,var val,var val,va
 external function LongInt ItemInContract(string,string,Date);
 external procedure SVOGetRate(record SVOVc);
 
+SetLangMode(LangUkrainian,"UKR",0);
+
 global
 function Boolean PasteCUInSVO(var record SVOVc SVOp,var string warntext)
 BEGIN
@@ -376,4 +378,29 @@ begin
   SVOp.DelAddr4 = a4;
   SVOp.Region = region;
   return;
+end;
+
+
+global updating procedure AttachNoteToSVO(record SVOVc SVOr, var Record NotepadVc Noter,integer compnr)
+begin
+  record RLinkVc RLinkr;
+  Integer notenr;
+  boolean findf;
+
+  Noter.SerNr = NextSerNr("NotepadVc",CurrentDate,-1,false,"");
+  Noter.Classification = 1;
+  Noter.CompanyNr = compnr;
+  if (RecordStore(Noter,false)) then begin
+    CreateRecordLink(SVOr,compnr,Noter,compnr);
+    notenr = 1;
+    while (ReadRecordLink(SVOr,notenr,Noter,RLinkr)) begin
+      notenr = notenr + 1;
+    end;
+    if (ReadRecordLink(SVOr,notenr-1,Noter,RLinkr)) then begin
+      RLinkr.Comment = "Результат діагностики";//"Printed Docs";   
+      if (RecordStore(RLinkr,true)) then begin  end;
+    end;
+  END;
+
+return;
 end;

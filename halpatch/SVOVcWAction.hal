@@ -3,6 +3,7 @@ remote updating function Integer RecordAction_raPasteSVOInPP(var record PPVc,var
 remote updating function Integer RecordAction_raPasteSVOInExp(var record ExpVc,var record SVOVc);
 remote updating function Integer RecordAction_raPasteSVOInIP(var record IPVc,var record SVOVc);
 remote updating function Integer RecordAction_raPasteSVOInStockMov(var record StockMovVc,var record SVOVc);
+remote updating procedure AttachNoteToSVO(record SVOVc, var Record NotepadVc,integer);
 
 global
 updating procedure ORFromSVODsm()
@@ -181,3 +182,26 @@ res = inner.SVODClassAfterEditField(wn,fieldname,fn,rownr,changed);
   SVODClassAfterEditField = res;
   RETURN;
 END;*/
+
+
+global updating procedure ResNoteSVODsm()
+begin
+integer wn,stat,compnr;
+record SVOVc SVOr;
+record NotepadVc NPr;
+
+  wn = curwindow;
+  stat = windowstate(wn);
+  
+  if(stat==0)then begin
+    compnr = WindowCompanyNr(wn);
+    getwindowrecord(wn,SVOr);
+    recordnew(NPr);
+    AttachNoteToSVO(SVOr,NPr,compnr);
+    OpenWindow("NotepadDClass",1,wn,"","",NPr);
+  end else begin
+    beep;
+  end;
+
+return;
+end;

@@ -59,6 +59,7 @@ BEGIN
   record ObjectsAccBlock OAb;//Edit***************************Sasha2,13:08 27.06.2014
   row ObjectsAccBlock OArw;//Edit***************************Sasha2,13:08 27.06.2014
   Integer j, mtrw; //Edit***************************Sasha2,13:14 27.06.2014
+  record LocationVc Locr; //Edit***************************Sasha2,14:23 03.07.2014
 
   chsum = false; 
   chrqty = false;
@@ -85,15 +86,18 @@ BEGIN
     ORrw.vRebate = vreb;
     ORrw.VATCode = vatcode;
     ORrw.BasePrice = baseprice;
-	blockload(OAb); //Edit***************************Sasha2,13:13 27.06.2014
-    mtrw = matrowcnt(OAb);
-    For(j=0;j<mtrw;j=j+1)begin
-      matrowget(OAb,j,OArw);
-      if(setinset(OArw.Objects,ORr.Objects))then begin
-        salesacc = OArw.SaleAccCode;
-        j = mtrw;                      
-      end;
-    end; //Edit***************************Sasha2,13:13 27.06.2014
+    Locr.Code = ORr.Location; //Edit***************************Sasha2,14:17 03.07.2014
+    if (ReadFirstMain(Locr,1,true) and NonBlank(Locr.Objects)) then begin //Edit***************************Sasha2,14:17 03.07.2014
+		blockload(OAb); //Edit***************************Sasha2,13:13 27.06.2014
+	    mtrw = matrowcnt(OAb);
+	    For(j=0;j<mtrw;j=j+1)begin
+	      matrowget(OAb,j,OArw);
+	      if(setinset(OArw.Objects,Locr.Objects))then begin
+	        salesacc = OArw.SaleAccCode;
+	        j = mtrw;                      
+	      end;
+	    end; //Edit***************************Sasha2,13:13 27.06.2014
+	end; //Edit***************************Sasha2,14:23 03.07.2014
     ORrw.SalesAcc = salesacc;
     ORrw.ArtCode = INr.Code;
     ORrw.Objects = FindINObjects(INr.Objects,INr.Group);
@@ -882,7 +886,7 @@ BEGIN
       ORp.FrPrice = DivRateToBase1(ORp.CurncyCode,ORp.FrBase,ORp.FrRate,ORp.ToRateB1,ORp.ToRateB2,ORp.BaseRate1,ORp.BaseRate2,DefaultCurRoundOff);
     end;  
     
-    blockload(OAb); //Edit***************************Sasha2,13:13 27.06.2014 {
+    /*blockload(OAb); //Edit***************************Sasha2,13:13 27.06.2014 {
     mtrw = matrowcnt(OAb);
     For(j=0;j<mtrw;j=j+1)begin
       matrowget(OAb,j,OArw);
@@ -904,7 +908,7 @@ BEGIN
         
       end;
       MatRowPut(ORp,i,ORpw);
-    end; //Edit***************************Sasha2,13:13 27.06.2014 }
+    end; *///Edit***************************Sasha2,13:13 27.06.2014 }
      
     if (nonblank(CUr.WarnText1)) then begin
       warning = CUr.WarnText1;

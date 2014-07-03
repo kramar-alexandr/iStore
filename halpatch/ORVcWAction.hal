@@ -43,6 +43,7 @@ external function Boolean SetUnitFactor(string,var val,val,val,val,var val,var v
 external procedure SerialNrDimensions(string,string,var val,var val,var val);
 external function Integer CheckSerialStatus(string,string,var string);
 remote function val CalculateSerialNrQuantity(string,string,string,Boolean,val,val,val,val);
+external procedure GetItemSalesAcc(string,Integer,var string); //Edit***************************Sasha2,14:36 03.07.2014
 
 global
 procedure ORSumup(var record ORVc ORp)
@@ -1005,6 +1006,54 @@ begin
   return;
 end;
 
+function Boolean ORDClassLocationEFAfter(Integer wn, Integer changed) //Edit***************************Sasha2,14:26 03.07.2014 {
+begin   
+  record ORVc ORr;
+  row ORVc ORrw;
+  Boolean chsum;
+  record ObjectsAccBlock OAb;
+  row ObjectsAccBlock OArw;
+  record LocationVc Locr;
+  Integer j, rwcnt; 
+  string 255 salesacc; 
+
+  if (changed!=0) then begin  
+    DeselectWindow(wn,false);
+    GetWindowRecord(wn,ORr);
+    
+    Locr.Code = ORr.Location;
+    if (ReadFirstMain(Locr,1,true) and NonBlank(Locr.Objects)) then begin
+	    blockload(OAb);
+	    rwcnt = matrowcnt(OAb);
+	    For(j=0;j<rwcnt;j=j+1) begin
+	      matrowget(OAb,j,OArw);
+	      if(setinset(OArw.Objects,Locr.Objects))then begin
+	        salesacc = OArw.SaleAccCode;
+	        j = rwcnt;                      
+	      end;
+	    end; 
+	    rwcnt = matrowcnt(ORr);
+	    for(j=0;j<rwcnt;j=j+1) begin
+	      matrowget(ORr,j,ORrw);
+	      if(NonBlank(ORrw.ArtCode))then begin
+	      	if (NonBlank(salesacc)) then begin
+	      		ORrw.SalesAcc = salesacc;
+	      	end else begin
+				GetItemSalesAcc(ORrw.ArtCode,ORr.ExportFlag,salesacc);
+				ORrw.SalesAcc = salesacc;
+	      	end;
+	        
+	      end;
+	      MatRowPut(ORr,j,ORrw);
+	    end;
+	end;
+    
+    PutWindowRecord(wn,ORr);
+  end;  
+  ORDClassLocationEFAfter = true;
+  return;
+end; //Edit***************************Sasha2,14:26 03.07.2014 }
+
 global
 function Boolean ORDClassAfterEditField(Integer wn,string fieldname,Integer fn, Integer rownr,Integer changed)
 BEGIN
@@ -1045,6 +1094,7 @@ BEGIN
     case "CustCode": res = ORDClassCustCodeEFAfter(wn,fn,rownr,changed);
     case "Quant": res = ORDClassQuantEFAfter(wn,fn,rownr,changed);
     case "ArtCode": res = ORDClassArtCodeEFAfter(wn,rownr,changed);
+    case "Location": res = ORDClassLocationEFAfter(wn,changed); //Edit***************************Sasha2,14:25 03.07.2014
   end;
   ORDClassAfterEditField = res;
   RETURN;

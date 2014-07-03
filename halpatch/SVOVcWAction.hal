@@ -3,7 +3,7 @@ remote updating function Integer RecordAction_raPasteSVOInPP(var record PPVc,var
 remote updating function Integer RecordAction_raPasteSVOInExp(var record ExpVc,var record SVOVc);
 remote updating function Integer RecordAction_raPasteSVOInIP(var record IPVc,var record SVOVc);
 remote updating function Integer RecordAction_raPasteSVOInStockMov(var record StockMovVc,var record SVOVc);
-remote updating procedure AttachNoteToSVO(record SVOVc, var Record NotepadVc,integer);
+remote updating procedure AttachNoteToSVO(record SVOVc, var Record NotepadVc,integer,string);// Edit ************************** Thursday, July 3, 2014 at 15:33:34
 
 global
 updating procedure ORFromSVODsm()
@@ -197,7 +197,7 @@ record NotepadVc NPr;
     compnr = WindowCompanyNr(wn);
     getwindowrecord(wn,SVOr);
     recordnew(NPr);
-    AttachNoteToSVO(SVOr,NPr,compnr);
+    AttachNoteToSVO(SVOr,NPr,compnr,currentuser);
     OpenWindow("NotepadDClass",1,wn,"","",NPr);
   end else begin
     beep;

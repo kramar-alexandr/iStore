@@ -381,12 +381,16 @@ begin
 end;
 
 
-global updating procedure AttachNoteToSVO(record SVOVc SVOr, var Record NotepadVc Noter,integer compnr)
+global updating procedure AttachNoteToSVO(record SVOVc SVOr, var Record NotepadVc Noter,integer compnr,string user)
 begin
   record RLinkVc RLinkr;
   Integer notenr;
   boolean findf;
-
+  record UserVc Userr;
+  
+  Userr.Code = user;
+  readfirstmain(Userr,1,true);
+  
   Noter.SerNr = NextSerNr("NotepadVc",CurrentDate,-1,false,"");
   Noter.Classification = 1;
   Noter.CompanyNr = compnr;
@@ -397,7 +401,7 @@ begin
       notenr = notenr + 1;
     end;
     if (ReadRecordLink(SVOr,notenr-1,Noter,RLinkr)) then begin
-      RLinkr.Comment = "Результат діагностики";//"Printed Docs";   
+      RLinkr.Comment = Userr.Name;//"Printed Docs";   
       if (RecordStore(RLinkr,true)) then begin  end;
     end;
   END;

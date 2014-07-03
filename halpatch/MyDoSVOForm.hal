@@ -23,6 +23,56 @@ external procedure ItemBCEAN13(string,var string);
 external procedure GetStandardProblemText(string,Integer,var string);
 external procedure GetFieldArgument(record DocVc,Integer,var string);
 
+procedure PrintWorksRows(record SVOVc SVOr)
+begin
+  boolean TrHs,testf;
+  record WSVc WSr;
+  row WSVc WSrw;
+  integer mtrw,i;
+  record INVc INr;
+  
+  WSr.SVONr = SVOr.SerNr;
+  TrHs = true;
+  while(loopkey("SVONr",WSr,1,TrHs))begin
+    testf = true;
+    if(WSr.SVONr!=SVOr.SerNr)then begin testf = false; TrHs = false; end;
+    if(WSr.OKFlag==0)then begin testf = false; end;
+    
+    if(testf)then begin
+      mtrw = matrowcnt(WSr);
+      For(i=0;i<mtrw;i=i+1) begin
+	      matrowget(WSr,i,WSrw);
+	        if (FIELDINFORM("MYF_WSWORKNAME") or FIELDINFORM("MYF_WSWORKCODE")) then begin
+	          if(nonblank(WSrw.ArtCode))then begin
+              INr.Code = WSrw.ArtCode;
+              if(readfirstmain(INr,1,true))begin
+                if(INr.ItemType==3 or INr.ItemType==0)then begin
+                  OUTFORMFIELD("MYF_WSWORKNAME",WSrw.Spec); 
+                  OUTFORMFIELD("MYF_WSWORKCODE",WSrw.ArtCode); 
+                end;
+              end;
+	          end else begin
+              OUTFORMFIELD("MYF_WSWORKNAME",WSrw.Spec); 
+	          end;
+	        end;
+	        
+	        if (FIELDINFORM("MYF_WSITEMNAME") or FIELDINFORM("MYF_WSITEMCODE")) then begin
+	          if(nonblank(WSrw.ArtCode))then begin
+              INr.Code = WSrw.ArtCode;
+              if(readfirstmain(INr,1,true))begin
+                if(INr.ItemType==1 or INr.ItemType==2)then begin
+                  OUTFORMFIELD("MYF_WSITEMNAME",WSrw.Spec); 
+                  OUTFORMFIELD("MYF_WSITEMCODE",WSrw.ArtCode); 
+                end;
+              end;
+	          end;
+	        end;
+	      
+      end; 
+    end;
+  end;
+return;
+end;
 
 global
 procedure MyPrintNote(record NotepadVc Noter,integer length)// Edit ************************** Thursday, July 3, 2014 at 10:53:57
@@ -204,6 +254,9 @@ LBREAK:;
           
           // Edit Start ---------------------------------------------- Edit Start
 	//Wednesday, 7 April 2010 1:00:52 PM
+	
+	        PrintWorksRows(SVOr);// Edit ************************** Thursday, July 3, 2014 at 11:19:46
+	
           enginer = "";
          if (FIELDINFORM("F_STANDARDPROBLEMTEXT")) then begin// Edit ************************** Thursday, July 3, 2014 at 10:47:28
 	         cnt=1;

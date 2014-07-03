@@ -21,17 +21,29 @@ external procedure ItemBC39(string,var string);
 external procedure ItemBCEAN(string,var string);
 external procedure ItemBCEAN13(string,var string);
 external procedure GetStandardProblemText(string,Integer,var string);
+external procedure GetFieldArgument(record DocVc,Integer,var string);
+
 
 global
-procedure MyPrintNote(record NotepadVc Noter)
+procedure MyPrintNote(record NotepadVc Noter,integer length)// Edit ************************** Thursday, July 3, 2014 at 10:53:57
 BEGIN
-  Integer i,rwcnt;
+  Integer i,rwcnt,j;
   string 255 tstr;
   
   rwcnt = LineTextCnt(Noter);
   for (i=0;i<rwcnt;i=i+1) begin
     tstr = LineTextGet(Noter,i);
-    OUTFORMFIELD("MY_SrviceText",tstr);    
+    if(length>0)then begin
+      while(len(tstr)>=length)begin
+        OUTFORMFIELD("F_STANDARDPROBLEMTEXT",left(tstr,length)); 
+        tstr = right(tstr,len(tstr)-length);
+      end;
+      if(len(tstr)>0)then begin
+        OUTFORMFIELD("F_STANDARDPROBLEMTEXT",tstr); 
+      end;
+    end else begin
+      OUTFORMFIELD("F_STANDARDPROBLEMTEXT",tstr);    
+    end;
   end;  
   RETURN;
 END;
@@ -103,14 +115,14 @@ BEGIN
       OUTFORMFIELD("F_WORKORDERNO",SVOrw.WOSerNr);
       OUTFORMFIELD("F_MAXCOST",SVOrw.MaxCost);
       OUTFORMFIELD("F_STANDARDPROBLEM",SVOrw.StandProblem);
-      if ((FIELDINFORM("F_STANDARDPROBLEMTEXT")) and (i==0)) then begin
+      /*if ((FIELDINFORM("F_STANDARDPROBLEMTEXT")) and (i==0)) then begin// Edit ************************** Thursday, July 3, 2014 at 10:46:55
         GetStandardProblemText(SVOrw.StandProblem,1,tstr);      
         OUTFORMFIELD("F_STANDARDPROBLEMTEXT",tstr);
         GetStandardProblemText(SVOrw.StandProblem,2,tstr);      
         OUTFORMFIELD("F_STANDARDPROBLEMTEXT",tstr);
         GetStandardProblemText(SVOrw.StandProblem,3,tstr);      
         OUTFORMFIELD("F_STANDARDPROBLEMTEXT",tstr);
-      end;  
+      end;  */
       t = t + SVOrw.Quant*SVOrw.Price;
       t = t + FindVAT(SVOrw.VATCode,SVOrw.Quant*SVOrw.Price,0,0);
       OUTFORMFIELD("F_BELOPP",t);
@@ -143,6 +155,9 @@ BEGIN
  	record RLinkVc RLr;
   integer cnt;
   string 255 enginer;
+  record DocVc Docr;
+  string 200 argument;
+  integer length;
 
 	// Edit End ---------------------------------------------- Edit End
 	
@@ -184,20 +199,29 @@ LBREAK:;
             SetFaxInfo(CUr.Person,CUr.Name,CUr.Fax,USetStr(1790));
           end;
           
+          Docr.Code = formcode;
+          readfirstmain(Docr,1,true);
+          
           // Edit Start ---------------------------------------------- Edit Start
 	//Wednesday, 7 April 2010 1:00:52 PM
           enginer = "";
-         if (FIELDINFORM("MY_SrviceText")) then begin
+         if (FIELDINFORM("F_STANDARDPROBLEMTEXT")) then begin// Edit ************************** Thursday, July 3, 2014 at 10:47:28
 	         cnt=1;
 	         while(ReadRecordLink(SVOr,cnt,NPr,RLr)) begin
 	          If(NPr.Classification=="1") then begin
 	          enginer = RLr.Comment;
-              MyPrintNote(NPr);
+	            argument = "";
+	            GetFieldArgument(Docr,F_STANDARDPROBLEMTEXT,argument);// Edit ************************** Thursday, July 3, 2014 at 10:47:29
+	            if(nonblank(argument))then begin
+	              length = stringtoint(argument);
+	            end;
+              MyPrintNote(NPr,length);
 	            goto LActPrintNote;
             end; 
 	         cnt = cnt+1;
 	         end;
          end;
+         
          LActPrintNote:
           if (FIELDINFORM("MY_Enginer")) then begin
 	         cnt=1;

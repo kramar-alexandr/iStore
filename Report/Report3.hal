@@ -284,7 +284,7 @@ begin
   ORr.Reserved = 1;
   
   switch(compnr)begin
-  		case  6:  CreateFile("Stock/AutoreservTXT.xls");
+  	case  6:  CreateFile("Stock/AutoreservTXT.xls");
               closefile;
               millisleep(100);
               openexportfile("Stock/AutoreservTXT.xls",true);

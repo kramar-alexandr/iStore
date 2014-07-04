@@ -718,22 +718,11 @@ L10PasteOrdInShip:;
       SHrw.ArtCode = ORrw.ArtCode;
       SHrw.Spec = ORrw.Spec;
       SHrw.Objects = ORrw.Objects;
-      Locr.Code = ORr.Location; //Edit***************************Sasha2,14:17 03.07.2014
-      if (ReadFirstMain(Locr,1,true) and NonBlank(Locr.Objects)) then begin //Edit***************************Sasha2,14:17 03.07.2014
-	      blockload(OAb); //Edit***************************Sasha2,13:13 27.06.2014
-		  mtrw = matrowcnt(OAb);
-		  For(j=0;j<mtrw;j=j+1)begin
-		    matrowget(OAb,j,OArw);
-		    if(setinset(OArw.Objects,Locr.Objects))then begin
-		      SHrw.CostAcc = OArw.AccCode;
-		      j = mtrw;                      
-		    end;
-		  end; //Edit***************************Sasha2,13:13 27.06.2014
-	  end; //Edit***************************Sasha2,14:17 03.07.2014
+      
       SHrw.SerialNr = ORrw.SerialNr;
       SHrw.Recepy = ORrw.Recepy;
       SHrw.VARList = ORrw.VARList;
-      SHrw.Location = ORrw.Location;
+      SHrw.Location = ORrw.Location;      
       SHrw.Source = ORrw.Source;
       SHrw.DespatchRowTime = ORrw.DespatchRowTime;
       if (nonblankdate(ORrw.DespatchRowDate)) then begin
@@ -766,6 +755,21 @@ L10PasteOrdInShip:;
       if (nonblank(SHrw.ArtCode)) then begin
         res = 0;
       end;    
+      
+      Locr.Code = ORrw.Location; //Edit***************************Sasha2,14:17 03.07.2014
+      if(blank(Locr.Code))then begin Locr.Code = ORr.Location; end;
+      if (ReadFirstMain(Locr,1,true) and NonBlank(Locr.Objects)) then begin //Edit***************************Sasha2,14:17 03.07.2014
+	      blockload(OAb); //Edit***************************Sasha2,13:13 27.06.2014
+        mtrw = matrowcnt(OAb);
+        For(j=0;j<mtrw;j=j+1)begin
+          matrowget(OAb,j,OArw);
+          if(setinset(OArw.Objects,Locr.Objects))then begin
+            SHrw.CostAcc = OArw.AccCode;
+            j = mtrw;                      
+          end;
+        end; //Edit***************************Sasha2,13:13 27.06.2014
+      end; //Edit***************************Sasha2,14:17 03.07.2014
+      
       MatRowPut(SHp,srw,SHrw);      
       totq = totq + SHrw.Ship;
       shrwcnt = MatRowCnt(SHp);
@@ -777,6 +781,8 @@ L10PasteOrdInShip:;
         end;     
       end;
       MatRowGet(SHp,srw,SHrw);
+      
+      
       dontdeletef = true;
       if (IsMaintenance)  then begin
         if (skipzerorows!=0) then begin

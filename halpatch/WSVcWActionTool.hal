@@ -233,6 +233,7 @@ BEGIN
   record ObjectsAccBlock OAb;// Edit ************************** Friday, 8 April 2011 14:43:19
   row ObjectsAccBlock OAbrw;
   integer mtrw,j;
+  record LocationVc Locr;// Edit ************************** Thursday, July 3, 2014 at 17:25:12
   
   BlockLoad(CAb);
   BlockLoad(ARb);
@@ -289,12 +290,14 @@ BEGIN
       WSrw.ItemType = GetItemType(WSr.SVONr,WSr.WONr,WSrw.MotherNr,WSrw.ItemType);
     end;
     WSrw.ACShort = "";
-    blockload(OAb);                                                // Edit ************************** Friday, 8 April 2011 12:19:17
+    blockload(OAb);          
+    Locr.Code = WSr.Location;
+    readfirstmain(Locr,1,true);                                      // Edit ************************** Friday, 8 April 2011 12:19:17
     /*if(WSrw.ItemType==2)then begin*/                                    // Edit ************************** Friday, 8 April 2011 12:19:18
       mtrw = matrowcnt(OAb);
       For(j=0;j<mtrw;j=j+1)begin
         matrowget(OAb,j,OAbrw);
-        if(setinset(OAbrw.Objects,WSr.Objects))then begin
+        if(setinset(OAbrw.Objects,Locr.Objects))then begin
           salesacc = OAbrw.AccCode;                                // Edit ************************** Friday, 8 April 2011 12:19:19
         end;
       end;

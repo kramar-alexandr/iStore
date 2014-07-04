@@ -86,18 +86,19 @@ BEGIN
     ORrw.vRebate = vreb;
     ORrw.VATCode = vatcode;
     ORrw.BasePrice = baseprice;
-    Locr.Code = ORr.Location; //Edit***************************Sasha2,14:17 03.07.2014
+    Locr.Code = ORrw.Location; //Edit***************************Sasha2,14:17 03.07.2014
+    if(blank(Locr.Code))then begin Locr.Code = ORr.Location; end;// Edit ************************** Thursday, July 3, 2014 at 15:59:05
     if (ReadFirstMain(Locr,1,true) and NonBlank(Locr.Objects)) then begin //Edit***************************Sasha2,14:17 03.07.2014
-		blockload(OAb); //Edit***************************Sasha2,13:13 27.06.2014
-	    mtrw = matrowcnt(OAb);
-	    For(j=0;j<mtrw;j=j+1)begin
-	      matrowget(OAb,j,OArw);
-	      if(setinset(OArw.Objects,Locr.Objects))then begin
-	        salesacc = OArw.SaleAccCode;
-	        j = mtrw;                      
-	      end;
-	    end; //Edit***************************Sasha2,13:13 27.06.2014
-	end; //Edit***************************Sasha2,14:23 03.07.2014
+      blockload(OAb); //Edit***************************Sasha2,13:13 27.06.2014
+        mtrw = matrowcnt(OAb);
+        For(j=0;j<mtrw;j=j+1)begin
+          matrowget(OAb,j,OArw);
+          if(setinset(OArw.Objects,Locr.Objects))then begin
+            salesacc = OArw.SaleAccCode;
+            j = mtrw;                      
+          end;
+        end; //Edit***************************Sasha2,13:13 27.06.2014
+    end; //Edit***************************Sasha2,14:23 03.07.2014
     ORrw.SalesAcc = salesacc;
     ORrw.ArtCode = INr.Code;
     ORrw.Objects = FindINObjects(INr.Objects,INr.Group);
@@ -456,6 +457,10 @@ BEGIN
   string 10 salesacc,tax2code;
   val price,vrebate,baseprice,tax2prc;
   Boolean dummyf;
+  record LocationVc Locr;// Edit ************************** Thursday, July 3, 2014 at 16:01:34
+  record ObjectsAccBlock OAb;//Edit***************************Sasha2,13:08 27.06.2014
+  row ObjectsAccBlock OArw;//Edit***************************Sasha2,13:08 27.06.2014
+  Integer j, mtrw; //Edit***************************Sasha2,13:14 27.06.2014
 
   if (readf) then begin
     if (ReadFirstMain(ORp,0,true)) then begin end;
@@ -476,6 +481,21 @@ BEGIN
         ORrw.BasePrice = baseprice;
         ORrw.VATCode = vatcode;
         ORrw.SalesAcc = salesacc;
+        
+        Locr.Code = ORrw.Location; //Edit***************************Sasha2,14:17 03.07.2014
+        if(blank(Locr.Code))then begin Locr.Code = ORp.Location; end;// Edit ************************** Thursday, July 3, 2014 at 15:59:05
+        if (ReadFirstMain(Locr,1,true) and NonBlank(Locr.Objects)) then begin //Edit***************************Sasha2,14:17 03.07.2014
+          blockload(OAb); //Edit***************************Sasha2,13:13 27.06.2014
+            mtrw = matrowcnt(OAb);
+            For(j=0;j<mtrw;j=j+1)begin
+              matrowget(OAb,j,OArw);
+              if(setinset(OArw.Objects,Locr.Objects))then begin
+                salesacc = OArw.SaleAccCode;
+                j = mtrw;                      
+              end;
+            end; //Edit***************************Sasha2,13:13 27.06.2014
+        end; //Edit***************************Sasha2,14:23 03.07.2014
+        
         ORrw.ArtCode = INr.Code;
         MatRowPut(ORp,i,ORrw);
         chsum = ORDchrsum(ORp,i);

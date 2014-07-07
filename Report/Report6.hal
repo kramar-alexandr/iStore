@@ -39,6 +39,7 @@ begin
       end else begin
 		  OutString(4,0,"Price P111",false);
 		  OutString(4,0,"Price P211",false);
+		  OutString(4,0,"Price P311",false);// Edit ************************** Monday, July 7, 2014 at 9:36:52
       end;
     end;
     
@@ -101,28 +102,6 @@ begin
               end else begin
                 OutString(4,0,0,false);
               end;
-              /*PLr.ArtCode = ISr.Code;
-              PLr.PLCode = "IS";
-              if(ReadFirstMain(PLr,2,true))then begin
-                OutString(4,0,PLr.ExVatPrice,false);
-              end else begin
-                OutString(4,0,0,false);
-              end;
-              PLr.ArtCode = ISr.Code;
-              PLr.PLCode = "IM-1";
-              if(ReadFirstMain(PLr,2,true))then begin
-                OutString(4,0,PLr.ExVatPrice,false);
-              end else begin
-                OutString(4,0,0,false);
-              end;
-                           
-              PLr.ArtCode = ISr.Code;
-              PLr.PLCode = "IM-3";
-              if(ReadFirstMain(PLr,2,true))then begin
-                OutString(4,0,PLr.ExVatPrice,false);
-              end else begin
-                OutString(4,0,0,false);
-              end;*/
             end;
           end;
           
@@ -145,6 +124,13 @@ begin
               end;
               PLr.ArtCode = ISr.Code;
               PLr.PLCode = "P211";
+              if(ReadFirstMain(PLr,2,true))then begin
+                OutString(4,0,PLr.ExVatPrice,false);
+              end else begin
+                OutString(4,0,0,false);
+              end;
+              PLr.ArtCode = ISr.Code;
+              PLr.PLCode = "P311";
               if(ReadFirstMain(PLr,2,true))then begin
                 OutString(4,0,PLr.ExVatPrice,false);
               end else begin

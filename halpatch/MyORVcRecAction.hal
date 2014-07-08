@@ -626,7 +626,7 @@ BEGIN
           
     // Edit Start ---------------------------------------------- Edit Start
 	//Tuesday, 1 February 2011 15:02:43
-	      if(ORr.Reserved!=0 and OR2r.Reserved!=0)then begin
+	      	if(ORr.Reserved!=0 and OR2r.Reserved!=0)then begin
             if(ORr.Location!=OR2r.Location)then begin
               RecordCheckError(22067,"",-1,"Location");      
               res = -1;

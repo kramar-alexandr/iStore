@@ -144,7 +144,7 @@ AService = 8;
     ResetCompany(PPhL);  
   end;
   
-  if (SetCompany(PhotoTek,false)) then begin//textera
+  /*if (SetCompany(PhotoTek,false)) then begin//textera// Edit ************************** Thursday, 14 August 2014 10:30:29
     UndeliveredItemsReportEn;
     RepSpec.Media = 2;
     RepSpec.f1 = "DOA#1,DOA_INV,INV#1,INV#2,INV_OUT,K_TRANSIT,MARKETING,OFFICE,RSV_OKS,SERVICE,TRANSIT#2,TRWH,INV#1/E,INV#1_TXT,INV#2_TXT,TRWH_TXT,MARKET_TXT,TRNS#2_TXT"; 
@@ -163,7 +163,7 @@ AService = 8;
     MyReservStstEn;
     
     ResetCompany(PhotoTek);  
-  end;
+  end;*/
   
   if (SetCompany(MMR,false)) then begin
 	       
@@ -193,7 +193,7 @@ AService = 8;
     ResetCompany(MMR);  
   end;
   
-  if (SetCompany(Technomedia,false)) then begin
+  /*if (SetCompany(Technomedia,false)) then begin// Edit ************************** Thursday, 14 August 2014 10:30:14
     UndeliveredItemsReportEn;
 
     RepSpec.Media = 7;
@@ -209,7 +209,7 @@ AService = 8;
     IPEn;
     MyReservStstEn;
     ResetCompany(Technomedia);  
-  end;
+  end;*/
   
   if (SetCompany(AService,false)) then begin
     RepSpec.Media = 8;

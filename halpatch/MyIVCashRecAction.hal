@@ -353,7 +353,11 @@ begin
   IVCashr.CurncyCode = "";
   IVCashr.CustCode = CashDefRec.DefCustCode;
   if (PasteCustInCashInv(IVCashr,"",warning)) then begin end;
-  IVCashr.SalesMan = CurrentUser;
+  
+  //IVCashr.SalesMan = CurrentUser;// Edit ************************** Wednesday, 13 August 2014 14:17:03
+  IVCashr.SalesMan = "";// Edit ************************** Wednesday, 13 August 2014 14:17:12
+  
+  
   if (ServingClient==false) then begin//offline
     BlockLoad(LastRecNr);
     
@@ -765,6 +769,16 @@ BEGIN
             end;
           end;
         end;
+        // Edit Start ---------------------------------------------- Edit Start
+	//Wednesday, 13 August 2014 14:19:23
+	
+        if (blank(IVCashr.SalesMan)) then begin
+					RecordCheckError(1058,IVCashr.SalesMan,-1,"SalesMan");      
+					goto LIVCashVcRecordCheck;
+				end;
+        
+	// Edit End ---------------------------------------------- Edit End
+	
         if (Date2Test("IVCashVc",IVCashr.TransDate,"TransDate",-1)==false) then begin
           res = -1;
           goto LIVCashVcRecordCheck;

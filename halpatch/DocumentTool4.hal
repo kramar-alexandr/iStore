@@ -79,7 +79,7 @@ I changed the code befor calling Getformcode
     usergrtest = true;
   end;
   
-  if (langtest and sertest and intnrtest and usergrtest and printertest) then begin// Edit ************************** Thursday, 14 August 2014 13:18:00
+  if (langtest and sertest and intnrtest and usergrtest/* and printertest*/) then begin// Edit ************************** Thursday, 14 August 2014 13:18:00
     SetPrinter(defprintgroupcode);  
     resfromcode = defformcode;
     res = true;

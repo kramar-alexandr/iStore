@@ -586,7 +586,9 @@ BEGIN
         res = true;
   end else begin
         if (ClientMode) then begin
-          StopAlert(USetStr(4));
+        	if(changed>0)then begin
+						messagebox(4,"");
+          end;
         end;
       
         switch (fieldname) begin

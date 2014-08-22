@@ -30,6 +30,7 @@ external function Boolean GetVATincl(string,var val,var Integer);
 external procedure SetupVATBase(var record SMVc,var Integer);
 external procedure AddVATBase(var record SMVc,string,val,val,Integer,Integer,Integer);
 external procedure MulVATIV(string,val,var val,var val,Integer,Integer);
+external procedure ValToText(val,Integer,string,string,var string);// Edit ************************** Tuesday, 19 August 2014 14:27:50
 
 procedure CashInvVat(Integer stp,Integer incvat,Integer NoTAXonVAT,Integer exportflag,string vatcode,val rowsump,
                 var val vatprcp,var val vatvalp,var val vatexclprc,var val vatinclprc,var val rowtax)
@@ -242,10 +243,11 @@ BEGIN
   record SMVc VATr;
   Integer vatcnt;
   record LangNrVc LangNrr;
-  Boolean printf,langf;
+  Boolean printf,langf,testf;// Edit ************************** Tuesday, 19 August 2014 14:06:52
   Integer intdocnr;
   string 30 formcode,langcode;
   record DocVc Docr;
+  
   
   GetLangNr(IVCashr.LangCode,LangNrr);
   BlockLoad(IVCashDefRec);
@@ -272,10 +274,14 @@ BEGIN
     for (i=rwcnt-1;i>=0;i=i-1) begin
       MatRowGet(IVCashDefRec,i,IVCashDefrw);
       if (FindFormcode(IVCashr.OKFlag,IVCashDefrw.Typ)) then begin 
-        if (Getformcode(i,IVCashDefrw.intdocnr,IVCashDefrw.FPCode,IVCashDefrw.UserGroup,IVCashDefrw.LangCode,IVCashDefrw.SerNr,IVCashr.SerNr,IVCashDefrw.PrintGroupCode,
-                        langcode,intdocnr,"IVCashVc",formcode)) then
-        begin
-          goto LBREAK;
+      	testf = true;
+      	if(nonblank(IVCashr.LocalMachineCode) and IVCashr.LocalMachineCode!=IVCashDefrw.PrintGroupCode and nonblank(IVCashDefrw.PrintGroupCode))then begin testf = false; end;
+      	if(testf)then begin// Edit ************************** Tuesday, 19 August 2014 14:06:12
+					if (Getformcode(i,IVCashDefrw.intdocnr,IVCashDefrw.FPCode,IVCashDefrw.UserGroup,IVCashDefrw.LangCode,IVCashDefrw.SerNr,IVCashr.SerNr,IVCashDefrw.PrintGroupCode,
+													langcode,intdocnr,"IVCashVc",formcode)) then
+					begin
+						goto LBREAK;
+					end;
         end;
       end;
     end;
@@ -407,6 +413,17 @@ LBREAK:;
           OUTFORMFIELD("F_ADDR4",IVCashr.Addr3);
           OUTFORMFIELD("F_INVADDR3",IVCashr.InvAddr3);
           OUTFORMFIELD("F_INVADDR4",IVCashr.InvAddr4);
+          // Edit Start ---------------------------------------------- Edit Start
+	//Tuesday, 19 August 2014 14:26:32
+	
+          if (FIELDINFORM("F_ATTBETALATEXT")) then begin
+						t = IVCashr.Sum4;
+						ValToText(t,M4Val,"UAH","UKR",tstr);
+						OUTFORMFIELD("F_ATTBETALATEXT",tstr);  
+					end;
+          
+	// Edit End ---------------------------------------------- Edit End
+	
           PrintCashInvRows(RepSpec,IVCashr,VATr,vatcnt,LangNrr,Docr,RoundRec);
           PrintLastPageFields(IVCashr,VATr,vatcnt,RoundRec);
           CloseForm;        
@@ -421,6 +438,9 @@ LBREAK:;
       end;
     end;
     intdocnr = intdocnr + 1;
+    if(intdocnr>10)then begin
+			printf = false;
+    end;
   end;
   RETURN;
 END;

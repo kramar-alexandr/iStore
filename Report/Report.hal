@@ -459,6 +459,10 @@ begin
   val cost,myprice;
   longint puno;
   date datepu;
+  record PUVc PUr;// Edit ************************** Wednesday, 3 September 2014 11:12:09
+  row PUVc PUrw;// Edit ************************** Wednesday, 3 September 2014 11:12:07
+  val curcost;
+  string 20 curncy;
   
   frloc = RepSpec.f2;
   art = RepSpec.f3;
@@ -488,7 +492,9 @@ begin
     OutString(4,0,"Кол-во",false);
     OutString(5,0,"Серийник",false);
     OutString(6,0,"Поставщик",true);
-    OutString(7,0,"Цена",true);
+    OutString(7,0,"Валюта поступления",true);
+    OutString(7,0,"Цена поступления",true);
+    OutString(7,0,"Кост",true);
     OutString(8,0,"Счет",true);
     OutString(9,0,"Група",true);
     OutString(1,0,"Дата",true);
@@ -537,6 +543,24 @@ begin
               OutString(5,0,SBr.Serial,false);
               OutString(6,0,postavchik,true);
               
+              // Edit Start ---------------------------------------------- Edit Start
+	//Wednesday, 3 September 2014 11:16:29
+	
+              curcost = blankval;
+              curncy = "";
+              if(IHr.FileName=="PUVc")then begin
+              	PUr.SerNr = IHr.TransNr;
+              	if(readfirstmain(PUr,1,true))then begin
+              		matrowget(PUr,IHr.Row,PUrw);
+              		curcost = PUrw.UPrice * IHr.Qty;
+              		curncy = PUr.CurncyCode;
+              	end;
+              end;
+              OutString(7,0,curncy,true);
+              OutVal(7,0,curcost,M4Val,true);
+              
+	// Edit End ---------------------------------------------- Edit End
+	
               OutVal(7,0,IHr.TotCostPrice,M4Val,true);
               OutString(8,"Dbl" & IHr.FileName,IHr.TransNr,true);
               OutString(9,0,group,true);

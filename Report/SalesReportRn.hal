@@ -840,31 +840,31 @@ begin
                   end else begin*/
                   
                   If(setinset("UAH_PURCHASE2",IVCashrw.Objects))then begin
-						IVCashr.CurncyCode="UAH_B";
-						end else begin
-					  		If(setinset("UAH_PURCHASE",IVCashrw.Objects))then begin
-							IVCashr.CurncyCode="UAH_B";
-							end else begin
-								If(setinset("UAH_APPLE",IVCashrw.Objects))then begin
-						  		IVCashr.CurncyCode="UAH_B";
-								end else begin
-									If(setinset("UAH_JBL",IVCashrw.Objects))then begin
-						  			IVCashr.CurncyCode="UAH_B";
+									IVCashr.CurncyCode="UAH_B";
 									end else begin
-										If(setinset("UAH_E",IVCashrw.Objects))then begin
-										IVCashr.CurncyCode="UAH_B";
+										If(setinset("UAH_PURCHASE",IVCashrw.Objects))then begin
+										IVCashr.CurncyCode="UAH_P";
 										end else begin
-											/*blockLoad(PCb);// Edit ************************** Wednesday, 13 April 2011 12:25:34
-											IVCashr.CurncyCode = PCb.CurncyCode;// Edit ************************** Wednesday, 13 April 2011 12:29:19
-											*/
-											IVCashr.CurncyCode="UAH";
-											end;					  																																															
-										end;
-									end;
-						  		end;
-						  	end;
+											If(setinset("UAH_APPLE",IVCashrw.Objects))then begin
+												IVCashr.CurncyCode="UAH_B";
+											end else begin
+												If(setinset("UAH_JBL",IVCashrw.Objects))then begin
+													IVCashr.CurncyCode="UAH_J";
+												end else begin
+													If(setinset("UAH_E",IVCashrw.Objects))then begin
+													IVCashr.CurncyCode="UAH_B";
+													end else begin
+														/*blockLoad(PCb);// Edit ************************** Wednesday, 13 April 2011 12:25:34
+														IVCashr.CurncyCode = PCb.CurncyCode;// Edit ************************** Wednesday, 13 April 2011 12:29:19
+														*/
+														IVCashr.CurncyCode="UAH";
+														end;					  																																															
+													end;
+												end;
+												end;
+											end;
 					//end;
-                  
+                  tstrval=blankval;
                   GetFullCurncyRate(IVCashr.CurncyCode,IVCashr.InvDate,frrate,to1,to2,br1,br2);// Edit ************************** Tuesday, 15 March 2011 13:39:40
                   //tusd = MulRateToBase1(IVCashr.CurncyCode,IVCashrw.Price,IVCashr.FrRate,IVCashr.ToRateB1,IVCashr.ToRateB2,IVCashr.BaseRate1,IVCashr.BaseRate2,DefaultCurRoundOff)*credinv;
 

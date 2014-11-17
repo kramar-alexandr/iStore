@@ -538,6 +538,7 @@ BEGIN
   string 5 daysstr,lastnostr,year;
   record INVc INr;
   record ItemHistVc IHr;
+  string 2 curcomp,h,m,s;// Edit ************************** Monday, 13 October 2014 14:42:59
   
   year = getyear(PUp.TransDate);
   days=DateDiff(PUp.TransDate,"1/1/" & getyear(PUp.TransDate));
@@ -577,13 +578,32 @@ BEGIN
     //end;
     L44AutoFillPUSerNr:;
     lastnostr = lastno;
+    if (lastno<1000) then begin lastnostr = "0" & lastnostr; end;
     if (lastno<100) then begin lastnostr = "0" & lastnostr; end;
     if (lastno<10) then begin lastnostr = "0" & lastnostr; end;
     daysstr = days;
     if (days<100) then begin daysstr = "0" & daysstr; end;
     if (days<10) then begin daysstr = "0" & daysstr; end;
+    curcomp = currentcompany;// Edit ************************** Monday, 13 October 2014 15:00:26
+    if(len(curcomp)==1)then begin
+    	curcomp = "9" & curcomp;
+    end;
+    h = GetHour(CurrentTime);// Edit ************************** Monday, 13 October 2014 15:00:30
+		m = GetMinute(CurrentTime);
+		s = GetSecond(CurrentTime);
+		if(len(h)==1)then begin
+    	h = "0" & h;
+    end;
+    if(len(m)==1)then begin
+    	m = "0" & m;
+    end;
+    if(len(s)==1)then begin
+    	s = "0" & s;
+    end;
+    serial = INr.AlternativeCode & daysstr & mid(year,3,1) & lastnostr;// Edit ************************** Monday, 13 October 2014 14:37:06
+    serial = curcomp & h & m & s & lastnostr;// Edit ************************** Monday, 13 October 2014 14:37:06// Edit ************************** Monday, 13 October 2014 14:39:33
     
-    serial = INr.AlternativeCode & daysstr & mid(year,3,1) & lastnostr;
+    
     CalcEANCHS(serial);
     // Edit ************************** вторник, 22 июня 2010 г. 09:32:16
     IHr.ArtCode = INr.Code;
@@ -591,7 +611,7 @@ BEGIN
     if(ReadFirstKey("ArtCodeSerialNr",IHr,2,true)) then begin
       //i=i-1;
       lastno = lastno+1;
-      if (lastno>999) then begin
+      if (lastno>9999) then begin
         goto L33AutoFillPUSerNr;
       end;
       goto L44AutoFillPUSerNr;
@@ -604,44 +624,6 @@ BEGIN
     L33AutoFillPUSerNr:;
   end;
   
-  /*for (i=0;i<rwcnt;i=i+1) begin
-    MatRowGet(PUp,i,PUrw);
-    ReadFirstItem(PUrw.ArtCode,INr,true,true);
-    if (INr.SerNrf==0) then begin
-      goto L33AutoFillPUSerNr;
-    end;
-    if (blank(lastitem)) then begin
-      lastitem = PUrw.ArtCode;
-    end;
-    if (i==0) then begin
-      if (blank(PUrw.SerialNr)) then begin
-        ReadLastINSer(PUrw.ArtCode,lastnr);
-      end else begin
-        lastnr = PUrw.SerialNr;
-        goto L33AutoFillPUSerNr;
-      end;
-    end;
-    if ((blank(PUrw.SerialNr)) and (PUrw.ArtCode==lastitem)) then begin
-      NextM4Number(lastnr,lastnr);
-      PUrw.SerialNr = lastnr;
-    end else begin
-      lastnr = PUrw.SerialNr;
-      lastitem = PUrw.ArtCode;
-      if (blank(PUrw.SerialNr)) then begin
-        lastnr = ReadLastSerialNr(PUp,PUrw.ArtCode,i);
-        if (blank(lastnr)) then begin
-          ReadLastINSer(PUrw.ArtCode,lastnr);
-        end;
-      end else begin
-        lastnr = PUrw.SerialNr;
-        goto L33AutoFillPUSerNr;
-      end;
-      NextM4SerialNumber(lastnr,lastnr);      
-      PUrw.SerialNr = lastnr;
-    end;
-    MatRowPut(PUp,i,PUrw);
-L33AutoFillPUSerNr:;
-  end;*/
 LAutoFillPUSerNr:;
   RETURN;
 END;

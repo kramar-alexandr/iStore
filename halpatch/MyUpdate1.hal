@@ -786,10 +786,12 @@ string 5 achar,char;
           WSRr.Available = newaval;
           end;
         end else begin
-          if(nonblank(WSRr.Available))then begin
-            WSRr.Available = WSRr.Available & "," & aval;
-          end else begin
-            WSRr.Available = aval;
+        	if(ISr.Instock>0)then begin
+						if(nonblank(WSRr.Available))then begin
+							WSRr.Available = WSRr.Available & "," & aval;
+						end else begin
+							WSRr.Available = aval;
+						end;
           end;
         end;
         WSRr.DateChange = CurrentDate;

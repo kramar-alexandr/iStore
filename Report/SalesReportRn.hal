@@ -1004,12 +1004,12 @@ record RcVc RepSpec;
               closefile;
               RunProgram("Reports/5/SaleReport_TXT.sh","");
       
-      case 6: CreateFile("Reports/6/SaleReport_MMR.xls");
+      /*case 6: CreateFile("Reports/6/SaleReport_MMR.xls");
               closefile;
               openexportfile("Reports/6/SaleReport_MMR.xls",true);
               SalesReportRn(RepSpec);
               closefile;
-              RunProgram("Reports/6/SaleReport_MMR.sh","");
+              RunProgram("Reports/6/SaleReport_MMR.sh","");*/
               
       case 7: CreateFile("Reports/7/SaleReport_TNM.xls");
               closefile;

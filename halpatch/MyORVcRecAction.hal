@@ -649,7 +649,7 @@ BEGIN
           
           // Edit Start ---------------------------------------------- Edit Start
 	//Wednesday, 28 April 2010 4:41:11 PM
-	if ((ORr.Reserved!=0) or (ORr.OKFlag!=0 and ORr.Reserved==0)) then begin
+					if (((ORr.Reserved!=0) or (ORr.OKFlag!=0 and ORr.Reserved==0)) and ORr.OrderClass!="SHOPS") then begin
             if (OSb.dontAllowOverreserving!=0) then begin
             //MessageBox(0,2);
               switch (INr.ItemType) begin

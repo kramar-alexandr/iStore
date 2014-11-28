@@ -418,7 +418,6 @@ string 5 c0,ci;
 string 20 res;
 boolean testf;
 	
-	messagebox(0,1);
   lenth = len(str);
   testf = true;
   if(lenth!=13) then begin testf = false; end;

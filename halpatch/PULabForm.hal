@@ -222,6 +222,9 @@ BEGIN
   pucnt = 0;
  
   Docr1.Code = "ETIKETKA1";
+  if (RepSpec.flags[1]==1) then begin  //edit ------------------------Dima 28.11.2014
+		Docr1.Code = "ETIKETKA1_WIN";
+	end;
   findetic1 = ReadFirstMain(Docr1,1,true);
   Docr.Code = formcode;
   if (ReadFirstMain(Docr,1,true)) then begin end;
@@ -359,11 +362,16 @@ BEGIN
     end;
 LBREAKPULab:;
     if (nonblank(formcode)) then begin
+	if (RepSpec.flags[1]==1) then begin  //edit ------------------------Dima 28.11.2014
+		formcode=formcode & "_WIN";
+	end;
+
       if (formisopen==false) then begin
         if (OpenForm(formcode)==false) then begin goto LDoPULabFormPrint1; end;
         SetPrinter(PULabDefrw.PrintGroupCode);  
         formisopen = true;
       end;
+      logtext(0,formcode);
       DoPULabFormPrint(RepSpec,formcode,PULabDefrw.PrintGroupCode);// Edit ************************** среда, 23 июня 2010 г. 11:43:31
       if (formisopen) then begin
         CloseForm;
@@ -384,7 +392,7 @@ global
 procedure PULabForm(record RcVc RepSpec)
 BEGIN
   Boolean tmpf;
-  
+
   tmpf = PrintDocument(RepSpec,"PULabForm",false);
   RETURN;
 END;

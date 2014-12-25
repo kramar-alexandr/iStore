@@ -210,7 +210,11 @@ for (i=0;i<numrw;i=i+1) begin
 	end;
 	ExportString(Valtostring(IVCashrw.Price,M4Val,chr(0),chr(46),0));  
 	if (nonblank(IVCashrw.vRebate)) then begin 
-		ExportString(Valtostring(IVCashrw.vRebate,M4Val,chr(0),chr(46),0)); 
+		if(windowsmode==0)then begin
+			ExportString(Valtostring(IVCashrw.Sum,M4Val,chr(0),chr(46),0));// Edit ************************** Wednesday, 3 December 2014 12:49:31 
+		end else begin
+			ExportString(Valtostring(IVCashrw.vRebate,M4Val,chr(0),chr(46),0));// Edit ************************** Wednesday, 3 December 2014 12:49:31 
+		end;
 	end else begin 
 		ExportVal(0,M4Val); 
 	end;

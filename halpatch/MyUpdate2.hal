@@ -43,6 +43,7 @@ begin
 			addtexttoarea(subject,a_subject);
 			writeareatofile(a_subject,"SMS/sms_subj.txt",0);
 			body = "[SENDER]A-SERVICE[/SENDER][SMS]Ваш ремонт " & SVOr.SerNr & " готов.[/SMS]";
+			//body = convertstringfromcodepage("WINDOWS-1251",body);
 			addtexttoarea(body,a_body);
 			writeareatofile(a_body,"SMS/sms_body.txt",0);
 			runprogram("SMS/sendSRVSMS.sh","");
@@ -98,6 +99,7 @@ begin
 			end else begin
 				body = "[SENDER]A-SERVICE[/SENDER][SMS]Ваш ремонт №" & SVOr.SerNr & " принят, тел.044-2227709.[/SMS]";
 			end;
+			//body = convertstringfromcodepage("WINDOWS-1251",body);
 			addtexttoarea(body,a_body);
 			writeareatofile(a_body,"SMS/sms_body.txt",0);
 			runprogram("SMS/sendSRVSMS.sh","");

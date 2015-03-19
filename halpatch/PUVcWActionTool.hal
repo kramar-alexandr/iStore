@@ -40,46 +40,6 @@ external procedure VICalcVals(var record VIVc);
 external procedure VICalcEReb(record VIVc);
 external function LongInt DateDiff(Date,Date);
 
-global
-procedure NextM4SerialNumber(string code,var string next)
-BEGIN
-  string 255 pre;
-  string 255 suff;
-  Integer i,j;
-  val t;
-  string 1 c;
-  string 255 zerostr,tstr;
-  Integer padcnt;
-
-  for (i=len(code);i>0;i=i-1) begin
-    c = Mid(code,i-1,1);
-    if ((asc(c)<asc("0")) or (asc(c)>asc("9"))) then begin//if it is 0, next number for 0123 will be 124
-      goto L10NextM4SerialNumber;
-    end;
-  end;
-L10NextM4SerialNumber:;
-  for (j=0;j<i;j=j+1) begin
-    pre = pre & Mid(code,j,1);
-  end;  
-  for (j=i;j<=len(code);j=j+1) begin
-    suff = suff & Mid(code,j,1);
-  end;
-  padcnt = len(suff);
-  t = StringToVal(suff,M40Val);
-  t = t + 1;
-//  tstr = Left(t,len(t)-3);
-  tstr = ValToString(t,M40Val,"","",0);  
-  M4PadString(tstr,padcnt,"0",true,suff);
-  next = pre & suff;
-  if (next=="0") then begin next = "1"; end;
-  if (next=="") then begin next = "1"; end;
-  if (nonblank(zerostr)) then begin
-    suff = next;
-    next = zerostr & suff;
-  end;
-  RETURN;
-END;
-
 function Integer VIRowExists(record VIVc VIp,string accnumber,string vatcode,val rowsump,val q)
 BEGIN
   Integer res;
@@ -539,7 +499,17 @@ BEGIN
   record INVc INr;
   record ItemHistVc IHr;
   string 2 curcomp,h,m,s;// Edit ************************** Monday, 13 October 2014 14:42:59
+  string 5 lastpudig,istr;
+  record PUVc PU2r;
   
+  if(PUp.SerNr==-1)then begin
+  	goto LAutoFillPUSerNr;
+  end else begin
+		PU2r.SerNr = PUp.SerNr;
+		if(!readfirstmain(PU2r,1,true))then begin
+			goto LAutoFillPUSerNr;
+		end;
+  end;
   year = getyear(PUp.TransDate);
   days=DateDiff(PUp.TransDate,"1/1/" & getyear(PUp.TransDate));
   
@@ -578,15 +548,22 @@ BEGIN
     //end;
     L44AutoFillPUSerNr:;
     lastnostr = lastno;
-    if (lastno<1000) then begin lastnostr = "0" & lastnostr; end;
-    if (lastno<100) then begin lastnostr = "0" & lastnostr; end;
+    //if (lastno<1000) then begin lastnostr = "0" & lastnostr; end;
+    //if (lastno<100) then begin lastnostr = "0" & lastnostr; end;
     if (lastno<10) then begin lastnostr = "0" & lastnostr; end;
     daysstr = days;
     if (days<100) then begin daysstr = "0" & daysstr; end;
     if (days<10) then begin daysstr = "0" & daysstr; end;
+    
+    
+    istr = i;
+    if(i<10)then begin istr = "0" & i; end;
+    if(i<100)then begin istr = "0" & i; end;
+    if(i<1000)then begin istr = "0" & i; end;
+    
     curcomp = currentcompany;// Edit ************************** Monday, 13 October 2014 15:00:26
     if(len(curcomp)==1)then begin
-    	curcomp = "9" & curcomp;
+    	//curcomp = "9" & curcomp;
     end;
     h = GetHour(CurrentTime);// Edit ************************** Monday, 13 October 2014 15:00:30
 		m = GetMinute(CurrentTime);
@@ -600,10 +577,19 @@ BEGIN
     if(len(s)==1)then begin
     	s = "0" & s;
     end;
-    serial = INr.AlternativeCode & daysstr & mid(year,3,1) & lastnostr;// Edit ************************** Monday, 13 October 2014 14:37:06
-    serial = curcomp & h & m & s & lastnostr;// Edit ************************** Monday, 13 October 2014 14:37:06// Edit ************************** Monday, 13 October 2014 14:39:33
+    if(len(PUp.SerNr)>=5)then begin
+    lastpudig = right(PUp.SerNr,5);
+    end else begin
+    	lastpudig = PUp.SerNr;
+    	while(len(lastpudig)<5)begin
+    		lastpudig = "0" & lastpudig;
+    	end;
+    end;
     
-    
+    //serial = INr.AlternativeCode & daysstr & mid(year,3,1) & lastnostr;// Edit ************************** Monday, 13 October 2014 14:37:06
+    //serial = curcomp & h & m & s & lastnostr;// Edit ************************** Monday, 13 October 2014 14:37:06// Edit ************************** Monday, 13 October 2014 14:39:33
+    serial = curcomp & lastpudig & right(istr,3) & right(lastnostr,3);
+        
     CalcEANCHS(serial);
     // Edit ************************** вторник, 22 июня 2010 г. 09:32:16
     IHr.ArtCode = INr.Code;

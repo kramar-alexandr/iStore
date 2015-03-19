@@ -541,6 +541,12 @@ BEGIN
           PrintValueInclZero("F_REBEATEORIG",t,M45Val,LangNrr,SysFormatRec,false);
       end;
       
+			/*if (FIELDINFORM("F_REBEATEORIG1")) then begin
+          //t = ORrw.Price*ORrw.Quant-ORrw.Sum;
+          //PrintValueInclZero("F_REBEATEORIG1",t,M45Val,LangNrr,SysFormatRec,false);
+      end;*/
+      t = ORrw.Price*ORrw.Quant-ORrw.Sum;
+      OUTFORMFIELD("F_REBEATEORIG1",t);
 
       if (FIELDINFORM("F_BASPRIS")) then begin
         if (ORr.InclVAT==0) then begin
@@ -556,16 +562,6 @@ BEGIN
         PrintValue("F_BASPRIS",t,M423Val,LangNrr,SysFormatRec,false);
       end;
       
-         
-      /*OUTFORMFIELD("F_COMMODITYCODE",INr.EUCodex);
-      OUTFORMFIELD("F_ALTERNATIVECODE",INr.AlternativeCode);
-      OUTFORMFIELD("F_SHELFCODE",INr.InvCode);
-      OUTFORMFIELD("F_WIDTH",INr.Width);
-      OUTFORMFIELD("F_HEIGHT",INr.Height);
-      OUTFORMFIELD("F_DEPTH",INr.Depth);
-      OUTFORMFIELD("F_WEIGHT",INr.Weight);
-      OUTFORMFIELD("F_VOLUME",INr.Volume);
-      OUTFORMFIELD("F_BARCODE",INr.BarCode);*/
       PrintValue("F_INPRICE",INr.InPrice,M423Val,LangNrr,SysFormatRec,false);
       OUTFORMFIELD("F_ITEMLOCATION",INr.Department);
       PrintValue("F_INPRICESUM",INr.InPrice*ORrw.Quant,M423Val,LangNrr,SysFormatRec,false);

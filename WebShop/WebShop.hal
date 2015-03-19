@@ -114,7 +114,7 @@ string 5 char;
   comma = false;
   While(loopbackkey("DateChange",WSRr,1,TrHs))begin
     testf = true;
-    if(WSRr.DateChange<addday(WSBb.DateLastTime,-5))then begin TrHs=false; testf = false; end;
+    if(WSRr.DateChange<addday(WSBb.DateLastTime,-30))then begin TrHs=false; testf = false; end;// Edit ************************** Friday, 13 March 2015 15:56:42
     
     if(testf)then begin
       if(comma)then begin
@@ -187,7 +187,7 @@ string 5 char;
   comma = false;
   While(loopbackkey("DateChange",WSRr,1,TrHs))begin
     testf = true;
-    if(WSRr.DateChange<addday(WSBb.DateLastTime,-5))then begin TrHs=false; testf = false; end;
+    if(WSRr.DateChange<addday(WSBb.DateLastTime,-5))then begin TrHs=false; testf = false; end;// Edit ************************** Friday, 13 March 2015 15:56:58
     
     if(testf)then begin
       if(comma)then begin

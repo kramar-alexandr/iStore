@@ -75,9 +75,9 @@ begin
   Maintenance("Видалити об'єкт з запису операцій",MyDelObjTRVClass,MyDelObjTRMn,modNL);
   Maintenance("Додати об'єкт до НДП ЕККА",MyDelObjTRVClass,AddObjToVatTRMn,modNL);
   
-  Maintenance("Create Web Sync Register",MyCrWebSyncVClass,SyncWebRegMn,modSY);
-  Maintenance("Recalculate Web Sync Register",MyCrWebSyncVClass,RecalcWebRegMn,modSY);
-  Maintenance("Update Web Sync Register",MyCrWebSyncVClass,UpdateWebRegMn,modSY); 
+  //Maintenance("Create Web Sync Register",MyCrWebSyncVClass,SyncWebRegMn,modSY);
+  //Maintenance("Recalculate Web Sync Register",MyCrWebSyncVClass,RecalcWebRegMn,modSY);
+  //Maintenance("Update Web Sync Register",MyCrWebSyncVClass,UpdateWebRegMn,modSY); 
   Maintenance("ChangeCuVatCode",MyCrWebSyncVClass,AddVATToCustomerMn,modSY);
   
   Maintenance("UnreservOldOrdeers",UnreservOldOrdersVClass,UnreservOldOrdersMn,modDBMain);
@@ -103,8 +103,8 @@ begin
   Setting("Рахунки об'єктів для розрахункiв",GasObjectsAccTClass,modExp);
   Setting("Опис товарів",GigieneTextLClass,modIN);
   Setting("Настройки Zebra",ZebraPrinterTClass,modUserSet);
-  Setting("Web Sync Settings",WebSyncTClass,modSY);
-  Setting("Web Matrix Sync Settings",WebSyncMatTClass,modSY);
+  //Setting("Web Sync Settings",WebSyncTClass,modSY);
+  //Setting("Web Matrix Sync Settings",WebSyncMatTClass,modSY);
   
   Setting("Web Sync Register",WebSyncRegLClass,modDBMain);
   Setting("OPPVc Registers",OPPLClass,modDBMain);
@@ -121,7 +121,13 @@ begin
   
   Setting("Sequence Numbers",SeqNrTClass,modUserSet);
   
-
+	
+	
+	Setting("Товари для синхрнізації з WEB",WebSyncRegLClass,modSO);
+	Maintenance("Створити товари синхронізації WEB",MyCrWebSyncVClass,SyncWebRegMn,modSO);
+  Maintenance("Перерахувати товари синхронізації WEB",MyCrWebSyncVClass,RecalcWebRegMn,modSO);
+  Maintenance("Поновити товари синхронізації WEB",MyCrWebSyncVClass,UpdateWebRegMn,modSO); 
+  Setting("Настройки синхронізації з WEB",WebSyncTClass,modSO);
 
   Register("Замовлення на обслуговування","Зам-ня на обсл-ня",SVOVc,modMSVO);
   Register("Замовлення на роботу","Зам-ня на роботу",WOVc,modMSVO);

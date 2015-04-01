@@ -1011,6 +1011,8 @@ record POSCurncyBlock PCb;
               
               case "S1":              c1=c1+IVCrw.Sum;
                                       c1u=c1u+round(IVCrw.Sum/frrate,defaultcurroundoff);
+              case "S2":              c2=c2+IVCrw.Sum;
+                                      c2u=c2u+round(IVCrw.Sum/frrate,defaultcurroundoff);
                                                                              
             end;
           end;
@@ -1065,6 +1067,8 @@ record POSCurncyBlock PCb;
           switch(custcode) begin
             case "S_K_OL":c1=c1+ivsum;
                           c1u=c1u+ivsumu;
+            case "S_K_ST_OL":c2=c2+ivsum;
+                          c2u=c2u+ivsumu;
             otherwise begin
             	of = of + ivsum;
             	ofu = ofu + ivsumu;
@@ -1104,6 +1108,18 @@ record POSCurncyBlock PCb;
         OutString(180,0,c1u,false);
         OutString(270,0,sm1,false);
         OutString(1,0,sm1u,true);
+      endformat;
+      end;
+      
+      CUr.Code = "S_K_ST_OL";
+      If(ReadfirstMain(CUr,1,true)) begin
+      StartFormat(15);
+        //OutString(0,0,CUr.Code,false);
+        OutString(0,0,"Samsung2",false);
+        OutString(80,0,c2,false);
+        OutString(180,0,c2u,false);
+        OutString(270,0,sm2,false);
+        OutString(1,0,sm2u,true);
       endformat;
       end;
       

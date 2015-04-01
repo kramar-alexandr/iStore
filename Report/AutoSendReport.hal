@@ -168,7 +168,7 @@ AService = 8;
   if (SetCompany(MMR,false)) then begin
 	       
      RepSpec.Media = 61;
-    RepSpec.f1 = "K_OL,K_OL_EXB";
+    RepSpec.f1 = "K_OL,K_OL_EXB,K_ST_OL";
     //RepSpec.f3 = "P111";	
     LocManyStockEn(RepSpec);
     

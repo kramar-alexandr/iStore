@@ -104,7 +104,7 @@ begin
   Setting("Ћпис товарґв",GigieneTextLClass,modIN);
   Setting("Ќастройки Zebra",ZebraPrinterTClass,modUserSet);
   //Setting("Web Sync Settings",WebSyncTClass,modSY);
-  //Setting("Web Matrix Sync Settings",WebSyncMatTClass,modSY);
+  Setting("Web Matrix Sync Settings",WebSyncMatTClass,modSY);
   
   Setting("Web Sync Register",WebSyncRegLClass,modDBMain);
   Setting("OPPVc Registers",OPPLClass,modDBMain);

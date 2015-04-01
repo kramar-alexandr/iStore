@@ -227,7 +227,7 @@ integer compno;
       case 6: CreateFile("Stock/SamsungStockFull.xls");
               closefile;
               openexportfile("Stock/SamsungStockFull.xls",true);
-              RepSpec.f1 = ",K_OL,K_OL_EXB,";
+              RepSpec.f1 = ",K_OL,K_OL_EXB,K_ST_OL";
               MyItemReportRn(RepSpec);
               millisleep(100);
               RunProgram("Stock/SamsungStockFull.sh", "");

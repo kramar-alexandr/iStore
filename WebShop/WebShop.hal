@@ -8,7 +8,7 @@ return;
 end;
 
 
-global updating procedure WebISTOREShopArtCode()
+webpublic global updating procedure WebISTOREShopArtCode()
 begin
 area areply;
 Boolean TrHs,testf,comma;
@@ -85,7 +85,7 @@ record INVc INr;
 return;
 end;
 
-global updating procedure WebISTOREShop()
+webpublic global updating procedure WebISTOREShop()
 begin
 area areply;
 Boolean TrHs,testf,comma;
@@ -158,7 +158,7 @@ string 5 char;
 return;
 end;
 
-global updating procedure WebITEKShop()
+webpublic global updating procedure WebITEKShop()
 begin
 area areply;
 Boolean TrHs,testf,comma;
@@ -226,7 +226,7 @@ end;
 
 //*************** 
 
-global updating procedure WebITEKShopArtCode()
+webpublic global updating procedure WebITEKShopArtCode()
 begin
 area areply;
 Boolean TrHs,testf,comma;
@@ -290,7 +290,7 @@ end;
 
 //***************
 
-Global updating procedure WebCreateCustomer()
+webpublic Global updating procedure WebCreateCustomer()
 begin
   area xmlarea,workarea;
 	xml getxml;
@@ -356,7 +356,7 @@ return;
 end;
 
 
-Global procedure WebGetSVOStatus()
+webpublic Global procedure WebGetSVOStatus()
 begin
 	string 50 sernr,phone;
 	record SVOVc SVOr;

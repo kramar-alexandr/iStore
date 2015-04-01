@@ -62,6 +62,7 @@ BEGIN
       		case "K_A_OP": PLr.PLCode = "P211";
       		case "K_A_OP_EX": PLr.PLCode = "P211";
       		case "K_OL": PLr.PLCode = "P111";
+      		case "K_ST_OL": PLr.PLCode = "P111";
       		case "K_OL_EXB": PLr.PLCode = "P111";
       	end;
       end;

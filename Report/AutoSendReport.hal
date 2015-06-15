@@ -42,7 +42,7 @@ MMR = 6;
 Technomedia = 7;//Technomedia
 AService = 8;
 
-
+/*
   if (SetCompany(iStore,false)) then begin
 
     UndeliveredItemsReportEn;
@@ -94,11 +94,6 @@ AService = 8;
     RepSpec.f3 = "IM-1";
     LocManyStockEn(RepSpec);
     
-    /*RepSpec.Media = 13;
-    RepSpec.f1 = "STORE_SM,STORE_SM_D";
-    RepSpec.f3 = "IM-2";
-    LocManyStockEn(RepSpec);*/
-    
     RepSpec.Media = 14;
     RepSpec.f1 = "STORE_OLMP,STORE_OL_D";
     RepSpec.f3 = "IM-3";
@@ -123,7 +118,6 @@ AService = 8;
   
   if (SetCompany(WD,false)) then begin
     KreditorkaWDEn;
-    //KreditorkaReportEn(WD);
     
     if(GetDateID(currentdate)==5)then begin
       PUOrdersToPrepayWDEn;
@@ -144,44 +138,21 @@ AService = 8;
     ResetCompany(PPhL);  
   end;
   
-  /*if (SetCompany(PhotoTek,false)) then begin//textera// Edit ************************** Thursday, 14 August 2014 10:30:29
-    UndeliveredItemsReportEn;
-    RepSpec.Media = 2;
-    RepSpec.f1 = "DOA#1,DOA_INV,INV#1,INV#2,INV_OUT,K_TRANSIT,MARKETING,OFFICE,RSV_OKS,SERVICE,TRANSIT#2,TRWH,INV#1/E,INV#1_TXT,INV#2_TXT,TRWH_TXT,MARKET_TXT,TRNS#2_TXT"; 
-    RepSpec.f2 = ",FOL,PROMS,";
-    LocManyStockGroupEn(RepSpec);
-    LocManyStockEn(RepSpec);
-    MyTransitReportEn;
-    MyTransitReportGroupEn;
-    MyItemReportEn;
-    KreditorkaReportEn(PhotoTek);
-    DebitorkaReportEn(PhotoTek);
-    MyShopsReportEn(PhotoTek);
-    SalesReportEn;
-    IPEn;
-    AutoUnreservOrderMn;
-    MyReservStstEn;
-    
-    ResetCompany(PhotoTek);  
-  end;*/
   
   if (SetCompany(MMR,false)) then begin
 	       
      RepSpec.Media = 61;
     RepSpec.f1 = "K_OL,K_OL_EXB,K_ST_OL";
-    //RepSpec.f3 = "P111";	
     LocManyStockEn(RepSpec);
     
 	RepSpec.Media = 62;
     RepSpec.f1 = "K_A_OP_EX,K_A_STO_EX,K_A_OP,K_A_ST_OP";
-    //RepSpec.f3 = "P211";
     LocManyStockEn(RepSpec);
     
     
 	MyItemReportEn;
 	
 	SalesReportEn;
-    //K
     if(GetDateID(currentdate)==1)then begin
       KreditorkaReportEn(MMR);
       DebitorkaReportEn(MMR);
@@ -193,23 +164,7 @@ AService = 8;
     ResetCompany(MMR);  
   end;
   
-  /*if (SetCompany(Technomedia,false)) then begin// Edit ************************** Thursday, 14 August 2014 10:30:14
-    UndeliveredItemsReportEn;
 
-    RepSpec.Media = 7;
-    RepSpec.f1 = "DOA#1,DOA_INV,DOA_INV#1,EXHIBITION,INV#1,INV#1/ADJ,INV#2/ADJ,INV#1/E,INV#1/SRV,INV#1E_RTN,INV#2,INV_OUT#1,K_TRANSIT,OFFICE,RTN,SERVICE,TRANSIT#2,TRWH,INV#1/E"; 
-    RepSpec.f2 = ",FOL,PROMS,";
-    LocManyStockEn(RepSpec);
-    MyItemReportEn;
-    AutoUnreservOrderMn;
-    KreditorkaReportEn(Technomedia);
-    DebitorkaReportEn(Technomedia);
-    MyShopsReportEn(Technomedia);
-    SalesReportEn;
-    IPEn;
-    MyReservStstEn;
-    ResetCompany(Technomedia);  
-  end;*/
   
   if (SetCompany(AService,false)) then begin
     RepSpec.Media = 8;
@@ -221,7 +176,7 @@ AService = 8;
     KreditorkaReportEn(AService);
     DebitorkaReportEn(AService);
     ResetCompany(AService); 
-  end;
+  end;*/
   
 
 return;

@@ -798,7 +798,7 @@ real i,h,h1,h2,h3,h4,h5,h6,hs,v,v2,vs,vm,hl,l,t,f;
   MatCol(t=1,144,"Наймен.",0,Spec,false,0);
   MatCol(t,-310,"Рах.варт.",0,CostAcc,false,AccSClass);
   MatCol(t,-200,"Об'єкти",0,Objects,false,ObjSClass);
-  MatCol(t,-100,"Стисло",0,ACShort,false,ACShortSClass);
+  MatCol(t,-100,"SalesAcc",0,SalesAcc,false,AccSClass);// Edit ************************** Tuesday, 2 June 2015 19:16:23
   InsertRowTest;
   DeleteRowTest;
   EndMatrix;
